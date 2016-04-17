@@ -4,7 +4,10 @@
 .pydevproject
 .project
 # The following applies to any file named __pycache__ in any subdirectory
-/__pycache__
+__pycache__/
+
+# Log files
+*.log
 
 # File for storing passwords etc.
 secretdata.txt
