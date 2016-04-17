@@ -1,2 +1,2 @@
-# coach
+# COACH
 COACH decision support system
