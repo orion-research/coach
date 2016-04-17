@@ -1,0 +1,10 @@
+<H2>Select a decision process</H2>
+
+<FORM action="/change_decision_process" method="post">
+<SELECT name="url">
+{% for p in decision_processes %}
+{{ p | safe }}
+{% endfor %}
+</SELECT>
+<INPUT type="submit" value="Select"/>
+</FORM>

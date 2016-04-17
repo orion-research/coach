@@ -1,0 +1,47 @@
+<!DOCTYPE HTML>
+<HTML>
+<HEAD>
+<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static', filename='format.css') }}">
+<TITLE>COACH</TITLE>
+</HEAD>
+
+<BODY>
+<H1>Welcome to COACH!</H1>
+
+<DIV style="background-color:#ffd213; padding-bottom: 8px; padding-left: 8px; padding-right: 8px; padding-top: 8px;">
+<B>Warning:</B> This software is a research prototype. Be careful not to enter any sensitive data. <BR>
+The software will be continuously changed and updated without prior notice, and in this process data may be lost.<BR>
+Parts of the service may be discontinued or interrupted at any point in time.
+</DIV>
+
+<H2>Login existing user</H2>
+
+<DIV style="color:red">
+{% if error == "FieldMissing": %}
+Error: User name or password missing!
+{% elif error == "NoSuchUser": %}
+Error: No such user!
+{% elif error == "WrongPassword": %}
+Error: Wrong password!
+{% endif %} 
+</DIV>
+
+<FORM action="/login_user" method="post">
+User id: 
+<BR>
+<INPUT type="text" name="user_id" required>
+<BR>
+Password: 
+<BR>
+<INPUT type="password" name="password" required>
+<BR>
+<INPUT type="submit" value="Login">
+</FORM>
+
+<H2>Create new user</H2>
+<FORM action="/create_user_dialogue">
+<INPUT type="submit" value="Create new user">
+</FORM>
+
+</BODY>
+</HTML>

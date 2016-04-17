@@ -1,0 +1,19 @@
+<H2>Rank alternatives</H2>
+
+<FORM action="{{this_process | safe}}perform_ranking" method="post">
+<SELECT name="alternative">
+{% for o in options %}
+{{ o | safe }}
+{% endfor %}
+</SELECT>
+
+<INPUT type="hidden" name="root" value="{{root | safe}}"/>
+<INPUT type="hidden" name="case_id" value="{{case_id | safe}}"/>
+<INPUT type="hidden" name="estimation_method" value="{{estimation_method | safe}}"/>
+<BR>
+
+{{ estimation_dialogue | safe }}
+<BR>
+
+<INPUT type="submit" value="Select"/>
+</FORM>

@@ -1,0 +1,4 @@
+[["decision_process", "A decision process service", "127.0.0.1:5002"],
+["decision_process", "The same decision process service", "127.0.0.1:5002"],
+["estimation_method", "Average of two estimation method", "127.0.0.1:5004"],
+["estimation_method", "Expert opinion estimation method", "127.0.0.1:5001"]]

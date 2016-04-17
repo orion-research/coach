@@ -1,0 +1,56 @@
+<!DOCTYPE HTML>
+<HTML>
+<HEAD>
+<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static', filename='format.css') }}">
+<TITLE>COACH</TITLE>
+</HEAD>
+
+<DIV id="menu">
+<IMG src="{{ url_for('static', filename='logotype.png') }}">
+<DIV id="main_menu">
+Logged in as:<BR>
+{{ session["user_id"] }}
+<HR>
+{% if session["case_id"] is defined %}
+Working on case:<BR>
+{{ session["case_id"] }}
+<HR>
+{% endif %}
+<UL>
+<LI><STRONG>General</STRONG></LI>
+<LI><A HREF="/change_password"> Change password </A></LI>
+<LI><A HREF="/logout"> Logout </A></LI>
+<LI><STRONG>Case management</STRONG></LI>
+<LI><A HREF="/open_case_dialogue"> Open case </A></LI>
+<LI><A HREF="/create_case_dialogue"> Create case </A></LI>
+{% if session["case_id"] %}
+<LI><A HREF="/edit_case_description"> Edit case description</A></LI>
+<LI><A HREF="/add_stakeholder_dialogue"> Add stakeholder </A></LI>
+<LI><A HREF="/change_decision_process_dialogue"> Change decision process</A></LI>
+<LI><A HREF="/create_alternative_dialogue"> Create decision alternative </A></LI>
+{% endif %}
+{% if process_menu is defined %}
+<LI><STRONG>Decision process</STRONG></LI>
+{{ process_menu | safe }}
+{% endif %}
+</DIV>
+</DIV>
+
+<DIV id="heading">
+<H1>COACH Decision Support System</H1>
+</DIV>
+
+<DIV id="main_dialogue">
+{% if message is defined %}
+{{ message | safe }}
+<BR><BR>
+{% endif %}
+
+{% if main_dialogue is defined %}
+{{ main_dialogue | safe }}
+{% endif %}
+</DIV>
+
+<BODY>
+</BODY>
+</HTML>

@@ -1,0 +1,7 @@
+<H2>Select a case to work on</H2>
+
+<UL>
+{% for c in user_cases %}
+<LI> {{ c | safe }} </LI>
+{% endfor %}
+</UL>

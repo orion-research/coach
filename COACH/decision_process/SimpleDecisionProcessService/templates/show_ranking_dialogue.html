@@ -1,0 +1,17 @@
+<H2>Results of ranking</H2>
+
+<H3>Ranked alternatives</H3>
+
+<UL>
+{% for a in ranked %}
+<LI> {{ a | safe }} </LI>
+{% endfor %}
+</UL>
+
+<H3>Unranked alternatives</H3>
+<UL>
+{% for a in unranked %}
+<LI> {{ a | safe }} </LI>
+{% endfor %}
+</UL>
+

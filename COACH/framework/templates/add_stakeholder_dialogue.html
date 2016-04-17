@@ -1,0 +1,7 @@
+<H2>Select a stakeholder to add to the decision case</H2>
+
+<UL>
+{% for s in stakeholders %}
+<LI> {{ s | safe }} </LI>
+{% endfor %}
+</UL>

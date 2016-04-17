@@ -1,0 +1,38 @@
+* {
+	font-family: sans-serif;
+	font-size: 18px;
+	margin: 0px;
+	padding: 0px;
+}
+
+h1 { font-size: 40px; }
+
+ul { 
+	list-style-position: inside; 
+}
+
+#menu {
+	width: 250px;
+	float: left;
+	padding: 5px;
+	background-color: #ffd213;
+}
+
+#menu ul {
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+
+#menu li {
+	display: block;
+}
+
+#menu li:hover {
+	background-color: #edeadb;
+}
+
+#menu a {
+	text-decoration: none;
+	color: black;
+}

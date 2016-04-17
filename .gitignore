@@ -1,0 +1,10 @@
+# List of files to be ignored by git when interacting with the public github repository.
+
+# Eclipse/python project management files
+.pydevproject
+.project
+# The following applies to any file named __pycache__ in any subdirectory
+/__pycache__
+
+# File for storing passwords etc.
+secretdata.txt

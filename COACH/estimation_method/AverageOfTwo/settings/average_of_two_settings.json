@@ -1,0 +1,7 @@
+{
+	"description": "Settings for the AverageOfTwo estimation method",
+	"name": "Average of two estimation method",
+	"port": 5004,
+	"ssl_certificate": "certificates/server.crt",
+	"ssl_encryption_key": "certificates/server.key"
+}

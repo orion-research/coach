@@ -1,0 +1,55 @@
+<!DOCTYPE HTML>
+<HTML>
+<HEAD>
+<LINK rel="stylesheet" type="text/css" href="format.css" media="screen" />
+<TITLE>COACH</TITLE>
+</HEAD>
+
+<DIV id="menu">
+<IMG src="logotype.png">
+<DIV id="main_menu">
+Logged in as:<BR>
+{{ session["user_id"] }}
+<HR>
+<STRONG>General</STRONG><BR>
+Change password<BR>
+Logout<BR>
+Open case<BR>
+Create case
+</DIV>
+
+<HR>
+
+<DIV id="case_menu">
+<STRONG>Case management</STRONG><BR>
+{% if session["case_id"] %}
+Open case<BR>
+Create case
+{% else %}
+<FONT color="grey">
+Open case<BR>
+Create case
+</FONT>
+{% end if %}
+</DIV>
+
+<HR>
+
+<DIV id="process_menu">
+<STRONG>Decision process</STRONG><BR>
+{% if process_menu is defined %}
+{{ process_menu | safe }}
+{% end if %}
+</DIV>
+</DIV>
+
+<DIV id="main_dialogue">
+<H1>COACH Decision Support System</H1>
+{% if main_dialogue is defined %}
+{{ main_dialogue | safe }}
+{% end if %}
+</DIV>
+
+<BODY>
+</BODY>
+</HTML>
