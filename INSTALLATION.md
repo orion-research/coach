@@ -51,8 +51,21 @@ $ sudo pip install neo4jrestclient
 
 ## Running COACH
 
+To make sure that Python imports are resolved correctly, do the following:
+
+$  PYTHONPATH="${PYTHONPATH}:path"
+
+where path is the path to the directory where the source code from GitHub was installed.
+
 To start running the services, move to the directory where you installed the source code from GitHub.
 Then move to the directory COACH/framework, and do the following to start the root service
 and a sample directory service:
 
-$ python3 launch.py <neo4j user name> <neo4j password> <session secret key, which is any random string>
+$ python3 launch.py <neo4j user name> <neo4j password> <session secret key, which is any random string> &
+
+To start any other service (for decision processes, estimation methods), move to the directory where the 
+source code is located and do:
+
+$ python3 service.py &
+
+where service.py is the name of the file implementing the service.
