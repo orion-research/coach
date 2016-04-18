@@ -61,11 +61,13 @@ To start running the services, move to the directory where you installed the sou
 Then move to the directory COACH/framework, and do the following to start the root service
 and a sample directory service:
 
-$ python3 launch.py <neo4j user name> <neo4j password> <session secret key, which is any random string> &
+$ nohup python3 launch.py <neo4j user name> <neo4j password> <session secret key, which is any random string> &
+
+(Take note of the PID printed on the screen, in case you need to kill the process later.)
 
 To start any other service (for decision processes, estimation methods), move to the directory where the 
 source code is located and do:
 
-$ python3 service.py &
+$ nohup python3 service.py &
 
 where service.py is the name of the file implementing the service.
