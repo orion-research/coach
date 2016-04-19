@@ -2,6 +2,12 @@
 Example estimation method that takes two parameters and returns the average of them.
 """
 
+# Set python import path to include COACH top directory
+import os
+import sys
+sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
+
+
 from COACH.framework import coach
 
 class AverageOfTwo(coach.EstimationMethod):

@@ -5,12 +5,18 @@ An example of a decision process service. It implements a simple decision proces
 3. Review the resulting ranking.
 """
 
+
+# Set python import path to include COACH top directory
+import os
+import sys
+sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
+
+
 # Coach framework
 from COACH.framework import coach
 
 # Standard libraries
 import json
-import os
 
 # Web server framework
 from flask import request, redirect
