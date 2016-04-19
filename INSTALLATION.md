@@ -51,23 +51,10 @@ $ sudo pip install neo4jrestclient
 
 ## Running COACH
 
-To make sure that Python imports are resolved correctly, do the following:
+To start running the services, move to the directory where you installed the source code from GitHub. Then run the bash script as follows:
 
-$  PYTHONPATH="${PYTHONPATH}:path"
+$ ./launch.sh <neo4j user name> <neo4j password> <session secret key, which is any random string>
 
-where path is the path to the directory where the source code from GitHub was installed.
+This should start a number of python3 processes, one for each service. To later stop all those processes (assuming you have not started any other python3 processes that you want to keep), type:
 
-To start running the services, move to the directory where you installed the source code from GitHub.
-Then move to the directory COACH/framework, and do the following to start the root service
-and a sample directory service:
-
-$ nohup python3 launch.py <neo4j user name> <neo4j password> <session secret key, which is any random string> &
-
-(Take note of the PID printed on the screen, in case you need to kill the process later.)
-
-To start any other service (for decision processes, estimation methods), move to the directory where the 
-source code is located and do:
-
-$ nohup python3 service.py &
-
-where service.py is the name of the file implementing the service.
+$ pkill python3
