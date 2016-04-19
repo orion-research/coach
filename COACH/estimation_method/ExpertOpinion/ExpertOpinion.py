@@ -2,6 +2,9 @@
 Example estimation method which captures expert opinion, i.e. it takes one parameter which is also the result of the estimation.
 """
 
+import sys
+print(sys.path)
+
 from COACH.framework import coach
 
 

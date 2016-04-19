@@ -6,7 +6,8 @@ Created on 17 apr. 2016
 
 import sys
 
-from COACH.framework import coach
+# from COACH.framework import coach
+import coach
 
 if __name__ == '__main__':
     coach.RootService("settings/root_settings.json", sys.argv[1:])

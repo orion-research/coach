@@ -5,6 +5,14 @@ An example of a decision process service. It implements a simple decision proces
 3. Review the resulting ranking.
 """
 
+# Add the grandparent directory to the module load path
+import os
+import sys
+#sys.path.append(os.path.split(os.path.split(os.path.split(os.path.split(os.path.realpath(__file__))[0])[0])[0])[0])
+sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
+print(sys.path)
+
+
 # Coach framework
 from COACH.framework import coach
 
