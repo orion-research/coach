@@ -2,7 +2,7 @@
 
 echo "Starting root server and directory server..."
 cd COACH/framework
-nohup python3 launch.py &
+nohup python3 launch.py $1 $2 $3 &
 
 echo "Starting SimpleDecisionModelService..."
 cd ../decision_process/SimpleDecisionProcessService
