@@ -2,11 +2,16 @@
 Example estimation method which captures expert opinion, i.e. it takes one parameter which is also the result of the estimation.
 """
 
+<<<<<<< HEAD
 # Set python import path to include COACH top directory
 import os
 import sys
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
+=======
+import sys
+print(sys.path)
+>>>>>>> c133459ddcee6be077fab5c4a581278c451e0da2
 
 from COACH.framework import coach
 

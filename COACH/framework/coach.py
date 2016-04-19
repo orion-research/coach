@@ -117,7 +117,7 @@ class Microservice:
         # To be able to run the debug mode, it is necessary to turn off the automatic reloading.
         # TODO: The SSL encryption does not seem to work, so it is turned off right now.
 #        self.thread = threading.Thread(target = self.ms.run, kwargs = {"port": self.port, "ssl_context": self.ssl_context})
-        self.thread = threading.Thread(target = self.ms.run, kwargs = {"port": self.port, "debug": True, "use_reloader": False, "threaded": True})
+        self.thread = threading.Thread(target = self.ms.run, kwargs = {"host": "0.0.0.0", "port": self.port, "use_reloader": False, "threaded": True})
         self.ms.logger.warning("Warning: Server running in debug mode!!!")
         self.thread.start()
 
