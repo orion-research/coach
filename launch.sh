@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Delete output from previous run of services
+find . -name "nohup.out" -delete
+
 echo "Starting root server and directory server..."
 cd COACH/framework
 nohup python3 launch.py $1 $2 $3 &
