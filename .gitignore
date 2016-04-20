@@ -9,5 +9,16 @@ __pycache__/
 # Log files
 *.log
 
+# Data files containing settings for particular installations
+
+# root_settings contains the path to the directory services, and needs to be updated
+# depending on where the services are installed.
+COACH/framework/settings/root_settings.json
+
+# directory.json contains path names to different services, and needs to be updated
+# depending on where the services are installed.
+COACH/framework/settings/directory.json
+
+
 # File for storing passwords etc.
 secretdata.txt

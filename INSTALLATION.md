@@ -49,6 +49,15 @@ $ sudo pip install requests
 
 $ sudo pip install neo4jrestclient
 
+## Configuration settings
+Depending on where COACH is installed, some settings files need to update with correct paths.
+This includes the files COACH/framework/settings/root_settings.json, where the path to directory must be updated,
+and COACH/framework/settings/directory.json, where the directory information is stored, with paths to the
+different installed services.
+
+Examples of the format of these files can be found in the same directory, as example_root_settings.json
+and example_directory.json.
+
 ## Running COACH
 
 To start running the services, move to the directory where you installed the source code from GitHub. Then run the bash script as follows:
