@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Check number of arguments
+if [[$# -ne 3]]; then
+    echo "Usage: ./launch.sh <database user name> <database password> <secret key>"
+    exit 1
+fi
+
 # Delete output from previous run of services
 find . -name "nohup.out" -delete
 
