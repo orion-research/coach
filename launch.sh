@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Check number of arguments
-if [[$# -ne 3]]; then
+if [ "$#" -ne 3]; then
     echo "Usage: ./launch.sh <database user name> <database password> <secret key>"
     exit 1
 fi
