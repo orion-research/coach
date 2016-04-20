@@ -30,7 +30,7 @@ To get Neo4j, use the instructions at: http://debian.neo4j.org/
 
 Neo4j should now be running. To check, type:
 
-$ service neo4j-service.
+$ service neo4j-service status
 
 The directory /etc/neo4j/ contains various property files to change settings. 
 The directory /var/lib/neo4j/data contains the actual data.
