@@ -93,7 +93,8 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
             estimation_dialogue = requests.get("http://" + estimation_method + "/dialogue").text
         
             # Render the dialogue
-            return self.go_to_state(self.perform_ranking_dialogue, options = options, estimation_dialogue = estimation_dialogue, this_process = request.url_root,
+            return self.go_to_state(self.perform_ranking_dialogue, options = options, estimation_dialogue = estimation_dialogue, 
+                                    this_process = "http://" + self.host + ":" + str(self.port) + "/",
                                     root = root, case_id = case_id, estimation_method = estimation_method)
         else:
             return "You need to select an estimation method before you can rank alternatives!"
@@ -167,4 +168,4 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
     
     
 if __name__ == '__main__':
-    SimpleDecisionProcessService("settings/decision_process_settings.json")
+    SimpleDecisionProcessService(sys.argv[1])

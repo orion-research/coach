@@ -29,4 +29,4 @@ class AverageOfTwo(coach.EstimationMethod):
 
 
 if __name__ == '__main__':
-    coach.EstimationMethodService("settings/average_of_two_settings.json", AverageOfTwo)
+    coach.EstimationMethodService(sys.argv[1], AverageOfTwo)

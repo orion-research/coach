@@ -59,12 +59,13 @@ import json
 import logging
 import random
 import smtplib
+import socket
 import ssl
 import string
 import threading
 
 # Web server framework
-from flask import Flask, Response, request, session, redirect
+from flask import Flask, Response, request, session
 from flask.views import View
 from flask.templating import render_template
 
@@ -82,6 +83,11 @@ class Microservice:
     """
     
     def __init__(self, settings_file_name, handling_class = None):
+        """
+        Initialize the microservice.
+        TODO: Depending on the value of self.settings["mode"], start the service with or without Tornado.
+        """
+        
         self.handling_class = handling_class
 
         # Read settings from settings_file_name
@@ -90,6 +96,7 @@ class Microservice:
         self.settings = json.loads(fileData)
 
         self.name = self.settings["name"]
+        self.host = self.settings["host"]
         self.port = self.settings["port"]
 
         # Setup SSL encryption
@@ -117,7 +124,7 @@ class Microservice:
         # To be able to run the debug mode, it is necessary to turn off the automatic reloading.
         # TODO: The SSL encryption does not seem to work, so it is turned off right now.
 #        self.thread = threading.Thread(target = self.ms.run, kwargs = {"port": self.port, "ssl_context": self.ssl_context})
-        self.thread = threading.Thread(target = self.ms.run, kwargs = {"host": "0.0.0.0", "port": self.port, "use_reloader": False, "threaded": True})
+        self.thread = threading.Thread(target = self.ms.run, kwargs = {"host": self.host, "port": self.port, "use_reloader": False, "threaded": True})
         self.ms.logger.warning("Warning: Server running in debug mode!!!")
         self.thread.start()
 
@@ -343,7 +350,7 @@ class RootService(Microservice):
 
         # Store point to service directories
         self.service_directories = self.settings["service_directories"]
-        
+                
     
     def random_token(self, length):
         """

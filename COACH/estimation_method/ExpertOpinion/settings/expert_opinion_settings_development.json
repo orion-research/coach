@@ -1,0 +1,9 @@
+{
+	"description": "Settings for the expert opinion estimation method",
+	"name": "Expert opinion estimation method",
+	"mode": "development",
+	"host": "appz-ext.sics.se", 
+	"port": 5001,
+	"ssl_certificate": "certificates/server.crt",
+	"ssl_encryption_key": "certificates/server.key"
+}

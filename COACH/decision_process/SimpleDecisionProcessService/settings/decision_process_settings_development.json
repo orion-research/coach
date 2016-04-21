@@ -1,6 +1,8 @@
 {
 	"description": "Settings for an example decision process",
 	"name": "An example decision process",
+	"mode": "development",
+	"host": "appz-ext.sics.se",
 	"port": 5002,
 	"ssl_certificate": "certificates/server.crt",
 	"ssl_encryption_key": "certificates/server.key", 

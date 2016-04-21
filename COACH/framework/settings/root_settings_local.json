@@ -1,0 +1,12 @@
+{
+	"description": "Settings for the root microservice",
+	"name": "Root microservice for ORION project",
+	"mode": "local",
+	"host": "127.0.0.1",
+	"port": 5000,
+	"ssl_certificate": "certificates/server.crt",
+	"ssl_encryption_key": "certificates/server.key",
+	"database": "http://127.0.0.1:7474/db/data/",
+	"service_directories": ["http://127.0.0.1:5003"],
+	"logfile": "root.log"
+}
