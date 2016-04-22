@@ -62,7 +62,7 @@ and example_directory.json.
 
 To start running the services, move to the directory where you installed the source code from GitHub. Then run the bash script as follows:
 
-$ ./launch.sh <neo4j user name> <neo4j password> <session secret key, which is any random string>
+$ ./launch_development.sh <neo4j user name> <neo4j password> <session secret key, which is any random string>
 
 This should start a number of python3 processes, one for each service. To later stop all those processes (assuming you have not started any other python3 processes that you want to keep), type:
 
