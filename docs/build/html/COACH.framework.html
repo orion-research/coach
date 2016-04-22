@@ -1,0 +1,608 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>COACH.framework package &mdash; COACH 0,1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0,1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="COACH 0,1 documentation" href="index.html" />
+    <link rel="up" title="COACH package" href="COACH.html" />
+    <link rel="prev" title="COACH.estimation_method.ExpertOpinion package" href="COACH.estimation_method.ExpertOpinion.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="COACH.estimation_method.ExpertOpinion.html" title="COACH.estimation_method.ExpertOpinion package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">COACH 0,1 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >COACH</a> &raquo;</li>
+          <li><a href="COACH.html" accesskey="U">COACH package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="coach-framework-package">
+<h1>COACH.framework package<a class="headerlink" href="#coach-framework-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-COACH.framework.coach">
+<span id="coach-framework-coach-module"></span><h2>COACH.framework.coach module<a class="headerlink" href="#module-COACH.framework.coach" title="Permalink to this headline">¶</a></h2>
+<p>Created on 16 mars 2016</p>
+<p>&#64;author: Jakob Axelsson</p>
+<p>The module coach contains the framework for developing components for COACH in Python.</p>
+<p>TODO:
+Deviations from architecture description:
+- Add a simple knowledge repository microservice, with only the ability to export a case to it</p>
+<p>Security:
+- How to handle authentication and database read/write access from other services?
+- Is it possible to restrict access for a client to only query on a limited set of the database? If so, this could be a way of letting 
+services use general querys. Otherwise, the root must provide an API for a limited set of requests.
+- The general principle for the external services is that they get access to one node in the database.
+To that node they may add attributes, and they may create subnodes linked from it.
+All this should happen through an API in the root service. The database itself should not be visible on the Internet.
+- Look into security. Authentication, e.g. <a class="reference external" href="http://blog.miguelgrinberg.com/post/restful-authentication-with-flask">http://blog.miguelgrinberg.com/post/restful-authentication-with-flask</a>.
+HTTPS, e.g. <a class="reference external" href="http://stackoverflow.com/questions/29458548/can-you-add-https-functionality-to-a-python-flask-web-server">http://stackoverflow.com/questions/29458548/can-you-add-https-functionality-to-a-python-flask-web-server</a>. <a class="reference external" href="https://github.com/kennethreitz/flask-sslify">https://github.com/kennethreitz/flask-sslify</a>. 
+- In the root settings, it should be possible set a regexp for what email addresses are allowed, to limit user creation.
+- Make https work!
+- It is necessary to have some kind of token to ensure that access is valid after logging it. Could it be saved in the session object?
+<a class="reference external" href="http://stackoverflow.com/questions/32510290/how-do-you-implement-token-authentication-in-flask">http://stackoverflow.com/questions/32510290/how-do-you-implement-token-authentication-in-flask</a>.
+For each user, a token with expiration is generated, and the token is also stored in the session object.
+Whenever an endpoint requiring authentication is called, it checks if the session token is still valid.
+If so, it gets a new token, and the timer is reset. If the token is no longer valid, the user is logged out.
+This can all be put into one method self.authenticate(), which is called at the beginning of each endpoint.
+- An email should be sent (e.g. using a special gmail account) to ask users to verify when registering.</p>
+<p>User interface:
+- Change the menu for case management. There should be one item for stakeholders, where current stakeholders can be listed and new ones added.
+Also, one for alternatives, where existing ones can be shown, edited or deleted, and new ones added.
+- It should be possible to change passwords!</p>
+<p>Design:
+- Make proper schemas for the case database. Estimate and EstimationMethod should be their own nodes. Maybe also property?
+- Should the role of a user be part of the relation between user and decision case? Each user can have different role in different cases.
+- Put the framework in this module, and create separate modules for each concrete method/process</p>
+<p>Services:
+- Develop decision processes for AHP and Pugh.</p>
+<p>Development:
+- Generate documentation: See <a class="reference external" href="https://codeandchaos.wordpress.com/2012/07/30/sphinx-autodoc-tutorial-for-dummies/">https://codeandchaos.wordpress.com/2012/07/30/sphinx-autodoc-tutorial-for-dummies/</a>.
+- Add logging. All transitions should be logged, and should include data from the session object. Errors should also be logged,
+and possible be alerted through email when in production. See <a class="reference external" href="http://flask.pocoo.org/docs/0.10/errorhandling/">http://flask.pocoo.org/docs/0.10/errorhandling/</a>.</p>
+<dl class="class">
+<dt id="COACH.framework.coach.Authentication">
+<em class="property">class </em><tt class="descclassname">COACH.framework.coach.</tt><tt class="descname">Authentication</tt><big>(</big><em>users_filename</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Authentication"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Authentication" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">builtins.object</span></tt></p>
+<p>The Authentication class provides storage for the information about users (user id, name, password hash, etc.)
+This information is stored in a json file, containing a dictionary with user name as key and the other information as a value dictionary. 
+Also, it provides functionality for generating and handling tokens. Token related information is not stored persistently.</p>
+<dl class="method">
+<dt id="COACH.framework.coach.Authentication.check_user_password">
+<tt class="descname">check_user_password</tt><big>(</big><em>userid</em>, <em>password</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Authentication.check_user_password"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Authentication.check_user_password" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if the hash of the given password matches the one stored in the database, and otherwise False.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.Authentication.create_user">
+<tt class="descname">create_user</tt><big>(</big><em>userid</em>, <em>password</em>, <em>email</em>, <em>name</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Authentication.create_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Authentication.create_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a user with the given id to the database. The password is stored as a hashed value.
+If the userid already exists in the database, that information is overwritten.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.Authentication.get_random_token">
+<tt class="descname">get_random_token</tt><big>(</big><em>length</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Authentication.get_random_token"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Authentication.get_random_token" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a random token, i.e. a string of alphanumeric characters, of the requested length.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.Authentication.get_user_email">
+<tt class="descname">get_user_email</tt><big>(</big><em>userid</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Authentication.get_user_email"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Authentication.get_user_email" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the email of a user.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.Authentication.get_user_name">
+<tt class="descname">get_user_name</tt><big>(</big><em>userid</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Authentication.get_user_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Authentication.get_user_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the name of a user.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.Authentication.password_hash">
+<tt class="descname">password_hash</tt><big>(</big><em>password</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Authentication.password_hash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Authentication.password_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the salted hash value for the given password.
+See <a class="reference external" href="https://wiki.python.org/moin/Md5Passwords">https://wiki.python.org/moin/Md5Passwords</a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.Authentication.user_exists">
+<tt class="descname">user_exists</tt><big>(</big><em>userid</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Authentication.user_exists"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Authentication.user_exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if the user with the given id already exists, and False otherwise.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="COACH.framework.coach.CaseDatabase">
+<em class="property">class </em><tt class="descclassname">COACH.framework.coach.</tt><tt class="descname">CaseDatabase</tt><big>(</big><em>url</em>, <em>username</em>, <em>password</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">builtins.object</span></tt></p>
+<p>The case database provides the interface to the database for storing case information. It wraps an API around a standard graph DBMS.</p>
+<p>TODO: 
+- Probably, it is wise to use Neo4j&#8217;s query language as much as possible, to minimize dependency
+on the rest library.
+- These actions should also generate entries into a history, showing who, when, and what has been done.</p>
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.add_stakeholder">
+<tt class="descname">add_stakeholder</tt><big>(</big><em>user_id</em>, <em>case_id</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.add_stakeholder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.add_stakeholder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.change_alternative_property">
+<tt class="descname">change_alternative_property</tt><big>(</big><em>alternative</em>, <em>name</em>, <em>value</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.change_alternative_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.change_alternative_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Changes the property name of the alternative node to become value.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.change_case_property">
+<tt class="descname">change_case_property</tt><big>(</big><em>case_id</em>, <em>name</em>, <em>value</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.change_case_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.change_case_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Changes the property name of the case_id node to become value.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.change_decision_process">
+<tt class="descname">change_decision_process</tt><big>(</big><em>case_id</em>, <em>url</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.change_decision_process"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.change_decision_process" title="Permalink to this definition">¶</a></dt>
+<dd><p>Changes the decision process url associated with a case.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.create_alternative">
+<tt class="descname">create_alternative</tt><big>(</big><em>title</em>, <em>description</em>, <em>case_id</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.create_alternative"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.create_alternative" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a decision alternative and links it to the case.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.create_case">
+<tt class="descname">create_case</tt><big>(</big><em>title</em>, <em>description</em>, <em>initiator</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.create_case"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.create_case" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new case in the database, with a relation to the initiating user. It returns the database id of the new case.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.create_user">
+<tt class="descname">create_user</tt><big>(</big><em>user_id</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.create_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.create_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new user in the database, if it does not exist already.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.get_alternative_property">
+<tt class="descname">get_alternative_property</tt><big>(</big><em>alternative</em>, <em>name</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.get_alternative_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.get_alternative_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the value of the property name of the alternative node, or None if it does not exist.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.get_case_property">
+<tt class="descname">get_case_property</tt><big>(</big><em>case_id</em>, <em>name</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.get_case_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.get_case_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the value of the property name of the case_id node, or None if it does not exist.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.get_decision_alternatives">
+<tt class="descname">get_decision_alternatives</tt><big>(</big><em>case_id</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.get_decision_alternatives"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.get_decision_alternatives" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the list of decision alternatives associated with the case_id node, returning both title and id.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.get_decision_process">
+<tt class="descname">get_decision_process</tt><big>(</big><em>case_id</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.get_decision_process"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.get_decision_process" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the decision process url of the case, or None if no decision process has been selected.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.user_cases">
+<tt class="descname">user_cases</tt><big>(</big><em>user_id</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.user_cases"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.user_cases" title="Permalink to this definition">¶</a></dt>
+<dd><p>user_cases queries the case database and returns a list of the cases connected to the user.
+Each case is represented by a pair indicating case id and case title.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.CaseDatabase.users">
+<tt class="descname">users</tt><big>(</big><em>user_id=None</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#CaseDatabase.users"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.CaseDatabase.users" title="Permalink to this definition">¶</a></dt>
+<dd><p>Queries the case database and returns an iterable of the users with the given id, or all users is no user_id is provided.</p>
+<p>TODO: replace with the following query:
+q = MATCH (u: User) WHERE u.user_id = %s RETURN u % user_id 
+q = MATCH (u: User) RETURN u</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="COACH.framework.coach.DecisionProcessService">
+<em class="property">class </em><tt class="descclassname">COACH.framework.coach.</tt><tt class="descname">DecisionProcessService</tt><big>(</big><em>settings_file_name</em>, <em>handling_class=None</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#DecisionProcessService"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.DecisionProcessService" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#COACH.framework.coach.Microservice" title="COACH.framework.coach.Microservice"><tt class="xref py py-class docutils literal"><span class="pre">COACH.framework.coach.Microservice</span></tt></a></p>
+<p>Class for decision process microservices. It can provide a process menu to the Root Service, 
+and when the user selects different process steps, further endpoints of the decision process can be invoked.</p>
+<dl class="method">
+<dt id="COACH.framework.coach.DecisionProcessService.create_endpoints">
+<tt class="descname">create_endpoints</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#DecisionProcessService.create_endpoints"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.DecisionProcessService.create_endpoints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="COACH.framework.coach.DirectoryService">
+<em class="property">class </em><tt class="descclassname">COACH.framework.coach.</tt><tt class="descname">DirectoryService</tt><big>(</big><em>settings_file_name</em>, <em>handling_class=None</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#DirectoryService"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.DirectoryService" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#COACH.framework.coach.Microservice" title="COACH.framework.coach.Microservice"><tt class="xref py py-class docutils literal"><span class="pre">COACH.framework.coach.Microservice</span></tt></a></p>
+<p>DirectoryMicroservices are used for providing catalogues of other services. They can be used by
+RootServices to look up services of different kinds.
+The list of services is stored in a local file on json format.</p>
+<p>The following methods are provided:
+/addService?type=X&amp;name=Y&amp;url=Z
+/removeService?url=Y
+/getServices[?type=X]</p>
+<p>TODO: Possibly, this could also run some tests of the service, to see that it fulfils the protocol.
+See also paper on SECO quality assurance, and select techniques from there.</p>
+<dl class="method">
+<dt id="COACH.framework.coach.DirectoryService.add_service">
+<tt class="descname">add_service</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#DirectoryService.add_service"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.DirectoryService.add_service" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a new service, with type, name, and URL, and saves the services file.
+If the given URL already exists, it should be removed.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.DirectoryService.create_endpoints">
+<tt class="descname">create_endpoints</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#DirectoryService.create_endpoints"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.DirectoryService.create_endpoints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.DirectoryService.get_services">
+<tt class="descname">get_services</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#DirectoryService.get_services"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.DirectoryService.get_services" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list of available services of the given type, in json format.
+To allow the user to manually edit the file, it is first read from file into self.services.
+Then this list is filtered.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.DirectoryService.remove_service">
+<tt class="descname">remove_service</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#DirectoryService.remove_service"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.DirectoryService.remove_service" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes a service based on its URL.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="COACH.framework.coach.EstimationMethod">
+<em class="property">class </em><tt class="descclassname">COACH.framework.coach.</tt><tt class="descname">EstimationMethod</tt><a class="reference internal" href="_modules/COACH/framework/coach.html#EstimationMethod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.EstimationMethod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#COACH.framework.coach.Method" title="COACH.framework.coach.Method"><tt class="xref py py-class docutils literal"><span class="pre">COACH.framework.coach.Method</span></tt></a></p>
+<p>This is the base class for EstimationMethods.
+Concrete instances should implement the following methods:
+/dialogue?param1=val1&amp;...&amp;paramN=valN - implemented by the dialogue method
+/evaluate?param1=val1&amp;...&amp;paramN=valN - implemented by the evaluate method</p>
+<dl class="method">
+<dt id="COACH.framework.coach.EstimationMethod.dialogue">
+<tt class="descname">dialogue</tt><big>(</big><em>params</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#EstimationMethod.dialogue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.EstimationMethod.dialogue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a HTML snippet with one text box for each parameter, which can be inserted into a web page.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.EstimationMethod.get_params">
+<tt class="descname">get_params</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#EstimationMethod.get_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.EstimationMethod.get_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dictionary with value provided in the HTTP request for each of the
+parameters defined in the parameterNames() method defines in a subclass.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="COACH.framework.coach.EstimationMethodService">
+<em class="property">class </em><tt class="descclassname">COACH.framework.coach.</tt><tt class="descname">EstimationMethodService</tt><big>(</big><em>settings_file_name</em>, <em>handling_class=None</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#EstimationMethodService"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.EstimationMethodService" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#COACH.framework.coach.Microservice" title="COACH.framework.coach.Microservice"><tt class="xref py py-class docutils literal"><span class="pre">COACH.framework.coach.Microservice</span></tt></a></p>
+<p>Generic class for wrapping estimation methods into a web service. Normally, a contributer of an estimation method would not need to change this class,
+but only provide the handling EstimationMethod class.</p>
+<dl class="method">
+<dt id="COACH.framework.coach.EstimationMethodService.create_endpoints">
+<tt class="descname">create_endpoints</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#EstimationMethodService.create_endpoints"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.EstimationMethodService.create_endpoints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="COACH.framework.coach.Method">
+<em class="property">class </em><tt class="descclassname">COACH.framework.coach.</tt><tt class="descname">Method</tt><a class="reference internal" href="_modules/COACH/framework/coach.html#Method"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Method" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">flask.views.View</span></tt></p>
+<p>Base class for all methods, implementing the dispatch mechanism for service endpoints.
+All concrete subclasses should implement the following method:
+/info - implemented by the info method</p>
+<dl class="method">
+<dt id="COACH.framework.coach.Method.dispatch_request">
+<tt class="descname">dispatch_request</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Method.dispatch_request"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Method.dispatch_request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dispatches each endpoint request to a separate function in the handling class.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="COACH.framework.coach.Microservice">
+<em class="property">class </em><tt class="descclassname">COACH.framework.coach.</tt><tt class="descname">Microservice</tt><big>(</big><em>settings_file_name</em>, <em>handling_class=None</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Microservice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Microservice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">builtins.object</span></tt></p>
+<p>Microservice is the base class of all microservices. It contains the functionality for setting up a service that can act as a stand-alone web server.
+It expects subclasses to implement the createEndpoints() function, which defines the service API.</p>
+<dl class="method">
+<dt id="COACH.framework.coach.Microservice.create_endpoints">
+<tt class="descname">create_endpoints</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Microservice.create_endpoints"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Microservice.create_endpoints" title="Permalink to this definition">¶</a></dt>
+<dd><p>create_endpoints is used by the __init__ method to define the API of the microservice.
+Override this method in subclasses to add service endpoints.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.Microservice.create_state">
+<tt class="descname">create_state</tt><big>(</big><em>state_dialogue</em>, <em>endpoint=None</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Microservice.create_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Microservice.create_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a state that can be used in state machine like control flows.
+state_dialogue is the name of the html template file to be rendered when the state is entered.
+Currently, the state is just the dialogue file name.
+If endpoint is provided, that endpoint is added to the list of endpoints.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.Microservice.go_to_state">
+<tt class="descname">go_to_state</tt><big>(</big><em>s</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#Microservice.go_to_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.Microservice.go_to_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enters the state s, and displays its dialogue.
+The optional kwargs are variables that can be evaluated when rendering the dialogue.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="COACH.framework.coach.RootService">
+<em class="property">class </em><tt class="descclassname">COACH.framework.coach.</tt><tt class="descname">RootService</tt><big>(</big><em>settings_file_name</em>, <em>secret_args</em>, <em>handling_class=None</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#COACH.framework.coach.Microservice" title="COACH.framework.coach.Microservice"><tt class="xref py py-class docutils literal"><span class="pre">COACH.framework.coach.Microservice</span></tt></a></p>
+<p>RootService implements the overall workflow manager and decision case manager. It is configured with links to 
+a number of directories, which are used for searching for other services. It contains the basic
+functionality for logging in, registering users, creating and closing decision cases, attaching
+users to a decision case, and selecting the decision process. Every installation of COACH has exactly one instance of this class.</p>
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.add_stakeholder">
+<tt class="descname">add_stakeholder</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.add_stakeholder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.add_stakeholder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a Stakeholder relationship between the current case and the user given as argument, with the role contributor.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.add_stakeholder_dialogue_transition">
+<tt class="descname">add_stakeholder_dialogue_transition</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.add_stakeholder_dialogue_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.add_stakeholder_dialogue_transition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.change_alternative_property">
+<tt class="descname">change_alternative_property</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.change_alternative_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.change_alternative_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Changes a property of the indicated case id in the database.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.change_case_property">
+<tt class="descname">change_case_property</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.change_case_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.change_case_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Changes a property of the indicated case id in the database.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.change_decision_process">
+<tt class="descname">change_decision_process</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.change_decision_process"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.change_decision_process" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.change_decision_process_dialogue_transition">
+<tt class="descname">change_decision_process_dialogue_transition</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.change_decision_process_dialogue_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.change_decision_process_dialogue_transition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.change_password">
+<tt class="descname">change_password</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.change_password"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.change_password" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.create_alternative">
+<tt class="descname">create_alternative</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.create_alternative"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.create_alternative" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a new decision alternative and adds a relation from the case to the alternative.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.create_alternative_dialogue_transition">
+<tt class="descname">create_alternative_dialogue_transition</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.create_alternative_dialogue_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.create_alternative_dialogue_transition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.create_case">
+<tt class="descname">create_case</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.create_case"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.create_case" title="Permalink to this definition">¶</a></dt>
+<dd><p>Endpoint representing the transition from the create case dialogue to the main menu.
+As a transition action, it creates the new case in the database, and connects the current user to it.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.create_case_dialogue_transition">
+<tt class="descname">create_case_dialogue_transition</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.create_case_dialogue_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.create_case_dialogue_transition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.create_endpoints">
+<tt class="descname">create_endpoints</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.create_endpoints"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.create_endpoints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.create_user">
+<tt class="descname">create_user</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.create_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.create_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Endpoint representing the transition from the create user dialogue to the main menu.
+If the user exists, it returns to the create user dialogue and displays a message about this.
+As a transition action, it creates the new user in the database.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.create_user_dialogue_transition">
+<tt class="descname">create_user_dialogue_transition</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.create_user_dialogue_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.create_user_dialogue_transition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.edit_case_description">
+<tt class="descname">edit_case_description</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.edit_case_description"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.edit_case_description" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.get_alternative_property">
+<tt class="descname">get_alternative_property</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.get_alternative_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.get_alternative_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the value of a certain property of the indicated alternative in the database.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.get_case_property">
+<tt class="descname">get_case_property</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.get_case_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.get_case_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the value of a certain property of the indicated case id in the database.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.get_decision_alternatives">
+<tt class="descname">get_decision_alternatives</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.get_decision_alternatives"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.get_decision_alternatives" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of decision alternatives associated with a case id, as a json file.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.get_service_directories">
+<tt class="descname">get_service_directories</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.get_service_directories"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.get_service_directories" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of service directories registered with this service as a json file.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.initial_transition">
+<tt class="descname">initial_transition</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.initial_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.initial_transition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.login_user">
+<tt class="descname">login_user</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.login_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.login_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Endpoint representing the transition from the initial dialogue to the main menu.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.logout">
+<tt class="descname">logout</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.logout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.logout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Endpoint representing the transition to the logged out state, which is the same as the initial state.
+The user and case being worked on is deleted from the session.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.main_menu_transition">
+<tt class="descname">main_menu_transition</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.main_menu_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.main_menu_transition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transition to the main menu. If the argument main_dialogue is passed with the call, it is first fetched from the URLs provided.
+If the case in the database has a decision method selected, its process method is fetched and included in the context.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.open_case">
+<tt class="descname">open_case</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.open_case"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.open_case" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.framework.coach.RootService.open_case_dialogue_transition">
+<tt class="descname">open_case_dialogue_transition</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/framework/coach.html#RootService.open_case_dialogue_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.framework.coach.RootService.open_case_dialogue_transition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-COACH.framework.launch">
+<span id="coach-framework-launch-module"></span><h2>COACH.framework.launch module<a class="headerlink" href="#module-COACH.framework.launch" title="Permalink to this headline">¶</a></h2>
+<p>Created on 17 apr. 2016</p>
+<p>&#64;author: Jakob Axelsson</p>
+</div>
+<div class="section" id="module-COACH.framework">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-COACH.framework" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">COACH.framework package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-COACH.framework.coach">COACH.framework.coach module</a></li>
+<li><a class="reference internal" href="#module-COACH.framework.launch">COACH.framework.launch module</a></li>
+<li><a class="reference internal" href="#module-COACH.framework">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="COACH.estimation_method.ExpertOpinion.html"
+                        title="previous chapter">COACH.estimation_method.ExpertOpinion package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/COACH.framework.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="COACH.estimation_method.ExpertOpinion.html" title="COACH.estimation_method.ExpertOpinion package"
+             >previous</a> |</li>
+        <li><a href="index.html">COACH 0,1 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >COACH</a> &raquo;</li>
+          <li><a href="COACH.html" >COACH package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2016, Jakob Axelsson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

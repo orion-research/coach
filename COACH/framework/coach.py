@@ -12,10 +12,6 @@ Deviations from architecture description:
 
 Security:
 - How to handle authentication and database read/write access from other services?
-- Factor out authentication into its own class. It can use the same database, but should be separate.
-When a new user is created, it has to go into both authentication and caseDB, but it is only authentication that stores password hashes, tokens, etc.
-- Passwords should probably not be in the settings file, in order to avoid the risk of these getting exposed on GitHub.
-Instead, they should be command line arguments (or in a separate file not on GitHub). Applies mainly to root.
 - Is it possible to restrict access for a client to only query on a limited set of the database? If so, this could be a way of letting 
 services use general querys. Otherwise, the root must provide an API for a limited set of requests.
 - The general principle for the external services is that they get access to one node in the database.
@@ -47,7 +43,6 @@ Services:
 - Develop decision processes for AHP and Pugh.
 
 Development:
-- Generate documentation: See https://codeandchaos.wordpress.com/2012/07/30/sphinx-autodoc-tutorial-for-dummies/.
 - Add logging. All transitions should be logged, and should include data from the session object. Errors should also be logged,
 and possible be alerted through email when in production. See http://flask.pocoo.org/docs/0.10/errorhandling/.
 """

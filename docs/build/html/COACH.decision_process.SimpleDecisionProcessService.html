@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>COACH.decision_process.SimpleDecisionProcessService package &mdash; COACH 0,1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0,1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="COACH 0,1 documentation" href="index.html" />
+    <link rel="up" title="COACH.decision_process package" href="COACH.decision_process.html" />
+    <link rel="next" title="COACH.estimation_method package" href="COACH.estimation_method.html" />
+    <link rel="prev" title="COACH.decision_process package" href="COACH.decision_process.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="COACH.estimation_method.html" title="COACH.estimation_method package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="COACH.decision_process.html" title="COACH.decision_process package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">COACH 0,1 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >COACH</a> &raquo;</li>
+          <li><a href="COACH.html" >COACH package</a> &raquo;</li>
+          <li><a href="COACH.decision_process.html" accesskey="U">COACH.decision_process package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="coach-decision-process-simpledecisionprocessservice-package">
+<h1>COACH.decision_process.SimpleDecisionProcessService package<a class="headerlink" href="#coach-decision-process-simpledecisionprocessservice-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService">
+<span id="coach-decision-process-simpledecisionprocessservice-simpledecisionprocessservice-module"></span><h2>COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService module<a class="headerlink" href="#module-COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService" title="Permalink to this headline">¶</a></h2>
+<p>An example of a decision process service. It implements a simple decision process in three steps:
+1. Select an estimation method to be used to rank the value of alternatives.
+2. For each alternative, estimate the value of each alternative.
+3. Review the resulting ranking.</p>
+<dl class="class">
+<dt id="COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService">
+<em class="property">class </em><tt class="descclassname">COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.</tt><tt class="descname">SimpleDecisionProcessService</tt><big>(</big><em>settings_file_name</em>, <em>handling_class=None</em><big>)</big><a class="reference internal" href="_modules/COACH/decision_process/SimpleDecisionProcessService/SimpleDecisionProcessService.html#SimpleDecisionProcessService"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="COACH.framework.html#COACH.framework.coach.DecisionProcessService" title="COACH.framework.coach.DecisionProcessService"><tt class="xref py py-class docutils literal"><span class="pre">COACH.framework.coach.DecisionProcessService</span></tt></a></p>
+<dl class="method">
+<dt id="COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.create_endpoints">
+<tt class="descname">create_endpoints</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/decision_process/SimpleDecisionProcessService/SimpleDecisionProcessService.html#SimpleDecisionProcessService.create_endpoints"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.create_endpoints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.perform_ranking">
+<tt class="descname">perform_ranking</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/decision_process/SimpleDecisionProcessService/SimpleDecisionProcessService.html#SimpleDecisionProcessService.perform_ranking"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.perform_ranking" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method is called using POST when the user presses the button in the estimation method dialogue as part of the ranking dialogue.
+It calculates the estimate and writes it to the database and then returns a status message showing the updated estimate value in the main dialogue window.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.perform_ranking_dialogue_transition">
+<tt class="descname">perform_ranking_dialogue_transition</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/decision_process/SimpleDecisionProcessService/SimpleDecisionProcessService.html#SimpleDecisionProcessService.perform_ranking_dialogue_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.perform_ranking_dialogue_transition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Endpoint which lets the user rank each of the alternatives using the selected estimation method dialogue.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.process_menu">
+<tt class="descname">process_menu</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/decision_process/SimpleDecisionProcessService/SimpleDecisionProcessService.html#SimpleDecisionProcessService.process_menu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.process_menu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.select_estimation_method">
+<tt class="descname">select_estimation_method</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/decision_process/SimpleDecisionProcessService/SimpleDecisionProcessService.html#SimpleDecisionProcessService.select_estimation_method"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.select_estimation_method" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method is called using POST when the user presses the select button in the select_estimation_method_dialogue.
+It gets to form parameters: root, which is the url of the root server, and method, which is the url of the selected estimation method.
+It changes the selection in the case database of the root server, and then returns a status message to be shown in the main dialogue window.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.select_estimation_method_dialogue_transition">
+<tt class="descname">select_estimation_method_dialogue_transition</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/decision_process/SimpleDecisionProcessService/SimpleDecisionProcessService.html#SimpleDecisionProcessService.select_estimation_method_dialogue_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.select_estimation_method_dialogue_transition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Endpoint which lets the user select which estimation method to use for this decision process.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.show_ranking_dialogue_transition">
+<tt class="descname">show_ranking_dialogue_transition</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/COACH/decision_process/SimpleDecisionProcessService/SimpleDecisionProcessService.html#SimpleDecisionProcessService.show_ranking_dialogue_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.show_ranking_dialogue_transition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Endpoint which shows the alternatives in rank order. Unranked alternatives are at the bottom.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-COACH.decision_process.SimpleDecisionProcessService">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-COACH.decision_process.SimpleDecisionProcessService" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">COACH.decision_process.SimpleDecisionProcessService package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService">COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService module</a></li>
+<li><a class="reference internal" href="#module-COACH.decision_process.SimpleDecisionProcessService">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="COACH.decision_process.html"
+                        title="previous chapter">COACH.decision_process package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="COACH.estimation_method.html"
+                        title="next chapter">COACH.estimation_method package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/COACH.decision_process.SimpleDecisionProcessService.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="COACH.estimation_method.html" title="COACH.estimation_method package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="COACH.decision_process.html" title="COACH.decision_process package"
+             >previous</a> |</li>
+        <li><a href="index.html">COACH 0,1 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >COACH</a> &raquo;</li>
+          <li><a href="COACH.html" >COACH package</a> &raquo;</li>
+          <li><a href="COACH.decision_process.html" >COACH.decision_process package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2016, Jakob Axelsson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

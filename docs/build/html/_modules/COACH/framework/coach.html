@@ -1,0 +1,993 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>COACH.framework.coach &mdash; COACH 0,1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0,1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="COACH 0,1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">COACH 0,1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for COACH.framework.coach</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on 16 mars 2016</span>
+
+<span class="sd">@author: Jakob Axelsson</span>
+
+<span class="sd">The module coach contains the framework for developing components for COACH in Python.</span>
+
+
+<span class="sd">TODO:</span>
+<span class="sd">Deviations from architecture description:</span>
+<span class="sd">- Add a simple knowledge repository microservice, with only the ability to export a case to it</span>
+
+<span class="sd">Security:</span>
+<span class="sd">- How to handle authentication and database read/write access from other services?</span>
+<span class="sd">- Is it possible to restrict access for a client to only query on a limited set of the database? If so, this could be a way of letting </span>
+<span class="sd">services use general querys. Otherwise, the root must provide an API for a limited set of requests.</span>
+<span class="sd">- The general principle for the external services is that they get access to one node in the database.</span>
+<span class="sd">To that node they may add attributes, and they may create subnodes linked from it.</span>
+<span class="sd">All this should happen through an API in the root service. The database itself should not be visible on the Internet.</span>
+<span class="sd">- Look into security. Authentication, e.g. http://blog.miguelgrinberg.com/post/restful-authentication-with-flask.</span>
+<span class="sd">HTTPS, e.g. http://stackoverflow.com/questions/29458548/can-you-add-https-functionality-to-a-python-flask-web-server. https://github.com/kennethreitz/flask-sslify. </span>
+<span class="sd">- In the root settings, it should be possible set a regexp for what email addresses are allowed, to limit user creation.</span>
+<span class="sd">- Make https work!</span>
+<span class="sd">- It is necessary to have some kind of token to ensure that access is valid after logging it. Could it be saved in the session object?</span>
+<span class="sd">http://stackoverflow.com/questions/32510290/how-do-you-implement-token-authentication-in-flask.</span>
+<span class="sd">For each user, a token with expiration is generated, and the token is also stored in the session object.</span>
+<span class="sd">Whenever an endpoint requiring authentication is called, it checks if the session token is still valid.</span>
+<span class="sd">If so, it gets a new token, and the timer is reset. If the token is no longer valid, the user is logged out.</span>
+<span class="sd">This can all be put into one method self.authenticate(), which is called at the beginning of each endpoint.</span>
+<span class="sd">- An email should be sent (e.g. using a special gmail account) to ask users to verify when registering.</span>
+
+<span class="sd">User interface:</span>
+<span class="sd">- Change the menu for case management. There should be one item for stakeholders, where current stakeholders can be listed and new ones added.</span>
+<span class="sd">Also, one for alternatives, where existing ones can be shown, edited or deleted, and new ones added.</span>
+<span class="sd">- It should be possible to change passwords!</span>
+
+<span class="sd">Design:</span>
+<span class="sd">- Make proper schemas for the case database. Estimate and EstimationMethod should be their own nodes. Maybe also property?</span>
+<span class="sd">- Should the role of a user be part of the relation between user and decision case? Each user can have different role in different cases.</span>
+<span class="sd">- Put the framework in this module, and create separate modules for each concrete method/process</span>
+
+<span class="sd">Services:</span>
+<span class="sd">- Develop decision processes for AHP and Pugh.</span>
+
+<span class="sd">Development:</span>
+<span class="sd">- Generate documentation: See https://codeandchaos.wordpress.com/2012/07/30/sphinx-autodoc-tutorial-for-dummies/.</span>
+<span class="sd">- Add logging. All transitions should be logged, and should include data from the session object. Errors should also be logged,</span>
+<span class="sd">and possible be alerted through email when in production. See http://flask.pocoo.org/docs/0.10/errorhandling/.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c"># Standard libraries</span>
+<span class="kn">import</span> <span class="nn">hashlib</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">smtplib</span>
+<span class="kn">import</span> <span class="nn">ssl</span>
+<span class="kn">import</span> <span class="nn">string</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+
+<span class="c"># Web server framework</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">Response</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">session</span>
+<span class="kn">from</span> <span class="nn">flask.views</span> <span class="kn">import</span> <span class="n">View</span>
+<span class="kn">from</span> <span class="nn">flask.templating</span> <span class="kn">import</span> <span class="n">render_template</span>
+
+<span class="kn">import</span> <span class="nn">requests</span>
+
+<span class="c"># Database connection</span>
+<span class="kn">from</span> <span class="nn">neo4jrestclient.client</span> <span class="kn">import</span> <span class="n">GraphDatabase</span>
+
+
+<div class="viewcode-block" id="Microservice"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Microservice">[docs]</a><span class="k">class</span> <span class="nc">Microservice</span><span class="p">:</span>
+    
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Microservice is the base class of all microservices. It contains the functionality for setting up a service that can act as a stand-alone web server.</span>
+<span class="sd">    It expects subclasses to implement the createEndpoints() function, which defines the service API.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings_file_name</span><span class="p">,</span> <span class="n">handling_class</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the microservice.</span>
+<span class="sd">        TODO: Depending on the value of self.settings[&quot;mode&quot;], start the service with or without Tornado.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">handling_class</span> <span class="o">=</span> <span class="n">handling_class</span>
+
+        <span class="c"># Read settings from settings_file_name</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">settings_file_name</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">fileData</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">fileData</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;name&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;host&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;port&quot;</span><span class="p">]</span>
+
+        <span class="c"># Create the microservice</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        
+        <span class="c"># If a log file name is provided, enable logging to that file</span>
+        <span class="k">if</span> <span class="s">&quot;logfile&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">:</span>
+            <span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;logfile&quot;</span><span class="p">])</span>
+            <span class="n">handler</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+            <span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%(asctime)s</span><span class="s"> - </span><span class="si">%(name)s</span><span class="s"> - </span><span class="si">%(levelname)s</span><span class="s"> - </span><span class="si">%(message)s</span><span class="s">&quot;</span><span class="p">)</span>
+            <span class="n">handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">handler</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&quot;Logging started&quot;</span><span class="p">)</span>
+
+        <span class="c"># Setup SSL encryption</span>
+        <span class="c"># See http://flask.pocoo.org/snippets/111/. Keys and certificates can be generated here: http://www.selfsignedcertificate.com/.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssl_context</span> <span class="o">=</span> <span class="n">ssl</span><span class="o">.</span><span class="n">SSLContext</span><span class="p">(</span><span class="n">ssl</span><span class="o">.</span><span class="n">PROTOCOL_TLSv1_2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssl_context</span><span class="o">.</span><span class="n">load_cert_chain</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;ssl_certificate&quot;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;ssl_encryption_key&quot;</span><span class="p">])</span>
+    
+        <span class="c"># Initialize the endpoints, as defined in concrete subclasses</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_endpoints</span><span class="p">()</span>
+            
+        <span class="c"># Depending on the server mode, start the app in different ways</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;mode&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;local&quot;</span><span class="p">:</span>
+            <span class="c"># Run using Flask built in server with debugging on</span>
+
+            <span class="c"># Start the microservice in a separate thread, since the call does not return otherwise.</span>
+            <span class="c"># Also, use threaded=True, to allow the microservice to handle multiple requests.</span>
+            <span class="c"># To be able to run the debug mode, it is necessary to turn off the automatic reloading.</span>
+            <span class="c"># TODO: The SSL encryption does not seem to work, so it is turned off right now.</span>
+    <span class="c">#        self.thread = threading.Thread(target = self.ms.run, kwargs = {&quot;port&quot;: self.port, &quot;ssl_context&quot;: self.ssl_context})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">run</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;host&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="s">&quot;port&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="s">&quot;use_reloader&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&quot;threaded&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s">&quot;debug&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;mode&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;development&quot;</span><span class="p">,</span> <span class="s">&quot;production&quot;</span><span class="p">]:</span>
+            <span class="c"># Run using Flask built in server with debugging on</span>
+            <span class="c"># TODO: Later, maybe change this to running with Tornado or other framework</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">run</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;host&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="s">&quot;port&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="s">&quot;use_reloader&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&quot;threaded&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s">&quot;debug&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;Unknown server mode: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;mode&quot;</span><span class="p">])</span>
+            
+
+<div class="viewcode-block" id="Microservice.create_endpoints"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Microservice.create_endpoints">[docs]</a>    <span class="k">def</span> <span class="nf">create_endpoints</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        create_endpoints is used by the __init__ method to define the API of the microservice.</span>
+<span class="sd">        Override this method in subclasses to add service endpoints.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+</div>
+<div class="viewcode-block" id="Microservice.create_state"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Microservice.create_state">[docs]</a>    <span class="k">def</span> <span class="nf">create_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_dialogue</span><span class="p">,</span> <span class="n">endpoint</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a state that can be used in state machine like control flows.</span>
+<span class="sd">        state_dialogue is the name of the html template file to be rendered when the state is entered.</span>
+<span class="sd">        Currently, the state is just the dialogue file name.</span>
+<span class="sd">        If endpoint is provided, that endpoint is added to the list of endpoints.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">if</span> <span class="n">endpoint</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="k">lambda</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="n">state_dialogue</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">state_dialogue</span>
+
+    </div>
+<div class="viewcode-block" id="Microservice.go_to_state"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Microservice.go_to_state">[docs]</a>    <span class="k">def</span> <span class="nf">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Enters the state s, and displays its dialogue.</span>
+<span class="sd">        The optional kwargs are variables that can be evaluated when rendering the dialogue.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="Authentication"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Authentication">[docs]</a><span class="k">class</span> <span class="nc">Authentication</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The Authentication class provides storage for the information about users (user id, name, password hash, etc.)</span>
+<span class="sd">    This information is stored in a json file, containing a dictionary with user name as key and the other information as a value dictionary. </span>
+<span class="sd">    Also, it provides functionality for generating and handling tokens. Token related information is not stored persistently. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">users_filename</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the user database from file, if the file exists, or otherwise creates an empty file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">users_filename</span> <span class="o">=</span> <span class="n">users_filename</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c"># Read users from the file name</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">users_filename</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">users</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c"># File of services does not exist, so create it an empty dictionary and save it to the file</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">users</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">users_filename</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Authentication.user_exists"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Authentication.user_exists">[docs]</a>    <span class="k">def</span> <span class="nf">user_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">userid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns True if the user with the given id already exists, and False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">userid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">users</span>
+    
+</div>
+<div class="viewcode-block" id="Authentication.create_user"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Authentication.create_user">[docs]</a>    <span class="k">def</span> <span class="nf">create_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">userid</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds a user with the given id to the database. The password is stored as a hashed value.</span>
+<span class="sd">        If the userid already exists in the database, that information is overwritten.</span>
+<span class="sd">        &quot;&quot;&quot;</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="p">[</span><span class="n">userid</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;password_hash&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">password_hash</span><span class="p">(</span><span class="n">password</span><span class="p">),</span> <span class="s">&quot;email&quot;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">users_filename</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
+
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        TODO: Add this functionality</span>
+<span class="sd">        </span>
+<span class="sd">        # Send an email to the user.</span>
+<span class="sd">        # TODO: Remove the gmail info, put it into the settings file.</span>
+<span class="sd">        # TODO: Create a link to an endpoint where the user can validate the password.</span>
+<span class="sd">        gmail_address = &quot;noreply.orionresearch@gmail.com&quot;</span>
+<span class="sd">        gmail_password = &quot;&lt;password deleted&gt;&quot;</span>
+<span class="sd">        token = self.get_random_token(20)</span>
+
+<span class="sd">        message_text = &quot;To validate your COACH user identity, please follow this link: blablabla.com/&quot; + token</span>
+
+<span class="sd">        message = &quot;\From: %s\nTo: %s\nSubject: %s\n\n%s&quot; % (gmail_address, email, &quot;Your COACH account&quot;, message_text)</span>
+<span class="sd">        try:</span>
+<span class="sd">            server = smtplib.SMTP(&quot;smtp.gmail.com&quot;, 587)</span>
+<span class="sd">            server.ehlo()</span>
+<span class="sd">            server.starttls()</span>
+<span class="sd">            server.login(gmail_address, gmail_password)</span>
+<span class="sd">            server.sendmail(gmail_address, email, message)</span>
+<span class="sd">            server.close()</span>
+<span class="sd">            self.ms.logger.info(&quot;Successfully sent mail to &quot; + email)</span>
+<span class="sd">        except Exception as e:</span>
+<span class="sd">            self.ms.logger.error(&quot;Failed to send mail to &quot; + email)</span>
+<span class="sd">            self.ms.logger.error(&quot;Exception: &quot; + str(e))</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    
+</div>
+<div class="viewcode-block" id="Authentication.password_hash"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Authentication.password_hash">[docs]</a>    <span class="k">def</span> <span class="nf">password_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the salted hash value for the given password.</span>
+<span class="sd">        See https://wiki.python.org/moin/Md5Passwords.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">salt</span> <span class="o">=</span> <span class="s">&quot;fe5x19&quot;</span>
+        <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">md5</span><span class="p">((</span><span class="n">salt</span> <span class="o">+</span> <span class="n">password</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&quot;UTF-8&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+        
+    </div>
+<div class="viewcode-block" id="Authentication.check_user_password"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Authentication.check_user_password">[docs]</a>    <span class="k">def</span> <span class="nf">check_user_password</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">userid</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns True if the hash of the given password matches the one stored in the database, and otherwise False.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">userid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="p">[</span><span class="n">userid</span><span class="p">][</span><span class="s">&quot;password_hash&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">password_hash</span><span class="p">(</span><span class="n">password</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span> 
+    
+    </div>
+<div class="viewcode-block" id="Authentication.get_user_email"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Authentication.get_user_email">[docs]</a>    <span class="k">def</span> <span class="nf">get_user_email</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">userid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the email of a user.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="p">[</span><span class="n">userid</span><span class="p">][</span><span class="s">&quot;email&quot;</span><span class="p">]</span>
+    
+    </div>
+<div class="viewcode-block" id="Authentication.get_user_name"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Authentication.get_user_name">[docs]</a>    <span class="k">def</span> <span class="nf">get_user_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">userid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the name of a user.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="p">[</span><span class="n">userid</span><span class="p">][</span><span class="s">&quot;name&quot;</span><span class="p">]</span>
+
+</div>
+<div class="viewcode-block" id="Authentication.get_random_token"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Authentication.get_random_token">[docs]</a>    <span class="k">def</span> <span class="nf">get_random_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">length</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates a random token, i.e. a string of alphanumeric characters, of the requested length.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">string</span><span class="o">.</span><span class="n">ascii_lowercase</span> <span class="o">+</span> <span class="n">string</span><span class="o">.</span><span class="n">ascii_uppercase</span> <span class="o">+</span> <span class="n">string</span><span class="o">.</span><span class="n">digits</span><span class="p">)</span> 
+                        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">length</span><span class="p">)])</span>
+
+</div></div>
+<div class="viewcode-block" id="CaseDatabase"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase">[docs]</a><span class="k">class</span> <span class="nc">CaseDatabase</span><span class="p">:</span>
+    
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The case database provides the interface to the database for storing case information. It wraps an API around a standard graph DBMS.</span>
+<span class="sd">    </span>
+<span class="sd">    TODO: </span>
+<span class="sd">    - Probably, it is wise to use Neo4j&#39;s query language as much as possible, to minimize dependency</span>
+<span class="sd">    on the rest library.</span>
+<span class="sd">    - These actions should also generate entries into a history, showing who, when, and what has been done. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_db</span> <span class="o">=</span> <span class="n">GraphDatabase</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">username</span> <span class="o">=</span> <span class="n">username</span><span class="p">,</span> <span class="n">password</span> <span class="o">=</span> <span class="n">password</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="CaseDatabase.users"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.users">[docs]</a>    <span class="k">def</span> <span class="nf">users</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Queries the case database and returns an iterable of the users with the given id, or all users is no user_id is provided.</span>
+<span class="sd">        </span>
+<span class="sd">        TODO: replace with the following query:</span>
+<span class="sd">        q = MATCH (u: User) WHERE u.user_id = %s RETURN u % user_id </span>
+<span class="sd">        q = MATCH (u: User) RETURN u </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">user_id</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;User&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">user_id</span> <span class="o">=</span> <span class="n">user_id</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;User&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c"># Label did not exist, so create it and return the empty list</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="s">&quot;User&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+    
+    </div>
+<div class="viewcode-block" id="CaseDatabase.user_cases"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.user_cases">[docs]</a>    <span class="k">def</span> <span class="nf">user_cases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        user_cases queries the case database and returns a list of the cases connected to the user.</span>
+<span class="sd">        Each case is represented by a pair indicating case id and case title.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;MATCH (case: Case) -[Stakeholder]-&gt; (user {user_id: </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s">}) RETURN id(case), case.title&quot;&quot;&quot;</span> <span class="o">%</span> <span class="n">user_id</span>
+        <span class="k">return</span> <span class="p">[(</span><span class="n">case_id</span><span class="p">,</span> <span class="n">case_title</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">case_id</span><span class="p">,</span> <span class="n">case_title</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">q</span><span class="p">)]</span>
+        
+    </div>
+<div class="viewcode-block" id="CaseDatabase.create_user"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.create_user">[docs]</a>    <span class="k">def</span> <span class="nf">create_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a new user in the database, if it does not exist already.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="p">(</span><span class="n">user_id</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">new_user</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">user_id</span> <span class="o">=</span> <span class="n">user_id</span><span class="p">)</span>
+            <span class="n">new_user</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s">&quot;User&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="CaseDatabase.create_case"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.create_case">[docs]</a>    <span class="k">def</span> <span class="nf">create_case</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">initiator</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a new case in the database, with a relation to the initiating user. It returns the database id of the new case.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">new_case</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">title</span> <span class="o">=</span> <span class="n">title</span><span class="p">,</span> <span class="n">description</span> <span class="o">=</span> <span class="n">description</span><span class="p">)</span>
+        <span class="n">new_case</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s">&quot;Case&quot;</span><span class="p">)</span>
+        
+        <span class="c"># Mark the current user as a stakeholder and initiator of this decision case</span>
+        <span class="n">new_case</span><span class="o">.</span><span class="n">relationships</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="s">&quot;Stakeholder&quot;</span><span class="p">,</span> <span class="n">initiator</span><span class="p">,</span> <span class="n">role</span> <span class="o">=</span> <span class="s">&quot;initiator&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_case</span><span class="o">.</span><span class="n">id</span>
+        
+    </div>
+<div class="viewcode-block" id="CaseDatabase.add_stakeholder"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.add_stakeholder">[docs]</a>    <span class="k">def</span> <span class="nf">add_stakeholder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">case_id</span><span class="p">):</span>    
+        <span class="n">user_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;User&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">user_id</span> <span class="o">=</span> <span class="n">user_id</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">case_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">case_id</span><span class="p">]</span>
+        <span class="n">case_node</span><span class="o">.</span><span class="n">relationships</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="s">&quot;Stakeholder&quot;</span><span class="p">,</span> <span class="n">user_node</span><span class="p">,</span> <span class="n">role</span> <span class="o">=</span> <span class="s">&quot;contributor&quot;</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="CaseDatabase.create_alternative"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.create_alternative">[docs]</a>    <span class="k">def</span> <span class="nf">create_alternative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">case_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a decision alternative and links it to the case.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">case_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">case_id</span><span class="p">]</span>
+        <span class="n">new_alternative</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">title</span> <span class="o">=</span> <span class="n">title</span><span class="p">,</span> <span class="n">description</span> <span class="o">=</span> <span class="n">description</span><span class="p">)</span>
+        <span class="n">new_alternative</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s">&quot;Alternative&quot;</span><span class="p">)</span>
+        <span class="n">case_node</span><span class="o">.</span><span class="n">relationships</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="s">&quot;Alternative&quot;</span><span class="p">,</span> <span class="n">new_alternative</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="CaseDatabase.get_decision_process"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.get_decision_process">[docs]</a>    <span class="k">def</span> <span class="nf">get_decision_process</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">case_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the decision process url of the case, or None if no decision process has been selected.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;MATCH (case: Case) WHERE id(case) = </span><span class="si">%s</span><span class="s"> RETURN case.decision_process LIMIT 1&quot;&quot;&quot;</span> <span class="o">%</span> <span class="n">case_id</span>
+            <span class="c"># Why is the result a list of lists????</span>
+            <span class="c"># Probably, because each return can contain several elements and hence they are gathered in a list</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">q</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+    
+    </div>
+<div class="viewcode-block" id="CaseDatabase.change_decision_process"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.change_decision_process">[docs]</a>    <span class="k">def</span> <span class="nf">change_decision_process</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">case_id</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Changes the decision process url associated with a case.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">q</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;MATCH (case: Case) WHERE id(case) = </span><span class="si">%s</span><span class="s"> SET case.decision_process = </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">case_id</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="CaseDatabase.change_case_property"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.change_case_property">[docs]</a>    <span class="k">def</span> <span class="nf">change_case_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">case_id</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Changes the property name of the case_id node to become value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;MATCH (case: Case) WHERE id(case) = </span><span class="si">%s</span><span class="s"> SET case.</span><span class="si">%s</span><span class="s"> = </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">case_id</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+        
+    </div>
+<div class="viewcode-block" id="CaseDatabase.get_case_property"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.get_case_property">[docs]</a>    <span class="k">def</span> <span class="nf">get_case_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">case_id</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the value of the property name of the case_id node, or None if it does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;MATCH (case: Case) WHERE id(case) = </span><span class="si">%s</span><span class="s"> RETURN case.</span><span class="si">%s</span><span class="s">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">case_id</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">q</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        
+    </div>
+<div class="viewcode-block" id="CaseDatabase.get_decision_alternatives"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.get_decision_alternatives">[docs]</a>    <span class="k">def</span> <span class="nf">get_decision_alternatives</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">case_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the list of decision alternatives associated with the case_id node, returning both title and id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;MATCH (case: Case) -[:Alternative]-&gt; (alt: Alternative) RETURN alt.title, id(alt)&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">q</span><span class="p">))</span>
+    
+    </div>
+<div class="viewcode-block" id="CaseDatabase.change_alternative_property"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.change_alternative_property">[docs]</a>    <span class="k">def</span> <span class="nf">change_alternative_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alternative</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Changes the property name of the alternative node to become value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;MATCH (alt: Alternative) WHERE id(alt) = </span><span class="si">%s</span><span class="s"> SET alt.</span><span class="si">%s</span><span class="s"> = </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">alternative</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+        
+    </div>
+<div class="viewcode-block" id="CaseDatabase.get_alternative_property"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.CaseDatabase.get_alternative_property">[docs]</a>    <span class="k">def</span> <span class="nf">get_alternative_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alternative</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the value of the property name of the alternative node, or None if it does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;MATCH (alt: Alternative) WHERE id(alt) = </span><span class="si">%s</span><span class="s"> RETURN alt.</span><span class="si">%s</span><span class="s">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">alternative</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">q</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        
+    </div></div>
+<div class="viewcode-block" id="RootService"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService">[docs]</a><span class="k">class</span> <span class="nc">RootService</span><span class="p">(</span><span class="n">Microservice</span><span class="p">):</span>
+    
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    RootService implements the overall workflow manager and decision case manager. It is configured with links to </span>
+<span class="sd">    a number of directories, which are used for searching for other services. It contains the basic</span>
+<span class="sd">    functionality for logging in, registering users, creating and closing decision cases, attaching</span>
+<span class="sd">    users to a decision case, and selecting the decision process. Every installation of COACH has exactly one instance of this class.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings_file_name</span><span class="p">,</span> <span class="n">secret_args</span><span class="p">,</span> <span class="n">handling_class</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the RootService object. The secret_args argument should be a list of three strings:</span>
+<span class="sd">        1. The database user name.</span>
+<span class="sd">        2. The database password.</span>
+<span class="sd">        3. The session encryption key.</span>
+<span class="sd">        These are kept outside the settings file to ensure that they do not spread when files are shared in a repository.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">settings_file_name</span><span class="p">,</span> <span class="n">handling_class</span><span class="p">)</span>
+
+        <span class="c"># Setup encryption for settings cookies</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">secret_key</span> <span class="o">=</span> <span class="n">secret_args</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="c"># Initialize the user database</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">authentication</span> <span class="o">=</span> <span class="n">Authentication</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;authentication_database&quot;</span><span class="p">])</span>
+
+        <span class="c"># Initialize the case database</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span> <span class="o">=</span> <span class="n">CaseDatabase</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;database&quot;</span><span class="p">],</span> 
+                                       <span class="n">secret_args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> 
+                                       <span class="n">secret_args</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Case database successfully connected&quot;</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;Fatal error: Case database cannot be accessed. Make sure that Neo4j is running!&quot;</span><span class="p">)</span>
+
+        <span class="c"># Store point to service directories</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">service_directories</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;service_directories&quot;</span><span class="p">]</span>
+                
+    
+<div class="viewcode-block" id="RootService.create_endpoints"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.create_endpoints">[docs]</a>    <span class="k">def</span> <span class="nf">create_endpoints</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># States, represented by dialogues</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initial_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_state</span><span class="p">(</span><span class="s">&quot;initial_dialogue.html&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_user_dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_state</span><span class="p">(</span><span class="s">&quot;create_user_dialogue.html&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_state</span><span class="p">(</span><span class="s">&quot;main_menu.html&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_case_dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_state</span><span class="p">(</span><span class="s">&quot;create_case_dialogue.html&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">open_case_dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_state</span><span class="p">(</span><span class="s">&quot;open_case_dialogue.html&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">change_decision_process_dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_state</span><span class="p">(</span><span class="s">&quot;change_decision_process_dialogue.html&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_stakeholder_dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_state</span><span class="p">(</span><span class="s">&quot;add_stakeholder_dialogue.html&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_alternative_dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_state</span><span class="p">(</span><span class="s">&quot;create_alternative_dialogue.html&quot;</span><span class="p">)</span>
+        
+        <span class="c"># Endpoints for transitions between the states without side effects</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_transition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/create_user_dialogue&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_user_dialogue_transition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/main_menu&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">,</span> <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;GET&quot;</span><span class="p">,</span> <span class="s">&quot;POST&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/create_case_dialogue&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_case_dialogue_transition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/open_case_dialogue&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">open_case_dialogue_transition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/change_decision_process_dialogue&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_decision_process_dialogue_transition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/add_stakeholder_dialogue&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_stakeholder_dialogue_transition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/create_alternative_dialogue&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_alternative_dialogue_transition</span><span class="p">)</span>
+        
+        <span class="c"># Endpoints for transitions between states with side effects</span>
+        <span class="c"># TODO: Do all these have to be posts, to ensure that data is encrypted when HTTPS is implemented?</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/login_user&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">login_user</span><span class="p">,</span> <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;POST&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/create_user&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_user</span><span class="p">,</span> <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;POST&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/create_case&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_case</span><span class="p">,</span> <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;POST&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/logout&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/change_password&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_password</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/open_case&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">open_case</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/edit_case_description&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edit_case_description</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/change_decision_process&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_decision_process</span><span class="p">,</span> <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;POST&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/add_stakeholder&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_stakeholder</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/create_alternative&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_alternative</span><span class="p">,</span> <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;POST&quot;</span><span class="p">])</span>
+
+        <span class="c"># Endpoints for database and directory services for usage by other components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/get_service_directories&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_service_directories</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/change_case_property&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_case_property</span><span class="p">,</span> <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;POST&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/get_case_property&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_case_property</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/get_decision_alternatives&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_decision_alternatives</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/change_alternative_property&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_alternative_property</span><span class="p">,</span> <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;POST&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/get_alternative_property&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_alternative_property</span><span class="p">)</span>
+        
+</div>
+<div class="viewcode-block" id="RootService.initial_transition"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.initial_transition">[docs]</a>    <span class="k">def</span> <span class="nf">initial_transition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_state</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="RootService.create_user_dialogue_transition"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.create_user_dialogue_transition">[docs]</a>    <span class="k">def</span> <span class="nf">create_user_dialogue_transition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">create_user_dialogue</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="RootService.main_menu_transition"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.main_menu_transition">[docs]</a>    <span class="k">def</span> <span class="nf">main_menu_transition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Transition to the main menu. If the argument main_dialogue is passed with the call, it is first fetched from the URLs provided.</span>
+<span class="sd">        If the case in the database has a decision method selected, its process method is fetched and included in the context.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">kwargs</span>
+        <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;main_dialogue&quot;</span><span class="p">]:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">url</span><span class="p">:</span>
+                <span class="c"># Fetch data from the provided url, passing the url of the root server as an argument to allow database access etc.</span>
+                <span class="n">context</span><span class="p">[</span><span class="n">arg</span><span class="p">]</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;root&quot;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">url_root</span><span class="p">})</span><span class="o">.</span><span class="n">text</span>
+        <span class="c"># If </span>
+        <span class="k">if</span> <span class="s">&quot;message&quot;</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="n">context</span><span class="p">[</span><span class="s">&quot;message&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;message&quot;</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">decision_process</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">get_decision_process</span><span class="p">(</span><span class="n">session</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">decision_process</span><span class="p">:</span>
+                <span class="n">context</span><span class="p">[</span><span class="s">&quot;process_menu&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;http://&quot;</span> <span class="o">+</span> <span class="n">decision_process</span> <span class="o">+</span> <span class="s">&quot;/process_menu&quot;</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;case_id&quot;</span><span class="p">:</span> <span class="n">session</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">]})</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">main_menu_state</span><span class="p">,</span> <span class="o">**</span><span class="n">context</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="RootService.create_case_dialogue_transition"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.create_case_dialogue_transition">[docs]</a>    <span class="k">def</span> <span class="nf">create_case_dialogue_transition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">create_case_dialogue</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="RootService.open_case_dialogue_transition"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.open_case_dialogue_transition">[docs]</a>    <span class="k">def</span> <span class="nf">open_case_dialogue_transition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Create links to the user&#39;s cases</span>
+        <span class="n">links</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;&lt;A HREF=</span><span class="se">\&quot;</span><span class="s">/open_case?case_id=</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s">&gt;</span><span class="si">%s</span><span class="s">&lt;/A&gt;&quot;</span> <span class="o">%</span> <span class="n">pair</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">user_cases</span><span class="p">(</span><span class="n">session</span><span class="p">[</span><span class="s">&quot;user_id&quot;</span><span class="p">])]</span>
+
+        <span class="n">dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">open_case_dialogue</span><span class="p">,</span> <span class="n">user_cases</span> <span class="o">=</span> <span class="n">links</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">(</span><span class="n">main_dialogue</span> <span class="o">=</span> <span class="n">dialogue</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="RootService.change_decision_process_dialogue_transition"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.change_decision_process_dialogue_transition">[docs]</a>    <span class="k">def</span> <span class="nf">change_decision_process_dialogue_transition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">directories</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;service_directories&quot;</span><span class="p">]</span>
+        <span class="n">services</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">current_decision_process</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">get_decision_process</span><span class="p">(</span><span class="n">session</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">directories</span><span class="p">:</span>
+            <span class="n">services</span> <span class="o">+=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">d</span> <span class="o">+</span> <span class="s">&quot;/get_services?type=decision_process&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;&lt;OPTION value=</span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s"> </span><span class="si">%s</span><span class="s">&gt; </span><span class="si">%s</span><span class="s"> &lt;/A&gt;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="s">&quot;selected&quot;</span> <span class="k">if</span> <span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">current_decision_process</span> <span class="k">else</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">services</span><span class="p">]</span>
+        
+        <span class="n">dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">change_decision_process_dialogue</span><span class="p">,</span> <span class="n">decision_processes</span> <span class="o">=</span> <span class="n">options</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">(</span><span class="n">main_dialogue</span> <span class="o">=</span> <span class="n">dialogue</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="RootService.add_stakeholder_dialogue_transition"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.add_stakeholder_dialogue_transition">[docs]</a>    <span class="k">def</span> <span class="nf">add_stakeholder_dialogue_transition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Create links to the decision processes</span>
+        <span class="n">users</span> <span class="o">=</span> <span class="p">[(</span><span class="n">u</span><span class="p">[</span><span class="s">&quot;user_id&quot;</span><span class="p">],</span> <span class="n">u</span><span class="p">[</span><span class="s">&quot;name&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">users</span><span class="p">()]</span>
+        <span class="n">links</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;&lt;A HREF=</span><span class="se">\&quot;</span><span class="s">/add_stakeholder?user_id=</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s">&gt; </span><span class="si">%s</span><span class="s"> &lt;/A&gt;&quot;</span> <span class="o">%</span> <span class="n">pair</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">users</span><span class="p">]</span>
+        
+        <span class="n">dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_stakeholder_dialogue</span><span class="p">,</span> <span class="n">stakeholders</span> <span class="o">=</span> <span class="n">links</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">(</span><span class="n">main_dialogue</span> <span class="o">=</span> <span class="n">dialogue</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="RootService.create_alternative_dialogue_transition"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.create_alternative_dialogue_transition">[docs]</a>    <span class="k">def</span> <span class="nf">create_alternative_dialogue_transition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">create_alternative_dialogue</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="RootService.login_user"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.login_user">[docs]</a>    <span class="k">def</span> <span class="nf">login_user</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Endpoint representing the transition from the initial dialogue to the main menu.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;user_id&quot;</span><span class="p">]</span>
+        <span class="n">password</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;password&quot;</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="n">user_id</span> <span class="o">==</span> <span class="s">&quot;&quot;</span> <span class="ow">or</span> <span class="n">password</span> <span class="o">==</span> <span class="s">&quot;&quot;</span><span class="p">:</span>
+            <span class="c"># If user_id or password is missing, show the dialogue again with an error message</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="s">&quot;FieldMissing&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">authentication</span><span class="o">.</span><span class="n">user_exists</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
+            <span class="c"># If user_id does not exist, show the dialogue again with an error message</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="s">&quot;NoSuchUser&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">authentication</span><span class="o">.</span><span class="n">check_user_password</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+            <span class="c"># If the wrong password was entered, show the dialogue again with an error message</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="s">&quot;WrongPassword&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Login successful, save some data in the session object, and go to main menu</span>
+            <span class="n">session</span><span class="p">[</span><span class="s">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">user_id</span>
+            <span class="c"># Add the user to the case db if it is not already there</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">create_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">()</span>
+
+</div>
+<div class="viewcode-block" id="RootService.create_user"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.create_user">[docs]</a>    <span class="k">def</span> <span class="nf">create_user</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Endpoint representing the transition from the create user dialogue to the main menu.</span>
+<span class="sd">        If the user exists, it returns to the create user dialogue and displays a message about this.</span>
+<span class="sd">        As a transition action, it creates the new user in the database.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;user_id&quot;</span><span class="p">]</span>
+        <span class="n">password1</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;password1&quot;</span><span class="p">]</span>
+        <span class="n">password2</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;password2&quot;</span><span class="p">]</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;name&quot;</span><span class="p">]</span>
+        <span class="n">email</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;email&quot;</span><span class="p">]</span>
+        
+        <span class="c"># TODO: Show the correct values pre-filled when the dialogue is reopened. </span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">authentication</span><span class="o">.</span><span class="n">user_exists</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
+            <span class="c"># If the user already exists, go back to the create user dialogue, with a message</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">create_user_dialogue</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="s">&quot;UserExists&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">password1</span> <span class="o">!=</span> <span class="n">password2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">create_user_dialogue</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="s">&quot;PasswordsNotEqual&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Otherwise, create the user in the database, and return to the initial dialogue.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">authentication</span><span class="o">.</span><span class="n">create_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">password1</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_state</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="RootService.create_case"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.create_case">[docs]</a>    <span class="k">def</span> <span class="nf">create_case</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Endpoint representing the transition from the create case dialogue to the main menu.</span>
+<span class="sd">        As a transition action, it creates the new case in the database, and connects the current user to it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">title</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;title&quot;</span><span class="p">]</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;description&quot;</span><span class="p">]</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">users</span><span class="p">(</span><span class="n">session</span><span class="p">[</span><span class="s">&quot;user_id&quot;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="n">session</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">create_case</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">user</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">()</span>
+
+</div>
+<div class="viewcode-block" id="RootService.open_case"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.open_case">[docs]</a>    <span class="k">def</span> <span class="nf">open_case</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># TODO: Instead of showing case id on screen, it should be the case name + id</span>
+
+        <span class="n">session</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">()</span>
+        
+</div>
+<div class="viewcode-block" id="RootService.logout"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.logout">[docs]</a>    <span class="k">def</span> <span class="nf">logout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Endpoint representing the transition to the logged out state, which is the same as the initial state.</span>
+<span class="sd">        The user and case being worked on is deleted from the session.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;user_id&quot;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;case_id&quot;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_state</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="RootService.change_password"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.change_password">[docs]</a>    <span class="k">def</span> <span class="nf">change_password</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">(</span><span class="n">main_dialogue</span> <span class="o">=</span> <span class="s">&quot;Not yet implemented!&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="RootService.edit_case_description"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.edit_case_description">[docs]</a>    <span class="k">def</span> <span class="nf">edit_case_description</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">(</span><span class="n">main_dialogue</span> <span class="o">=</span> <span class="s">&quot;Not yet implemented!&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="RootService.change_decision_process"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.change_decision_process">[docs]</a>    <span class="k">def</span> <span class="nf">change_decision_process</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;url&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">change_decision_process</span><span class="p">(</span><span class="n">session</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">],</span> <span class="n">url</span><span class="p">)</span>
+        <span class="n">menu</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;http://&quot;</span> <span class="o">+</span> <span class="n">url</span> <span class="o">+</span> <span class="s">&quot;/process_menu&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">(</span><span class="n">main_dialogue</span> <span class="o">=</span> <span class="s">&quot;Decision process changed!&quot;</span><span class="p">,</span> <span class="n">process_menu</span> <span class="o">=</span> <span class="n">menu</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="RootService.add_stakeholder"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.add_stakeholder">[docs]</a>    <span class="k">def</span> <span class="nf">add_stakeholder</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds a Stakeholder relationship between the current case and the user given as argument, with the role contributor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;user_id&quot;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">add_stakeholder</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">session</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">(</span><span class="n">main_dialogue</span> <span class="o">=</span> <span class="s">&quot;Stakeholder added!&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="RootService.create_alternative"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.create_alternative">[docs]</a>    <span class="k">def</span> <span class="nf">create_alternative</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds a new decision alternative and adds a relation from the case to the alternative.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;title&quot;</span><span class="p">]</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">&quot;description&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">create_alternative</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">session</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_menu_transition</span><span class="p">(</span><span class="n">main_dialogue</span> <span class="o">=</span> <span class="s">&quot;New alternative created!&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="RootService.get_service_directories"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.get_service_directories">[docs]</a>    <span class="k">def</span> <span class="nf">get_service_directories</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the list of service directories registered with this service as a json file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">service_directories</span><span class="p">))</span>
+
+    </div>
+<div class="viewcode-block" id="RootService.change_case_property"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.change_case_property">[docs]</a>    <span class="k">def</span> <span class="nf">change_case_property</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Changes a property of the indicated case id in the database.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">change_case_property</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">],</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;name&quot;</span><span class="p">],</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;value&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&quot;Ok&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="RootService.get_decision_alternatives"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.get_decision_alternatives">[docs]</a>    <span class="k">def</span> <span class="nf">get_decision_alternatives</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the list of decision alternatives associated with a case id, as a json file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">alternatives</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">get_decision_alternatives</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">alternatives</span><span class="p">))</span>
+    
+    </div>
+<div class="viewcode-block" id="RootService.get_case_property"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.get_case_property">[docs]</a>    <span class="k">def</span> <span class="nf">get_case_property</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the value of a certain property of the indicated case id in the database.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">get_case_property</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">],</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;name&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="RootService.change_alternative_property"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.change_alternative_property">[docs]</a>    <span class="k">def</span> <span class="nf">change_alternative_property</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Changes a property of the indicated case id in the database.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">change_alternative_property</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;alternative&quot;</span><span class="p">],</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;name&quot;</span><span class="p">],</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;value&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&quot;Ok&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="RootService.get_alternative_property"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.RootService.get_alternative_property">[docs]</a>    <span class="k">def</span> <span class="nf">get_alternative_property</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the value of a certain property of the indicated alternative in the database.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">caseDB</span><span class="o">.</span><span class="n">get_alternative_property</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;alternative&quot;</span><span class="p">],</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;name&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    </div></div>
+<div class="viewcode-block" id="DirectoryService"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.DirectoryService">[docs]</a><span class="k">class</span> <span class="nc">DirectoryService</span><span class="p">(</span><span class="n">Microservice</span><span class="p">):</span>
+    
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    DirectoryMicroservices are used for providing catalogues of other services. They can be used by</span>
+<span class="sd">    RootServices to look up services of different kinds.</span>
+<span class="sd">    The list of services is stored in a local file on json format.</span>
+<span class="sd">    </span>
+<span class="sd">    The following methods are provided:</span>
+<span class="sd">    /addService?type=X&amp;name=Y&amp;url=Z</span>
+<span class="sd">    /removeService?url=Y</span>
+<span class="sd">    /getServices[?type=X]</span>
+<span class="sd">    </span>
+<span class="sd">    TODO: Possibly, this could also run some tests of the service, to see that it fulfils the protocol.</span>
+<span class="sd">    See also paper on SECO quality assurance, and select techniques from there.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings_file_name</span><span class="p">,</span> <span class="n">handling_class</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the microservice, and then reads the data file of registered services from a json file,</span>
+<span class="sd">        or creates a json file if none exists.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">settings_file_name</span><span class="p">,</span> <span class="n">handling_class</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&quot;directory_file_name&quot;</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c"># Read file of services into a dictionary</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">services</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c"># File of services does not exist, so create it an empty dictionary and save it to the file</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">services</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">services</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                
+    
+<div class="viewcode-block" id="DirectoryService.create_endpoints"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.DirectoryService.create_endpoints">[docs]</a>    <span class="k">def</span> <span class="nf">create_endpoints</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Initialize the API</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/get_services&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_services</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/add_service&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_service</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/remove_service&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_service</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="DirectoryService.get_services"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.DirectoryService.get_services">[docs]</a>    <span class="k">def</span> <span class="nf">get_services</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a list of available services of the given type, in json format.</span>
+<span class="sd">        To allow the user to manually edit the file, it is first read from file into self.services.</span>
+<span class="sd">        Then this list is filtered.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">services</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="n">service_type</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;type&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">service_type</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">([</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">services</span> <span class="k">if</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">service_type</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">([</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">services</span><span class="p">])</span>
+
+</div>
+<div class="viewcode-block" id="DirectoryService.add_service"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.DirectoryService.add_service">[docs]</a>    <span class="k">def</span> <span class="nf">add_service</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds a new service, with type, name, and URL, and saves the services file.</span>
+<span class="sd">        If the given URL already exists, it should be removed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">service_type</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;type&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;url&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">services</span> <span class="o">=</span> <span class="p">[</span><span class="n">post</span> <span class="k">for</span> <span class="n">post</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">services</span> <span class="k">if</span> <span class="n">post</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="n">url</span><span class="p">]</span> <span class="o">+</span> <span class="p">[(</span><span class="n">service_type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">url</span><span class="p">)]</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">services</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s">&quot;&quot;</span>
+
+</div>
+<div class="viewcode-block" id="DirectoryService.remove_service"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.DirectoryService.remove_service">[docs]</a>    <span class="k">def</span> <span class="nf">remove_service</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Removes a service based on its URL.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;url&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">services</span> <span class="o">=</span> <span class="p">[</span><span class="n">post</span> <span class="k">for</span> <span class="n">post</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">services</span> <span class="k">if</span> <span class="n">post</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="n">url</span><span class="p">]</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">services</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s">&quot;&quot;</span>
+
+</div></div>
+<div class="viewcode-block" id="DecisionProcessService"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.DecisionProcessService">[docs]</a><span class="k">class</span> <span class="nc">DecisionProcessService</span><span class="p">(</span><span class="n">Microservice</span><span class="p">):</span>
+    
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class for decision process microservices. It can provide a process menu to the Root Service, </span>
+<span class="sd">    and when the user selects different process steps, further endpoints of the decision process can be invoked. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="DecisionProcessService.create_endpoints"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.DecisionProcessService.create_endpoints">[docs]</a>    <span class="k">def</span> <span class="nf">create_endpoints</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Initialize the API</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/process_menu&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_menu</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="EstimationMethodService"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.EstimationMethodService">[docs]</a><span class="k">class</span> <span class="nc">EstimationMethodService</span><span class="p">(</span><span class="n">Microservice</span><span class="p">):</span>
+    
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generic class for wrapping estimation methods into a web service. Normally, a contributer of an estimation method would not need to change this class,</span>
+<span class="sd">    but only provide the handling EstimationMethod class.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="EstimationMethodService.create_endpoints"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.EstimationMethodService.create_endpoints">[docs]</a>    <span class="k">def</span> <span class="nf">create_endpoints</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Initialize the API</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/info&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handling_class</span><span class="o">.</span><span class="n">as_view</span><span class="p">(</span><span class="s">&quot;info&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/dialogue&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handling_class</span><span class="o">.</span><span class="n">as_view</span><span class="p">(</span><span class="s">&quot;dialogue&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/evaluate&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handling_class</span><span class="o">.</span><span class="n">as_view</span><span class="p">(</span><span class="s">&quot;evaluate&quot;</span><span class="p">))</span>
+        
+</div></div>
+<div class="viewcode-block" id="Method"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Method">[docs]</a><span class="k">class</span> <span class="nc">Method</span><span class="p">(</span><span class="n">View</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class for all methods, implementing the dispatch mechanism for service endpoints.</span>
+<span class="sd">    All concrete subclasses should implement the following method:</span>
+<span class="sd">    /info - implemented by the info method</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Method.dispatch_request"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.Method.dispatch_request">[docs]</a>    <span class="k">def</span> <span class="nf">dispatch_request</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Dispatches each endpoint request to a separate function in the handling class.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Call the method of the object that corresponds to the endpoint name</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">endpoint</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_params</span><span class="p">())</span>
+
+        <span class="c"># Create a response, and add some standard header information</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">Response</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s">&#39;Cache-Control&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;no-cache, no-store, must-revalidate&#39;</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s">&#39;Pragma&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;no-cache&#39;</span>
+        <span class="k">return</span> <span class="n">response</span>
+
+</div></div>
+<div class="viewcode-block" id="EstimationMethod"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.EstimationMethod">[docs]</a><span class="k">class</span> <span class="nc">EstimationMethod</span><span class="p">(</span><span class="n">Method</span><span class="p">):</span>
+    
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is the base class for EstimationMethods.</span>
+<span class="sd">    Concrete instances should implement the following methods:</span>
+<span class="sd">    /dialogue?param1=val1&amp;...&amp;paramN=valN - implemented by the dialogue method</span>
+<span class="sd">    /evaluate?param1=val1&amp;...&amp;paramN=valN - implemented by the evaluate method</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="EstimationMethod.get_params"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.EstimationMethod.get_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a dictionary with value provided in the HTTP request for each of the</span>
+<span class="sd">        parameters defined in the parameterNames() method defines in a subclass.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_names</span><span class="p">():</span>
+            <span class="n">params</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">params</span>
+    
+    </div>
+<div class="viewcode-block" id="EstimationMethod.dialogue"><a class="viewcode-back" href="../../../COACH.framework.html#COACH.framework.coach.EstimationMethod.dialogue">[docs]</a>    <span class="k">def</span> <span class="nf">dialogue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a HTML snippet with one text box for each parameter, which can be inserted into a web page.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">entries</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_params</span><span class="p">():</span>
+            <span class="n">entries</span> <span class="o">=</span> <span class="n">entries</span> <span class="o">+</span> <span class="n">n</span> <span class="o">+</span> <span class="s">&quot;: &lt;INPUT TYPE=</span><span class="se">\&quot;</span><span class="s">text</span><span class="se">\&quot;</span><span class="s"> name=</span><span class="se">\&quot;</span><span class="s">&quot;</span> <span class="o">+</span> <span class="n">n</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\&quot;</span><span class="s">&gt;&lt;BR&gt;&quot;</span>
+        <span class="k">return</span> <span class="n">entries</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">COACH 0,1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2016, Jakob Axelsson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

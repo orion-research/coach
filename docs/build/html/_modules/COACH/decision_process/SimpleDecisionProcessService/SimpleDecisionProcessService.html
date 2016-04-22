@@ -1,0 +1,263 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService &mdash; COACH 0,1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '0,1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="COACH 0,1 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">COACH 0,1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">An example of a decision process service. It implements a simple decision process in three steps:</span>
+<span class="sd">1. Select an estimation method to be used to rank the value of alternatives.</span>
+<span class="sd">2. For each alternative, estimate the value of each alternative.</span>
+<span class="sd">3. Review the resulting ranking.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c"># Set python import path to include COACH top directory</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">curdir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">pardir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">pardir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">pardir</span><span class="p">))</span>
+
+
+<span class="c"># Coach framework</span>
+<span class="kn">from</span> <span class="nn">COACH.framework</span> <span class="kn">import</span> <span class="n">coach</span>
+
+<span class="c"># Standard libraries</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="c"># Web server framework</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">request</span><span class="p">,</span> <span class="n">redirect</span>
+<span class="kn">from</span> <span class="nn">flask.templating</span> <span class="kn">import</span> <span class="n">render_template</span>
+
+<span class="kn">import</span> <span class="nn">requests</span>
+
+
+<div class="viewcode-block" id="SimpleDecisionProcessService"><a class="viewcode-back" href="../../../../COACH.decision_process.SimpleDecisionProcessService.html#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService">[docs]</a><span class="k">class</span> <span class="nc">SimpleDecisionProcessService</span><span class="p">(</span><span class="n">coach</span><span class="o">.</span><span class="n">DecisionProcessService</span><span class="p">):</span>
+
+<div class="viewcode-block" id="SimpleDecisionProcessService.create_endpoints"><a class="viewcode-back" href="../../../../COACH.decision_process.SimpleDecisionProcessService.html#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.create_endpoints">[docs]</a>    <span class="k">def</span> <span class="nf">create_endpoints</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Initialize the API</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SimpleDecisionProcessService</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">create_endpoints</span><span class="p">()</span>
+
+        <span class="c"># States, represented by dialogues</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">select_estimation_method_dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_state</span><span class="p">(</span><span class="s">&quot;select_estimation_method_dialogue.html&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">perform_ranking_dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_state</span><span class="p">(</span><span class="s">&quot;perform_ranking_dialogue.html&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show_ranking_dialogue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_state</span><span class="p">(</span><span class="s">&quot;show_ranking_dialogue.html&quot;</span><span class="p">)</span>
+        
+        <span class="c"># Endpoints for transitions between the states without side effects</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/select_estimation_method_dialogue&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">select_estimation_method_dialogue_transition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/perform_ranking_dialogue&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">perform_ranking_dialogue_transition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/show_ranking_dialogue&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_ranking_dialogue_transition</span><span class="p">)</span>
+        
+        <span class="c"># Endpoints for transitions between states with side effects</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/select_estimation_method&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">select_estimation_method</span><span class="p">,</span> <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;POST&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="s">&quot;/perform_ranking&quot;</span><span class="p">,</span> <span class="n">view_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">perform_ranking</span><span class="p">,</span> <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;POST&quot;</span><span class="p">])</span>
+
+</div>
+<div class="viewcode-block" id="SimpleDecisionProcessService.process_menu"><a class="viewcode-back" href="../../../../COACH.decision_process.SimpleDecisionProcessService.html#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.process_menu">[docs]</a>    <span class="k">def</span> <span class="nf">process_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s">&quot;process_menu.html&quot;</span><span class="p">,</span> <span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">url_root</span><span class="p">,</span> <span class="n">case_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ms</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;Error in process_menu: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+            <span class="k">return</span> <span class="s">&quot;Error in process_menu: Please check log file!&quot;</span>
+
+</div>
+<div class="viewcode-block" id="SimpleDecisionProcessService.select_estimation_method_dialogue_transition"><a class="viewcode-back" href="../../../../COACH.decision_process.SimpleDecisionProcessService.html#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.select_estimation_method_dialogue_transition">[docs]</a>    <span class="k">def</span> <span class="nf">select_estimation_method_dialogue_transition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Endpoint which lets the user select which estimation method to use for this decision process.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;root&quot;</span><span class="p">]</span>
+        <span class="n">case_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">]</span>
+        <span class="c"># Fetch the available services from the directories available in the root.</span>
+        <span class="n">directories</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">root</span> <span class="o">+</span> <span class="s">&quot;get_service_directories&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="n">services</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">directories</span><span class="p">:</span>
+            <span class="n">services</span> <span class="o">+=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">d</span> <span class="o">+</span> <span class="s">&quot;/get_services?type=estimation_method&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+        <span class="c"># Create the alternatives for a dropdown menu</span>
+        <span class="c"># TODO: It should show the current estimation method as preselected.</span>
+        
+        <span class="n">options</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;&lt;OPTION value=</span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s">&gt; </span><span class="si">%s</span><span class="s"> &lt;/A&gt;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">services</span><span class="p">]</span>
+
+        <span class="c"># Render the dialogue</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">select_estimation_method_dialogue</span><span class="p">,</span> <span class="n">estimation_methods</span> <span class="o">=</span> <span class="n">options</span><span class="p">,</span> <span class="n">this_process</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">url_root</span><span class="p">,</span> 
+                                <span class="n">root</span> <span class="o">=</span> <span class="n">root</span><span class="p">,</span> <span class="n">case_id</span> <span class="o">=</span> <span class="n">case_id</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="SimpleDecisionProcessService.perform_ranking_dialogue_transition"><a class="viewcode-back" href="../../../../COACH.decision_process.SimpleDecisionProcessService.html#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.perform_ranking_dialogue_transition">[docs]</a>    <span class="k">def</span> <span class="nf">perform_ranking_dialogue_transition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Endpoint which lets the user rank each of the alternatives using the selected estimation method dialogue.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;root&quot;</span><span class="p">]</span>
+        <span class="n">case_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">]</span>
+
+        <span class="n">estimation_method</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">root</span> <span class="o">+</span> <span class="s">&quot;get_case_property&quot;</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;case_id&quot;</span><span class="p">:</span> <span class="n">case_id</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;estimation_method&quot;</span><span class="p">})</span><span class="o">.</span><span class="n">text</span>
+
+        <span class="k">if</span> <span class="n">estimation_method</span><span class="p">:</span>
+            <span class="c"># Get the alternatives from root and build a list to be fitted into a dropdown menu</span>
+            <span class="n">decision_alternatives</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">root</span> <span class="o">+</span> <span class="s">&quot;get_decision_alternatives&quot;</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;case_id&quot;</span><span class="p">:</span> <span class="n">case_id</span><span class="p">})</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+            <span class="n">options</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;&lt;OPTION value=</span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s">&gt; </span><span class="si">%s</span><span class="s"> &lt;/A&gt;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">decision_alternatives</span><span class="p">]</span>
+        
+            <span class="c"># Get the estimation method&#39;s dialogue</span>
+            <span class="n">estimation_dialogue</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;http://&quot;</span> <span class="o">+</span> <span class="n">estimation_method</span> <span class="o">+</span> <span class="s">&quot;/dialogue&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        
+            <span class="c"># Render the dialogue</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">perform_ranking_dialogue</span><span class="p">,</span> <span class="n">options</span> <span class="o">=</span> <span class="n">options</span><span class="p">,</span> <span class="n">estimation_dialogue</span> <span class="o">=</span> <span class="n">estimation_dialogue</span><span class="p">,</span> 
+                                    <span class="n">this_process</span> <span class="o">=</span> <span class="s">&quot;http://&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;/&quot;</span><span class="p">,</span>
+                                    <span class="n">root</span> <span class="o">=</span> <span class="n">root</span><span class="p">,</span> <span class="n">case_id</span> <span class="o">=</span> <span class="n">case_id</span><span class="p">,</span> <span class="n">estimation_method</span> <span class="o">=</span> <span class="n">estimation_method</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&quot;You need to select an estimation method before you can rank alternatives!&quot;</span>
+        
+</div>
+<div class="viewcode-block" id="SimpleDecisionProcessService.show_ranking_dialogue_transition"><a class="viewcode-back" href="../../../../COACH.decision_process.SimpleDecisionProcessService.html#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.show_ranking_dialogue_transition">[docs]</a>    <span class="k">def</span> <span class="nf">show_ranking_dialogue_transition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Endpoint which shows the alternatives in rank order. Unranked alternatives are at the bottom.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;root&quot;</span><span class="p">]</span>
+        <span class="n">case_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">]</span>
+
+        <span class="c"># Get the alternatives for the case.</span>
+        <span class="n">decision_alternatives</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">root</span> <span class="o">+</span> <span class="s">&quot;get_decision_alternatives&quot;</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;case_id&quot;</span><span class="p">:</span> <span class="n">case_id</span><span class="p">})</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        
+        <span class="c"># Get the estimate for each alternative.</span>
+        <span class="n">estimates</span> <span class="o">=</span> <span class="p">[(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">root</span> <span class="o">+</span> <span class="s">&quot;get_alternative_property&quot;</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;alternative&quot;</span><span class="p">:</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;estimate&quot;</span><span class="p">})</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">decision_alternatives</span><span class="p">]</span>
+
+        <span class="c"># Sort the ranked alternatives.</span>
+        <span class="n">ranked_alternatives</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([(</span><span class="n">a</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="ow">in</span> <span class="n">estimates</span> <span class="k">if</span> <span class="n">e</span><span class="p">],</span> <span class="n">key</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">reverse</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+        <span class="n">unranked_alternatives</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span> <span class="k">for</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="ow">in</span> <span class="n">estimates</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">e</span><span class="p">]</span>
+        
+        <span class="c"># Render the dialogue</span>
+        <span class="n">ranked_alternatives</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span> <span class="o">+</span> <span class="s">&quot;: estimation = &quot;</span> <span class="o">+</span> <span class="n">e</span> <span class="k">for</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="ow">in</span> <span class="n">ranked_alternatives</span><span class="p">]</span>
+        <span class="n">unranked_alternatives</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span> <span class="o">+</span> <span class="s">&quot;: no estimation&quot;</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">unranked_alternatives</span><span class="p">]</span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">go_to_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">show_ranking_dialogue</span><span class="p">,</span> <span class="n">ranked</span> <span class="o">=</span> <span class="n">ranked_alternatives</span><span class="p">,</span> <span class="n">unranked</span> <span class="o">=</span> <span class="n">unranked_alternatives</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="SimpleDecisionProcessService.select_estimation_method"><a class="viewcode-back" href="../../../../COACH.decision_process.SimpleDecisionProcessService.html#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.select_estimation_method">[docs]</a>    <span class="k">def</span> <span class="nf">select_estimation_method</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method is called using POST when the user presses the select button in the select_estimation_method_dialogue.</span>
+<span class="sd">        It gets to form parameters: root, which is the url of the root server, and method, which is the url of the selected estimation method.</span>
+<span class="sd">        It changes the selection in the case database of the root server, and then returns a status message to be shown in the main dialogue window.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c"># Write the selection to the database.</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;root&quot;</span><span class="p">]</span>
+        <span class="n">method</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;method&quot;</span><span class="p">]</span>
+        <span class="n">case_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">]</span>
+        <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">root</span> <span class="o">+</span> <span class="s">&quot;change_case_property&quot;</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;case_id&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">case_id</span><span class="p">),</span> <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;estimation_method&quot;</span><span class="p">,</span> <span class="s">&quot;value&quot;</span><span class="p">:</span> <span class="n">method</span><span class="p">})</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="s">&quot;Estimation method changed to &quot;</span><span class="p">)</span> <span class="o">+</span> <span class="n">method</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">root</span> <span class="o">+</span> <span class="s">&quot;main_menu?message=&quot;</span> <span class="o">+</span> <span class="n">message</span><span class="p">)</span>
+    
+    </div>
+<div class="viewcode-block" id="SimpleDecisionProcessService.perform_ranking"><a class="viewcode-back" href="../../../../COACH.decision_process.SimpleDecisionProcessService.html#COACH.decision_process.SimpleDecisionProcessService.SimpleDecisionProcessService.SimpleDecisionProcessService.perform_ranking">[docs]</a>    <span class="k">def</span> <span class="nf">perform_ranking</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method is called using POST when the user presses the button in the estimation method dialogue as part of the ranking dialogue.</span>
+<span class="sd">        It calculates the estimate and writes it to the database and then returns a status message showing the updated estimate value in the main dialogue window.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">root</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;root&quot;</span><span class="p">]</span>
+        <span class="n">alternative</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;alternative&quot;</span><span class="p">]</span>
+        <span class="n">case_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;case_id&quot;</span><span class="p">]</span>
+        <span class="n">estimation_method</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="s">&quot;estimation_method&quot;</span><span class="p">]</span>
+
+        <span class="c"># Calculate estimate. This is done by removing the values &quot;root&quot;, &quot;case_id&quot;, &quot;estimation_method&quot; and &quot;alternative&quot; from the dictionary of values. </span>
+        <span class="c"># The rest should be estimation method arguments, and are passed to the evaluate endpoint of the estimation method.</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">-</span> <span class="p">{</span><span class="s">&quot;root&quot;</span><span class="p">,</span> <span class="s">&quot;case_id&quot;</span><span class="p">,</span> <span class="s">&quot;estimation_method&quot;</span><span class="p">,</span> <span class="s">&quot;alternative&quot;</span><span class="p">}:</span>
+            <span class="n">params</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;http://&quot;</span> <span class="o">+</span> <span class="n">estimation_method</span> <span class="o">+</span> <span class="s">&quot;/evaluate&quot;</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="n">params</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+    
+        <span class="c"># Write estimate to the database</span>
+        <span class="c"># TODO: For now, just set it as an attribute of the alternative node. This needs to be improved!</span>
+        <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">root</span> <span class="o">+</span> <span class="s">&quot;change_alternative_property&quot;</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;alternative&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">alternative</span><span class="p">),</span> <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;estimate&quot;</span><span class="p">,</span> <span class="s">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+    
+        <span class="n">message</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="s">&quot;Estimate has been changed to &quot;</span><span class="p">)</span> <span class="o">+</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">root</span> <span class="o">+</span> <span class="s">&quot;main_menu?message=&quot;</span> <span class="o">+</span> <span class="n">message</span><span class="p">)</span>
+    
+    </div></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">SimpleDecisionProcessService</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">COACH 0,1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2016, Jakob Axelsson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
