@@ -8,7 +8,6 @@ The module coach contains the framework for developing components for COACH in P
 
 TODO:
 Deviations from architecture description:
-- Factor out authentication
 - Add a simple knowledge repository microservice, with only the ability to export a case to it
 
 Security:
@@ -59,7 +58,6 @@ import json
 import logging
 import random
 import smtplib
-import socket
 import ssl
 import string
 import threading
@@ -158,6 +156,116 @@ class Microservice:
         return render_template(s, **kwargs)
 
 
+class Authentication:
+    """
+    The Authentication class provides storage for the information about users (user id, name, password hash, etc.)
+    This information is stored in a json file, containing a dictionary with user name as key and the other information as a value dictionary. 
+    Also, it provides functionality for generating and handling tokens. Token related information is not stored persistently. 
+    """
+
+    def __init__(self, users_filename):
+        """
+        Initializes the user database from file, if the file exists, or otherwise creates an empty file.
+        """
+        self.users_filename = users_filename
+        try:
+            # Read users from the file name
+            with open(self.users_filename, "r") as file:
+                data = file.read()
+                self.users = json.loads(data)
+        except:
+            # File of services does not exist, so create it an empty dictionary and save it to the file
+            self.users = dict()
+            data = json.dumps(self.users)
+            with open(self.users_filename, "w") as file:
+                file.write(data)
+
+
+    def user_exists(self, userid):
+        """
+        Returns True if the user with the given id already exists, and False otherwise.
+        """
+        return userid in self.users
+    
+
+    def create_user(self, userid, password, email, name):
+        """
+        Adds a user with the given id to the database. The password is stored as a hashed value.
+        If the userid already exists in the database, that information is overwritten.
+        """ 
+        self.users[userid] = {"password_hash": self.password_hash(password), "email": email, "name": name}
+        with open(self.users_filename, "w") as file:
+            json.dump(self.users, file)
+
+        """
+        TODO: Add this functionality
+        
+        # Send an email to the user.
+        # TODO: Remove the gmail info, put it into the settings file.
+        # TODO: Create a link to an endpoint where the user can validate the password.
+        gmail_address = "noreply.orionresearch@gmail.com"
+        gmail_password = "<password deleted>"
+        token = self.get_random_token(20)
+
+        message_text = "To validate your COACH user identity, please follow this link: blablabla.com/" + token
+
+        message = "\From: %s\nTo: %s\nSubject: %s\n\n%s" % (gmail_address, email, "Your COACH account", message_text)
+        try:
+            server = smtplib.SMTP("smtp.gmail.com", 587)
+            server.ehlo()
+            server.starttls()
+            server.login(gmail_address, gmail_password)
+            server.sendmail(gmail_address, email, message)
+            server.close()
+            self.ms.logger.info("Successfully sent mail to " + email)
+        except Exception as e:
+            self.ms.logger.error("Failed to send mail to " + email)
+            self.ms.logger.error("Exception: " + str(e))
+        """
+        return None
+    
+
+    def password_hash(self, password):
+        """
+        Returns the salted hash value for the given password.
+        See https://wiki.python.org/moin/Md5Passwords.
+        """
+        salt = "fe5x19"
+        return hashlib.md5((salt + password).encode("UTF-8")).hexdigest()
+        
+    
+    def check_user_password(self, userid, password):
+        """
+        Returns True if the hash of the given password matches the one stored in the database, and otherwise False.
+        """
+        if userid in self.users:
+            return self.users[userid]["password_hash"] == self.password_hash(password)
+        else:
+            return False 
+    
+    
+    def get_user_email(self, userid):
+        """
+        Returns the email of a user.
+        """
+        return self.users[userid]["email"]
+    
+    
+    def get_user_name(self, userid):
+        """
+        Returns the name of a user.
+        """
+        return self.users[userid]["name"]
+
+
+    def get_random_token(self, length):
+        """
+        Generates a random token, i.e. a string of alphanumeric characters, of the requested length.
+        """
+        return "".join([random.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) 
+                        for _ in range(0, length)])
+
+
 class CaseDatabase:
     
     """
@@ -201,23 +309,13 @@ class CaseDatabase:
         return [(case_id, case_title) for (case_id, case_title) in self._db.query(q)]
         
     
-    def correct_password(self, user_id, password):
+    def create_user(self, user_id):
         """
-        Returns true if the password of user_id corresponds to the supplied password. 
+        Creates a new user in the database, if it does not exist already.
         """
-        users = self._db.labels.get("User").get(user_id = user_id)
-        return (len(users) > 0) and ("password" in users[0]) and (users[0]["password"] == password) 
-        
-
-    def create_user(self, user_id, password_hash, name, email):
-        """
-        Creates a new user in the database.
-        """
-        new_user = self._db.nodes.create(user_id = user_id, 
-                                         password = password_hash, 
-                                         name = name, 
-                                         email = email)
-        new_user.labels.add("User")
+        if len(self.users(user_id)) == 0:
+            new_user = self._db.nodes.create(user_id = user_id)
+            new_user.labels.add("User")
 
 
     def create_case(self, title, description, initiator):
@@ -339,7 +437,10 @@ class RootService(Microservice):
         # Setup encryption for settings cookies
         self.ms.secret_key = secret_args[2]
 
-        # Initialize the database for storing users and cases
+        # Initialize the user database
+        self.authentication = Authentication(self.settings["authentication_database"])
+
+        # Initialize the case database
         try:
             self.caseDB = CaseDatabase(self.settings["database"], 
                                        secret_args[0], 
@@ -351,23 +452,6 @@ class RootService(Microservice):
         # Store point to service directories
         self.service_directories = self.settings["service_directories"]
                 
-    
-    def random_token(self, length):
-        """
-        Generates a random token, i.e. a string of alphanumeric characters, of the requested length.
-        """
-        return "".join([random.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) 
-                        for _ in range(0, length)])
-
-
-    def password_hash(self, password):
-        """
-        Returns the salted hash value for the given password.
-        See https://wiki.python.org/moin/Md5Passwords.
-        """
-        salt = "fe5x19"
-        return hashlib.md5((salt + password).encode("UTF-8")).hexdigest()
-        
     
     def create_endpoints(self):
         # States, represented by dialogues
@@ -490,15 +574,17 @@ class RootService(Microservice):
         if user_id == "" or password == "":
             # If user_id or password is missing, show the dialogue again with an error message
             return self.go_to_state(self.initial_state, error = "FieldMissing")
-        elif len(self.caseDB.users(user_id)) == 0:
+        elif not self.authentication.user_exists(user_id):
             # If user_id does not exist, show the dialogue again with an error message
             return self.go_to_state(self.initial_state, error = "NoSuchUser")
-        elif not self.caseDB.correct_password(user_id, self.password_hash(password)):
-            # If user_id does not exist, show the dialogue again with an error message
+        elif not self.authentication.check_user_password(user_id, password):
+            # If the wrong password was entered, show the dialogue again with an error message
             return self.go_to_state(self.initial_state, error = "WrongPassword")
         else:
             # Login successful, save some data in the session object, and go to main menu
             session["user_id"] = user_id
+            # Add the user to the case db if it is not already there
+            self.caseDB.create_user(user_id)
             return self.main_menu_transition()
 
 
@@ -516,39 +602,14 @@ class RootService(Microservice):
         email = request.form["email"]
         
         # TODO: Show the correct values pre-filled when the dialogue is reopened. 
-        # TODO: This part should maybe go into the authentication class and casedb class?
-        users = self.caseDB.users(user_id)
-        if len(users) > 0:
+        if self.authentication.user_exists(user_id):
             # If the user already exists, go back to the create user dialogue, with a message
             return self.go_to_state(self.create_user_dialogue, error = "UserExists")
         elif password1 != password2:
             return self.go_to_state(self.create_user_dialogue, error = "PasswordsNotEqual")
         else:
             # Otherwise, create the user in the database, and return to the initial dialogue.
-            self.caseDB.create_user(user_id, self.password_hash(password1), name, email)
-
-            # Send an email to the user.
-            # TODO: Remove the gmail info, put it into the settings file.
-            # TODO: Create a link to an endpoint where the user can validate the password.
-            gmail_address = "noreply.orionresearch@gmail.com"
-            gmail_password = "<password deleted>"
-            token = self.random_token(20)
-
-            message_text = "To validate your COACH user identity, please follow this link: blablabla.com/" + token
-
-            message = "\From: %s\nTo: %s\nSubject: %s\n\n%s" % (gmail_address, email, "Your COACH account", message_text)
-            try:
-                server = smtplib.SMTP("smtp.gmail.com", 587)
-                server.ehlo()
-                server.starttls()
-                server.login(gmail_address, gmail_password)
-                server.sendmail(gmail_address, email, message)
-                server.close()
-                self.ms.logger.info("Successfully sent mail to " + email)
-            except Exception as e:
-                self.ms.logger.error("Failed to send mail to " + email)
-                self.ms.logger.error("Exception: " + str(e))
-           
+            self.authentication.create_user(user_id, password1, email, name)
             return self.go_to_state(self.initial_state)
 
 

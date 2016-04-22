@@ -8,5 +8,6 @@
 	"ssl_encryption_key": "certificates/server.key",
 	"database": "http://127.0.0.1:7474/db/data/",
 	"service_directories": ["http://127.0.0.1:5003"],
-	"logfile": "root.log"
+	"logfile": "root.log",
+	"authentication_database": "settings/authentication.json"
 }
