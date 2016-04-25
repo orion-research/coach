@@ -11,7 +11,7 @@ find . -name "nohup.out" -delete
 
 echo "Starting root server and directory server..."
 cd COACH/framework
-nohup python3 launch.py settings/root_settings_development.json settings/directory_settings_development $1 $2 $3 &
+nohup python3 launch.py settings/root_settings_development.json settings/directory_settings_development.json $1 $2 $3 &
 
 echo "Starting SimpleDecisionModelService..."
 cd ../decision_process/SimpleDecisionProcessService
