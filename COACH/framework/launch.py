@@ -11,7 +11,7 @@ sys.path.append(os.path.join(os.curdir, os.pardir))
 
 
 # from COACH.framework import coach
-from COACH.framework import coach
+import coach
 
 if __name__ == '__main__':
     coach.RootService(sys.argv[1], sys.argv[3:])
