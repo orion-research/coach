@@ -9,6 +9,9 @@ __pycache__/
 # Log files
 *.log
 
+# Output from nohup command on linux
+nohup.out
+
 # Data files containing settings for particular installations
 
 # root_settings contains the path to the directory services, and needs to be updated
