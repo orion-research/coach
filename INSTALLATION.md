@@ -16,12 +16,38 @@ You will need to install the following software to be able to execute COACH:
 - Python 3 programming language
 - Python libraries: flask, requests, neo4jrestclient
 
-# For developers
-These instructions assume you will be running COACH on your local PC.
+# Local development
+These instructions assume you will be running COACH on your local PC. It is convenient to use Eclipse as an IDE, but not a requirement.
 
-To be written...
+## Neo4j
+Neo4j Community Edition needs to be installed on your local machine, and be started.
+Instructions are available here: http://neo4j.com/download/.
 
-# For production
+## Python libraries
+Having installed Python 3.x (whatever the latest version is), and the pip package manager, do the following:
+
+$ pip install flask
+
+$ pip install requests
+
+$ pip install neo4jrestclient
+
+## Configuration settings
+Depending on where COACH is installed, some settings files need to update with correct paths.
+This includes the files COACH/framework/settings/root_settings.json, where the path to directory must be updated,
+and COACH/framework/settings/directory.json, where the directory information is stored, with paths to the
+different installed services.
+
+Examples of the format of these files can be found in the same directory, as example_root_settings.json
+and example_directory.json.
+
+## Running COACH
+To start all the services, a small Python script has been created in the framework folder, that starts all the services. It can be ran from inside Eclipse, or from the command line:
+
+$ python launch.py
+
+
+# Development server
 These instructions assume you will be running COACH on a Linux server.
 
 ## Neo4j 
@@ -67,3 +93,7 @@ $ ./launch_development.sh <neo4j user name> <neo4j password> <session secret key
 This should start a number of python3 processes, one for each service. To later stop all those processes (assuming you have not started any other python3 processes that you want to keep), type:
 
 $ pkill python3
+
+
+# Production server
+The same instructions as for development server applies
