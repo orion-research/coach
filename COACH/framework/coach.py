@@ -405,8 +405,10 @@ class CaseDatabase:
     def get_decision_alternatives(self, case_id):
         """
         Gets the list of decision alternatives associated with the case_id node, returning both title and id.
+        TODO: The query needs to be fixed. It does not check that the case is correct.
         """
-        q = """MATCH (case: Case) -[:Alternative]-> (alt: Alternative) RETURN alt.title, id(alt)"""
+#        q = """MATCH (case: Case) -[:Alternative]-> (alt: Alternative) WHERE id(case) = %s RETURN alt.title, id(alt)""" % (case_id,)
+        q = """MATCH (case: Case) -[:Alternative]-> (alt: Alternative) WHERE id(case) = {case_id} RETURN alt.title, id(alt)""".format(**locals())
         return list(self._db.query(q))
     
     
