@@ -30,4 +30,4 @@ class ExpertOpinion(coach.EstimationMethod):
 
 
 if __name__ == '__main__':
-    coach.EstimationMethodService(sys.argv[1], ExpertOpinion)
+    coach.EstimationMethodService(sys.argv[1], ExpertOpinion).run()

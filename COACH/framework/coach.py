@@ -51,6 +51,7 @@ and possible be alerted through email when in production. See http://flask.pocoo
 import hashlib
 import json
 import logging
+import os
 import random
 import smtplib
 import ssl
@@ -75,16 +76,20 @@ class Microservice:
     It expects subclasses to implement the createEndpoints() function, which defines the service API.
     """
     
-    def __init__(self, settings_file_name, handling_class = None):
+    def __init__(self, settings_file_name, handling_class = None, working_directory = None):
         """
         Initialize the microservice.
-        TODO: Depending on the value of self.settings["mode"], start the service with or without Tornado.
         """
+        
+        if working_directory:
+            self.working_directory = working_directory
+        else:
+            self.working_directory = os.getcwd()
         
         self.handling_class = handling_class
 
         # Read settings from settings_file_name
-        with open(settings_file_name, "r") as file:
+        with open(os.path.join(self.working_directory, settings_file_name), "r") as file:
             fileData = file.read()
         self.settings = json.loads(fileData)
 
@@ -112,6 +117,11 @@ class Microservice:
         # Initialize the endpoints, as defined in concrete subclasses
         self.create_endpoints()
             
+
+    def run(self):
+        """
+        Starts the MicroService.
+        """
         # Depending on the server mode, start the app in different ways
         if self.settings["mode"] == "local":
             # Run using Flask built in server with debugging on
@@ -443,7 +453,7 @@ class RootService(Microservice):
         self.ms.secret_key = secret_args[2]
 
         # Initialize the user database
-        self.authentication = Authentication(self.settings["authentication_database"])
+        self.authentication = Authentication(os.path.join(self.working_directory, self.settings["authentication_database"]))
 
         # Initialize the case database
         try:
@@ -749,24 +759,24 @@ class DirectoryService(Microservice):
     See also paper on SECO quality assurance, and select techniques from there.
     """
     
-    def __init__(self, settings_file_name, handling_class = None):
+    def __init__(self, settings_file_name, handling_class = None, working_directory = None):
         """
         Initializes the microservice, and then reads the data file of registered services from a json file,
         or creates a json file if none exists.
         """
-        super().__init__(settings_file_name, handling_class)
+        super().__init__(settings_file_name, handling_class, working_directory)
         
         self.file_name = self.settings["directory_file_name"]
         try:
             # Read file of services into a dictionary
-            with open(self.file_name, "r") as file:
+            with open(os.path.join(self.working_directory, self.file_name), "r") as file:
                 data = file.read()
                 self.services = json.loads(data)
         except:
             # File of services does not exist, so create it an empty dictionary and save it to the file
             self.services = dict()
             data = json.dumps(self.services)
-            with open(self.file_name, "w") as file:
+            with open(os.path.join(self.working_directory, self.file_name), "w") as file:
                 file.write(data)
                 
     
@@ -783,7 +793,7 @@ class DirectoryService(Microservice):
         To allow the user to manually edit the file, it is first read from file into self.services.
         Then this list is filtered.
         """
-        with open(self.file_name, "r") as file:
+        with open(os.path.join(self.working_directory, self.file_name), "r") as file:
             data = file.read()
             self.services = json.loads(data)
 
@@ -804,7 +814,7 @@ class DirectoryService(Microservice):
         url = request.args.get("url", "")
         
         self.services = [post for post in self.services if post[2] != url] + [(service_type, name, url)]
-        with open(self.file_name, "w") as file:
+        with open(os.path.join(self.working_directory, self.file_name), "w") as file:
             json.dump(self.services, file)
         return ""
 
@@ -816,7 +826,7 @@ class DirectoryService(Microservice):
         url = request.args.get("url", "")
         
         self.services = [post for post in self.services if post[2] != url]
-        with open(self.file_name, "w") as file:
+        with open(os.path.join(self.working_directory, self.file_name), "w") as file:
             json.dump(self.services, file)
         return ""
 

@@ -29,4 +29,4 @@ class AverageOfTwo(coach.EstimationMethod):
 
 
 if __name__ == '__main__':
-    coach.EstimationMethodService(sys.argv[1], AverageOfTwo)
+    coach.EstimationMethodService(sys.argv[1], AverageOfTwo).run()

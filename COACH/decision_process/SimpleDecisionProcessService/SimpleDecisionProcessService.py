@@ -168,4 +168,4 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
     
     
 if __name__ == '__main__':
-    SimpleDecisionProcessService(sys.argv[1])
+    SimpleDecisionProcessService(sys.argv[1]).run()

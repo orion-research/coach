@@ -14,5 +14,5 @@ sys.path.append(os.path.join(os.curdir, os.pardir))
 import coach
 
 if __name__ == '__main__':
-    coach.RootService(sys.argv[1], sys.argv[3:])
-    coach.DirectoryService(sys.argv[2])
+    coach.RootService(sys.argv[1], sys.argv[3:]).run()
+    coach.DirectoryService(sys.argv[2]).run()
