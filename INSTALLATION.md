@@ -32,19 +32,20 @@ $ pip install requests
 
 $ pip install neo4jrestclient
 
-## Configuration settings
-Depending on where COACH is installed, some settings files need to update with correct paths.
-This includes the files COACH/framework/settings/root_settings.json, where the path to directory must be updated,
-and COACH/framework/settings/directory.json, where the directory information is stored, with paths to the
-different installed services.
-
-Examples of the format of these files can be found in the same directory, as example_root_settings.json
-and example_directory.json.
+(In some installations, you have to use pip3 instead of pip in the above commands.)
 
 ## Running COACH
-To start all the services, a small Python script has been created in the framework folder, that starts all the services. It can be ran from inside Eclipse, or from the command line:
+To start all the services, a small Python script has been created in the COACH folder, that starts all the services. It can be ran from inside Eclipse, or from the command line:
 
-$ python launch.py
+$ python launch.py <neo4j user name> <neo4j password> <random string>
+
+(In some installations, you have to use python3 instead of python in the above command.)
+
+In the above command, <neo4j user name> and <neo4j password> should be replaced by whatever username and password you have selected for the database.
+The <random string> parameter is used for encrypting the user passwords in the authentication module. It can be any string, but what is important is that
+the same string is used on all invocations.
+
+To start interacting with COACH, open http://127.0.0.1:5000 in a web browser.
 
 
 # Development server
@@ -75,14 +76,13 @@ $ sudo pip install requests
 
 $ sudo pip install neo4jrestclient
 
-## Configuration settings
-Depending on where COACH is installed, some settings files need to update with correct paths.
-This includes the files COACH/framework/settings/root_settings.json, where the path to directory must be updated,
-and COACH/framework/settings/directory.json, where the directory information is stored, with paths to the
-different installed services.
+(In some installations, you have to use pip3 instead of pip in the above commands.)
 
-Examples of the format of these files can be found in the same directory, as example_root_settings.json
-and example_directory.json.
+## Configuration settings
+Depending on where COACH is installed, some settings files need to update with correct url paths.
+This includes the files COACH/framework/settings/root_settings_development.json, where the url path to directory must be updated,
+and COACH/framework/settings/directory_development.json, where the directory information is stored, with url paths to the
+different installed services.
 
 ## Running COACH
 
