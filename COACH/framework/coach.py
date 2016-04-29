@@ -89,7 +89,7 @@ class Microservice:
         self.handling_class = handling_class
 
         # Read settings from settings_file_name
-        with open(os.path.join(self.working_directory, settings_file_name), "r") as file:
+        with open(os.path.join(self.working_directory, os.path.normpath(settings_file_name)), "r") as file:
             fileData = file.read()
         self.settings = json.loads(fileData)
 
@@ -111,8 +111,8 @@ class Microservice:
 
         # Setup SSL encryption
         # See http://flask.pocoo.org/snippets/111/. Keys and certificates can be generated here: http://www.selfsignedcertificate.com/.
-        self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-        self.ssl_context.load_cert_chain(self.settings["ssl_certificate"], self.settings["ssl_encryption_key"])
+#        self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+#        self.ssl_context.load_cert_chain(self.settings["ssl_certificate"], self.settings["ssl_encryption_key"])
     
         # Initialize the endpoints, as defined in concrete subclasses
         self.create_endpoints()
@@ -122,6 +122,7 @@ class Microservice:
         """
         Starts the MicroService.
         """
+        
         # Depending on the server mode, start the app in different ways
         if self.settings["mode"] == "local":
             # Run using Flask built in server with debugging on
@@ -440,7 +441,7 @@ class RootService(Microservice):
     users to a decision case, and selecting the decision process. Every installation of COACH has exactly one instance of this class.
     """
     
-    def __init__(self, settings_file_name, secret_args, handling_class = None):
+    def __init__(self, settings_file_name, secret_args, handling_class = None, working_directory = None):
         """
         Initialize the RootService object. The secret_args argument should be a list of three strings:
         1. The database user name.
@@ -449,7 +450,7 @@ class RootService(Microservice):
         These are kept outside the settings file to ensure that they do not spread when files are shared in a repository.
         """
         
-        super().__init__(settings_file_name, handling_class)
+        super().__init__(settings_file_name, handling_class = handling_class, working_directory = working_directory)
 
         # Setup encryption for settings cookies
         self.ms.secret_key = secret_args[2]
