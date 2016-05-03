@@ -7,19 +7,34 @@ Created on 17 apr. 2016
 import os
 import sys
 
+sys.path.append(os.path.join(os.curdir, os.pardir))
 
-# from COACH.framework import coach
 from COACH.framework import coach
 from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
 from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 
 if __name__ == '__main__':
-    topdir = os.path.join(os.path.abspath(os.curdir), "COACH")
+    if len(sys.argv) != 4:
+        print("Usage: python launch.py <neo4j user name> <neo4j password> <password hash key>")
+        exit(1)
     
-    # Start root service and directory service from the framework module
-    wdir = os.path.join(topdir, "framework")
-    os.chdir(wdir)
+    try:
+        # This will work if running script from command line (Windows or Linux)
+        # For some reason, it does not work if starting from within Eclipse
+        topdir = os.path.abspath(os.curdir)
+        
+        # Start root service and directory service from the framework module
+        wdir = os.path.join(topdir, "framework")
+        os.chdir(wdir)
+    except:
+        # Workaround for starting in Eclipse
+        topdir = os.path.join(os.path.abspath(os.curdir), "COACH")
+
+        # Start root service and directory service from the framework module
+        wdir = os.path.join(topdir, "framework")
+        os.chdir(wdir)
+        
     coach.RootService(os.path.normpath("settings/root_settings_local.json"), sys.argv[1:], 
                       working_directory = wdir).run()
     coach.DirectoryService(os.path.normpath("settings/directory_settings_local.json"), 
