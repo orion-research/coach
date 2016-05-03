@@ -346,6 +346,23 @@ class CaseDatabase:
         return new_case.id
         
     
+    def change_case_description(self, case_id, title, description):
+        """
+        Changes the title and description fields of the case with case_id.
+        """
+        q = """MATCH (case: Case) WHERE id(case) = {case_id} SET case.title = \"{title}\", case.description = \"{description}\""""
+        self._db.query(q.format(**locals()))
+    
+        
+    def get_case_description(self, case_id):
+        """
+        Returns a tuple containing the case title and description for the case with case_id.
+        """
+        q = """MATCH (case:Case) WHERE id(case) = {case_id} RETURN case.title, case.description"""
+        result = self._db.query(q.format(**locals()))[0]
+        return (result[0], result[1])
+        
+
     def add_stakeholder(self, user_id, case_id):    
         user_node = self._db.labels.get("User").get(user_id = user_id)[0]
         case_node = self._db.nodes[case_id]
@@ -481,6 +498,7 @@ class RootService(Microservice):
         self.change_decision_process_dialogue = self.create_state("change_decision_process_dialogue.html")
         self.add_stakeholder_dialogue = self.create_state("add_stakeholder_dialogue.html")
         self.create_alternative_dialogue = self.create_state("create_alternative_dialogue.html")
+        self.edit_case_description_dialogue = self.create_state("edit_case_description_dialogue.html")
         
         # Endpoints for transitions between the states without side effects
         self.ms.add_url_rule("/", view_func = self.initial_transition)
@@ -491,6 +509,7 @@ class RootService(Microservice):
         self.ms.add_url_rule("/change_decision_process_dialogue", view_func = self.change_decision_process_dialogue_transition)
         self.ms.add_url_rule("/add_stakeholder_dialogue", view_func = self.add_stakeholder_dialogue_transition)
         self.ms.add_url_rule("/create_alternative_dialogue", view_func = self.create_alternative_dialogue_transition)
+        self.ms.add_url_rule("/edit_case_description_dialogue", view_func = self.edit_case_description_dialogue_transition)
         
         # Endpoints for transitions between states with side effects
         # TODO: Do all these have to be posts, to ensure that data is encrypted when HTTPS is implemented?
@@ -500,7 +519,7 @@ class RootService(Microservice):
         self.ms.add_url_rule("/logout", view_func = self.logout)
         self.ms.add_url_rule("/change_password", view_func = self.change_password)
         self.ms.add_url_rule("/open_case", view_func = self.open_case)
-        self.ms.add_url_rule("/edit_case_description", view_func = self.edit_case_description)
+        self.ms.add_url_rule("/change_case_description", view_func = self.change_case_description, methods = ["POST"])
         self.ms.add_url_rule("/change_decision_process", view_func = self.change_decision_process, methods = ["POST"])
         self.ms.add_url_rule("/add_stakeholder", view_func = self.add_stakeholder)
         self.ms.add_url_rule("/create_alternative", view_func = self.create_alternative, methods = ["POST"])
@@ -580,6 +599,11 @@ class RootService(Microservice):
     
     def create_alternative_dialogue_transition(self):
         return self.go_to_state(self.create_alternative_dialogue)
+
+    
+    def edit_case_description_dialogue_transition(self):
+        (title, description) = self.caseDB.get_case_description(session["case_id"])
+        return self.go_to_state(self.edit_case_description_dialogue, title = title, description = description)
 
     
     def login_user(self):
@@ -668,8 +692,13 @@ class RootService(Microservice):
         return self.main_menu_transition(main_dialogue = "Not yet implemented!")
 
 
-    def edit_case_description(self):
-        return self.main_menu_transition(main_dialogue = "Not yet implemented!")
+    def change_case_description(self):
+        title = request.form["title"]
+        description = request.form["description"]
+        user = self.caseDB.users(session["user_id"])[0]
+        self.caseDB.change_case_description(session["case_id"], title, description)
+
+        return self.main_menu_transition(main_dialogue = "Case description changed!")
 
 
     def change_decision_process(self):

@@ -1,0 +1,23 @@
+<!DOCTYPE HTML>
+<HTML>
+<HEAD>
+<TITLE>COACH</TITLE>
+</HEAD>
+
+<BODY>
+<H1>Create new decision case</H1>
+
+<FORM action="/change_case_description" method="post">
+Title: 
+<BR>
+<INPUT type="text" name="title" value="{{title}}"required>
+<BR>
+Description: 
+<BR>
+<TEXTAREA name="description" rows="20" cols="80" required>{{description}}</TEXTAREA>
+<BR>
+<INPUT type="submit" value="Change description">
+</FORM>
+
+</BODY>
+</HTML>
