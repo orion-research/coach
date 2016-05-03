@@ -22,6 +22,8 @@ COACH/framework/settings/root_settings.json
 # depending on where the services are installed.
 COACH/framework/settings/directory.json
 
+# authentication.json contains user data for a particular server
+COACH/framework/settings/authentication.json
 
 # File for storing passwords etc.
 secretdata.txt
