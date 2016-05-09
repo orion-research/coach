@@ -37,7 +37,7 @@ $ pip install neo4jrestclient
 ## Running COACH
 To start all the services, a small Python script has been created in the COACH folder, that starts all the services. It can be ran from inside Eclipse, or from the command line:
 
-$ python launch.py <neo4j user name> <neo4j password> <random string>
+$ python launch-local.py <neo4j user name> <neo4j password> <random string>
 
 (In some installations, you have to use python3 instead of python in the above command.)
 
@@ -86,14 +86,14 @@ different installed services.
 
 ## Running COACH
 
-To start running the services, move to the directory where you installed the source code from GitHub. Then run the bash script as follows:
+To start running the services, move to the directory where you installed the source code from GitHub. Then run the following command:
 
-$ ./launch_development.sh <neo4j user name> <neo4j password> <session secret key, which is any random string>
+$ python launch-development.py <neo4j user name> <neo4j password> <random string> &
 
-This should start a number of python3 processes, one for each service. To later stop all those processes (assuming you have not started any other python3 processes that you want to keep), type:
+To later stop, type:
 
 $ pkill python3
 
 
 # Production server
-The same instructions as for development server applies
+To be defined.
