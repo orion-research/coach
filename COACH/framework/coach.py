@@ -458,7 +458,7 @@ class RootService(Microservice):
     users to a decision case, and selecting the decision process. Every installation of COACH has exactly one instance of this class.
     """
     
-    def __init__(self, settings_file_name, secret_args, handling_class = None, working_directory = None):
+    def __init__(self, settings_file_name, secret_data_file_name, handling_class = None, working_directory = None):
         """
         Initialize the RootService object. The secret_args argument should be a list of three strings:
         1. The database user name.
@@ -469,8 +469,13 @@ class RootService(Microservice):
         
         super().__init__(settings_file_name, handling_class = handling_class, working_directory = working_directory)
 
+        # Read secret data file
+        with open(os.path.join(self.working_directory, os.path.normpath(secret_data_file_name)), "r") as file:
+            fileData = file.read()
+        secret_data = json.loads(fileData)
+
         # Setup encryption for settings cookies
-        self.ms.secret_key = secret_args[2]
+        self.ms.secret_key = secret_data["secret_key"]
 
         # Initialize the user database
         self.authentication = Authentication(os.path.join(self.working_directory, self.settings["authentication_database"]))
@@ -478,8 +483,8 @@ class RootService(Microservice):
         # Initialize the case database
         try:
             self.caseDB = CaseDatabase(self.settings["database"], 
-                                       secret_args[0], 
-                                       secret_args[1])
+                                       secret_data["neo4j_user_name"], 
+                                       secret_data["neo4j_password"])
             self.ms.logger.info("Case database successfully connected")
         except:
             self.ms.logger.error("Fatal error: Case database cannot be accessed. Make sure that Neo4j is running!")

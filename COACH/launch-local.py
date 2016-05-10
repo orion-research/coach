@@ -15,10 +15,6 @@ from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print("Usage: python launch.py <neo4j user name> <neo4j password> <password hash key>")
-        exit(1)
-    
     try:
         # This will work if running script from command line (Windows or Linux)
         # For some reason, it does not work if starting from within Eclipse
@@ -35,7 +31,8 @@ if __name__ == '__main__':
         wdir = os.path.join(topdir, "framework")
         os.chdir(wdir)
         
-    coach.RootService(os.path.normpath("settings/root_settings_local.json"), sys.argv[1:], 
+    coach.RootService(os.path.normpath("settings/root_settings_local.json"), 
+                      os.path.normpath("settings/root_secret_data.json"),
                       working_directory = wdir).run()
     coach.DirectoryService(os.path.normpath("settings/directory_settings_local.json"), 
                            working_directory = os.path.join(topdir, "framework")).run()
