@@ -6,6 +6,9 @@
 # The following applies to any file named __pycache__ in any subdirectory
 __pycache__/
 
+# Compiled python binaries
+*.pyc
+
 # Log files
 *.log
 

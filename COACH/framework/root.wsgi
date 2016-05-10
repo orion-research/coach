@@ -6,15 +6,20 @@ The script should be in the same directory as the Python file it imports.
 import os
 import sys
 
+sys.path.append(os.curdir)
+sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir))
+sys.path.append('/usr/lib/python3.4')
+sys.path.append('/usr/lib/python3.4/plat-x86_64-linux-gnu')
+sys.path.append('/usr/lib/python3.4/lib-dynload')
+sys.path.append('/usr/local/lib/python3.4/dist-packages')
+sys.path.append('/usr/lib/python3/dist-packages')
+
+if sys.version_info[0] < 3:
+    raise Exception("Python 3 required! Current Python version is %s" % sys.version_info)
+
+
 from COACH.framework import coach
 
-#    if len(sys.argv) != 4:
-#        print("Usage: python launch.py <neo4j user name> <neo4j password> <password hash key>")
-#        exit(1)
-
-# TODO: How handle the secret command line arguments???
- 
-application = 
-    coach.RootService(os.path.normpath("settings/root_settings_local.json"), 
-                      os.path.normpath("settings/root_secret_data.json"),
-                      working_directory = os.path.abspath(os.curdir))
+application = coach.RootService(os.path.normpath("settings/root_settings_local.json"), 
+                                os.path.normpath("settings/root_secret_data.json"),
+                                working_directory = os.path.abspath(os.curdir)).ms
