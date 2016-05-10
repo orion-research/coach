@@ -6,6 +6,8 @@ The script should be in the same directory as the Python file it imports.
 import os
 import sys
 
+sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir))
+
 if sys.version_info[0] < 3:
     raise Exception("Python 3 required! Current Python version is %s" % sys.version_info)
 
