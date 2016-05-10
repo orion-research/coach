@@ -15,10 +15,6 @@ from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print("Usage: python launch.py <neo4j user name> <neo4j password> <password hash key>")
-        exit(1)
-    
     try:
         # This will work if running script from command line (Windows or Linux)
         # For some reason, it does not work if starting from within Eclipse
