@@ -54,7 +54,6 @@ import logging
 import os
 import random
 import smtplib
-import ssl
 import string
 import threading
 
@@ -109,11 +108,6 @@ class Microservice:
             self.ms.logger.addHandler(handler)
             self.ms.logger.warning("Logging started")
 
-        # Setup SSL encryption
-        # See http://flask.pocoo.org/snippets/111/. Keys and certificates can be generated here: http://www.selfsignedcertificate.com/.
-#        self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-#        self.ssl_context.load_cert_chain(self.settings["ssl_certificate"], self.settings["ssl_encryption_key"])
-    
         # Initialize the endpoints, as defined in concrete subclasses
         self.create_endpoints()
             
@@ -130,13 +124,9 @@ class Microservice:
             # Start the microservice in a separate thread, since the call does not return otherwise.
             # Also, use threaded=True, to allow the microservice to handle multiple requests.
             # To be able to run the debug mode, it is necessary to turn off the automatic reloading.
-            # TODO: The SSL encryption does not seem to work, so it is turned off right now.
-    #        self.thread = threading.Thread(target = self.ms.run, kwargs = {"port": self.port, "ssl_context": self.ssl_context})
             self.thread = threading.Thread(target = self.ms.run, kwargs = {"host": self.host, "port": self.port, "use_reloader": False, "threaded": True, "debug": True})
             self.thread.start()
         elif self.settings["mode"] in ["development", "production"]:
-            # Run using Flask built in server with debugging on
-            # TODO: Later, maybe change this to running with Tornado or other framework
             self.thread = threading.Thread(target = self.ms.run, kwargs = {"host": self.host, "port": self.port, "use_reloader": False, "threaded": True, "debug": False})
             self.thread.start()
         else:

@@ -4,8 +4,6 @@
 	"mode": "development",
 	"host": "appz-ext.sics.se",
 	"port": 5000,
-	"ssl_certificate": "certificates/server.crt",
-	"ssl_encryption_key": "certificates/server.key",
 	"database": "http://127.0.0.1:7474/db/data/",
 	"service_directories": ["http://appz-ext.sics.se:5003"],
 	"logfile": "root.log",

@@ -3,7 +3,5 @@
 	"name": "Average of two estimation method",
 	"mode": "local",
 	"host": "127.0.0.1",
-	"port": 5004,
-	"ssl_certificate": "certificates/server.crt",
-	"ssl_encryption_key": "certificates/server.key"
+	"port": 5004
 }

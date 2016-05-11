@@ -4,7 +4,5 @@
 	"mode": "local",
 	"host": "127.0.0.1",
 	"port": 5003,
-	"ssl_certificate": "certificates/server.crt",
-	"ssl_encryption_key": "certificates/server.key",
 	"directory_file_name": "settings/directory.json"
 }
