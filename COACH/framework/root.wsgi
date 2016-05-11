@@ -20,6 +20,6 @@ if sys.version_info[0] < 3:
 
 from COACH.framework import coach
 
-application = coach.RootService(os.path.normpath("settings/root_settings_local.json"), 
+application = coach.RootService(os.path.normpath("settings/root_settings_development.json"), 
                                 os.path.normpath("settings/root_secret_data.json"),
                                 working_directory = os.path.abspath(os.curdir)).ms
