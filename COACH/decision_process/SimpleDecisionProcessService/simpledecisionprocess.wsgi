@@ -16,5 +16,5 @@ if sys.version_info[0] < 3:
 
 from COACH.framework import coach
 
-application = SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.normpath("settings/decision_process_settings_local.json"),
+application = SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.normpath("settings/decision_process_settings_development.json"),
                                                                         working_directory = os.path.abspath(os.curdir)).ms
