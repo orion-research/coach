@@ -585,7 +585,9 @@ class RootService(Microservice):
     
     def add_stakeholder_dialogue_transition(self):
         # Create links to the decision processes
-        users = [(u["user_id"], u["name"]) for u in self.caseDB.users()]
+        # Get all users who exist both in the authentication list and in the case DB
+        user_ids = [u["user_id"] for u in self.caseDB.users() if self.authentication.user_exists(u["user_id"])]
+        users = [(u, self.authentication.get_user_name(u)) for u in user_ids]
         links = ["<A HREF=\"/add_stakeholder?user_id=%s\"> %s </A>" % pair for pair in users]
         
         dialogue = self.go_to_state(self.add_stakeholder_dialogue, stakeholders = links)
