@@ -62,11 +62,14 @@ by the Flask library.
 
 ## Neo4j 
 To get Neo4j, use the instructions at: http://debian.neo4j.org/ 
-(under the headings "Using the Debian repository", and "Installing Neo4j")
+(under the headings "Using the Debian repository", and "Installing Neo4j". 
+Note that neo4j assumes that Java 8 is installed, which is not a default package for certain versions of Ubuntu and Debian Linux.)
 
 Neo4j should now be running. To check, type:
 
 	$ service neo4j-service status
+
+(In some versions, the service might be called neo4j instead of neo4j-service.)
 
 The directory /etc/neo4j/ contains various property files to change settings. 
 The directory /var/lib/neo4j/data contains the actual data.
@@ -78,7 +81,7 @@ The password can be changed using curl (do sudo apt-get curl if it is not alread
 (For more information ,see http://www.delimited.io/blog/2014/1/15/getting-started-with-neo4j-on-ubuntu-server.)
 
 ## Python libraries
-Having installed Python 3.x (whatever the latest version is), and the pip package manager, do the following:
+Having installed Python 3.x (whatever the latest version is), and the pip package manager (sudo apt-get python3-pip), do the following:
 
 	$ sudo pip install flask
 
@@ -107,6 +110,7 @@ but needs to be created. The file should be placed in the COACH/framework/settin
 ## Apache
 Apache is installed and started as follows: 
 
+	$ sudo apt-get update
 	$ sudo apt-get install apache2
 	$ sudo /etc/init.d/apache2 start
 
