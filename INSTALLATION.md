@@ -11,7 +11,7 @@ Then, use the following git commands:
 
 # Dependencies
 You will need to install the following software to be able to execute COACH:
-- Neo4j database (community edition)
+- Neo4j database (community edition, version 3.x)
 - Python 3 programming language
 - Python libraries: flask, requests, neo4jrestclient
 - Apache web server (for development/production on server, not needed for local development)
@@ -21,14 +21,14 @@ These instructions assume you will be running COACH on your local PC. It is conv
 
 ## Neo4j
 Neo4j Community Edition needs to be installed on your local machine, and be started.
-Instructions are available here: http://neo4j.com/download/.
+Instructions are available here: http://neo4j.com/download/. Use version 3.x.
 
 ## Python libraries
 Having installed Python 3.x (whatever the latest version is), and the pip package manager, do the following:
 
 	$ pip install flask
 	$ pip install requests
-	$ pip install neo4jrestclient
+	$ pip install neo4j-driver=1.0.0
 
 (In some installations, you have to use pip3 instead of pip in the above commands.)
 
@@ -62,7 +62,7 @@ by the Flask library.
 
 ## Neo4j 
 To get Neo4j, use the instructions at: http://debian.neo4j.org/ 
-(under the headings "Using the Debian repository", and "Installing Neo4j". 
+(under the headings "Using the Debian repository", and "Installing Neo4j". Use version 3.x.
 Note that neo4j assumes that Java 8 is installed, which is not a default package for certain versions of Ubuntu and Debian Linux.)
 
 Neo4j should now be running. To check, type:
@@ -84,10 +84,8 @@ The password can be changed using curl (do sudo apt-get curl if it is not alread
 Having installed Python 3.x (whatever the latest version is), and the pip package manager (sudo apt-get python3-pip), do the following:
 
 	$ sudo pip install flask
-
 	$ sudo pip install requests
-
-	$ sudo pip install neo4jrestclient
+	$ pip install neo4j-driver=1.0.0
 
 (In some installations, you have to use pip3 instead of pip in the above commands.)
 
