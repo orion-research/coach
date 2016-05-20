@@ -307,7 +307,7 @@ class RootService(Microservice):
     def add_stakeholder_dialogue_transition(self):
         # Create links to the decision processes
         # Get all users who exist both in the authentication list and in the case DB
-        user_ids = [u["user_id"] for u in self.caseDB.users() if self.authentication.user_exists(u["user_id"])]
+        user_ids = [u for u in self.caseDB.user_ids() if self.authentication.user_exists(u)]
         users = [(u, self.authentication.get_user_name(u)) for u in user_ids]
         links = ["<A HREF=\"/add_stakeholder?user_id=%s\"> %s </A>" % pair for pair in users]
         
@@ -381,9 +381,8 @@ class RootService(Microservice):
         
         title = request.form["title"]
         description = request.form["description"]
-        user = self.caseDB.users(session["user_id"])[0]
         
-        session["case_id"] = self.caseDB.create_case(title, description, user)
+        session["case_id"] = self.caseDB.create_case(title, description, session["user_id"])
         
         return self.main_menu_transition()
 
@@ -413,7 +412,6 @@ class RootService(Microservice):
     def change_case_description(self):
         title = request.form["title"]
         description = request.form["description"]
-        user = self.caseDB.users(session["user_id"])[0]
         self.caseDB.change_case_description(session["case_id"], title, description)
 
         return self.main_menu_transition(main_dialogue = "Case description changed!")
