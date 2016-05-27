@@ -8,6 +8,8 @@
 <DIV id="menu">
 <IMG src="{{ url_for('static', filename='logotype.png') }}">
 <DIV id="main_menu">
+Version:<BR>
+{{ session["version"] }}
 Logged in as:<BR>
 {{ session["user_id"] }}
 <HR>

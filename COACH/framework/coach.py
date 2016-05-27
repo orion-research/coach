@@ -51,6 +51,8 @@ and possible be alerted through email when in production. See http://flask.pocoo
 import json
 import logging
 import os
+import subprocess
+        
 import threading
 
 # Coach modules
@@ -202,7 +204,17 @@ class RootService(Microservice):
 
         # Store point to service directories
         self.service_directories = self.settings["service_directories"]
-                
+                        
+    
+    def get_version(self):
+        """
+        Returns the version of the software running. It fetches this information from git.
+        """
+        try:
+            return subprocess.check_output(["git", "describe", "--all", "--long"]).decode("ascii")
+        except:
+            return "No version information available"
+
     
     def create_endpoints(self):
         # States, represented by dialogues
@@ -250,6 +262,9 @@ class RootService(Microservice):
         
 
     def initial_transition(self):
+        # Store the software version in the session object
+        session["version"] = self.get_version()
+
         return self.go_to_state(self.initial_state)
 
 
