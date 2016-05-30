@@ -127,10 +127,13 @@ class Microservice:
         and another dictionary as its value.
         The settings for a particular object is found by looking up the first class name in its class hierarchy,
         that contains the key in its dictionary. 
-        It is also possible to put certain keys as global, in the top level dictionary, to set defaults for all classes.
+        If the MicroService has a handling class, this class's name is used first.
         """
         # Get the list of parent classes in method resolution order.
-        parents = [cls.__name__ for cls in getmro(self.__class__)]
+        if self.handling_class:
+            parents = [self.handling_class.__name__] + [cls.__name__ for cls in getmro(self.__class__)]
+        else:
+            parents = [cls.__name__ for cls in getmro(self.__class__)]
         # Look for the key in each parent's dictionary, and return the first found.
         for p in parents:
             try:
