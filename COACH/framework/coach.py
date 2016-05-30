@@ -88,20 +88,18 @@ class Microservice:
         self.handling_class = handling_class
 
         # Read settings from settings_file_name
-        with open(os.path.join(self.working_directory, os.path.normpath(settings_file_name)), "r") as file:
-            fileData = file.read()
-        self.settings = json.loads(fileData)
+        self.load_settings(settings_file_name)
 
-        self.name = self.settings["name"]
-        self.host = self.settings["host"]
-        self.port = self.settings["port"]
+        self.name = self.get_setting("name")
+        self.host = self.get_setting("host")
+        self.port = self.get_setting("port")
 
         # Create the microservice
         self.ms = Flask(self.name)
         
         # If a log file name is provided, enable logging to that file
         if "logfile" in self.settings:
-            handler = logging.FileHandler(self.settings["logfile"])
+            handler = logging.FileHandler(self.get_setting("logfile"))
             handler.setLevel(logging.INFO)
             formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             handler.setFormatter(formatter)
@@ -112,13 +110,29 @@ class Microservice:
         self.create_endpoints()
             
 
+    def load_settings(self, settings_file_name):
+        """
+        Loads settings from a file.
+        """
+        with open(os.path.join(self.working_directory, os.path.normpath(settings_file_name)), "r") as file:
+            fileData = file.read()
+        self.settings = json.loads(fileData)
+
+
+    def get_setting(self, key):
+        """
+        Returns the settings value for the provided key, or an exception if it does not exist.
+        """
+        return self.settings[key]
+
+
     def run(self):
         """
         Starts the MicroService.
         """
         
         # Depending on the server mode, start the app in different ways
-        if self.settings["mode"] == "local":
+        if self.get_setting("mode") == "local":
             # Run using Flask built in server with debugging on
 
             # Start the microservice in a separate thread, since the call does not return otherwise.
@@ -126,11 +140,11 @@ class Microservice:
             # To be able to run the debug mode, it is necessary to turn off the automatic reloading.
             self.thread = threading.Thread(target = self.ms.run, kwargs = {"host": self.host, "port": self.port, "use_reloader": False, "threaded": True, "debug": True})
             self.thread.start()
-        elif self.settings["mode"] in ["development", "production"]:
+        elif self.get_setting("mode") in ["development", "production"]:
             self.thread = threading.Thread(target = self.ms.run, kwargs = {"host": self.host, "port": self.port, "use_reloader": False, "threaded": True, "debug": False})
             self.thread.start()
         else:
-            self.ms.logger.error("Unknown server mode: " + self.settings["mode"])
+            self.ms.logger.error("Unknown server mode: " + self.get_setting("mode"))
             
 
     def create_endpoints(self):
@@ -191,11 +205,11 @@ class RootService(Microservice):
         self.ms.secret_key = secret_data["secret_key"]
 
         # Initialize the user database
-        self.authentication = Authentication(os.path.join(self.working_directory, self.settings["authentication_database"]))
+        self.authentication = Authentication(os.path.join(self.working_directory, self.get_setting("authentication_database")))
 
         # Initialize the case database
         try:
-            self.caseDB = CaseDatabase(self.settings["database"], 
+            self.caseDB = CaseDatabase(self.get_setting("database"), 
                                        secret_data["neo4j_user_name"], 
                                        secret_data["neo4j_password"])
             self.ms.logger.info("Case database successfully connected")
@@ -203,7 +217,7 @@ class RootService(Microservice):
             self.ms.logger.error("Fatal error: Case database cannot be accessed. Make sure that Neo4j is running!")
 
         # Store point to service directories
-        self.service_directories = self.settings["service_directories"]
+        self.service_directories = self.get_setting("service_directories")
                         
     
     def get_version(self):
@@ -308,7 +322,7 @@ class RootService(Microservice):
 
     
     def change_decision_process_dialogue_transition(self):
-        directories = self.settings["service_directories"]
+        directories = self.get_setting("service_directories")
         services = []
         current_decision_process = self.caseDB.get_decision_process(session["case_id"])
         for d in directories:
@@ -529,7 +543,7 @@ class DirectoryService(Microservice):
         """
         super().__init__(settings_file_name, handling_class, working_directory)
         
-        self.file_name = self.settings["directory_file_name"]
+        self.file_name = self.get_setting("directory_file_name")
         try:
             # Read file of services into a dictionary
             with open(os.path.join(self.working_directory, self.file_name), "r") as file:
