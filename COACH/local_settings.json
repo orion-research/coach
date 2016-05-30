@@ -1,0 +1,51 @@
+{
+"object":
+{
+	"description": "Common settings for all classes",
+	"mode": "local",
+	"host": "127.0.0.1"
+},
+
+"RootService":
+{
+	"description": "Settings for the root microservice",
+	"name": "Root microservice for ORION project",
+	"port": 5000,
+	"database": "http://127.0.0.1:7474/db/data/",
+	"service_directories": ["http://127.0.0.1:5003"],
+	"logfile": "root.log",
+	"authentication_database": "settings/authentication.json"
+},
+
+"DirectoryService": 
+{
+	"description": "Settings for an example directory",
+	"name": "An example directory",
+	"port": 5003,
+	"directory_file_name": "settings/directory.json"
+},
+
+"SimpleDecisionProcess":
+{
+	"description": "Settings for an example decision process",
+	"name": "An example decision process",
+	"port": 5002,
+	"logfile": "SimpleDecisionProcess.log"
+},
+
+
+"AverageOfTwo":
+{
+	"description": "Settings for the AverageOfTwo estimation method",
+	"name": "Average of two estimation method",
+	"port": 5004
+},
+
+"ExpertOpinion":
+{
+	"description": "Settings for the expert opinion estimation method",
+	"name": "Expert opinion estimation method",
+	"port": 5001
+}
+
+}

@@ -31,10 +31,13 @@ if __name__ == '__main__':
         wdir = os.path.join(topdir, "framework")
         os.chdir(wdir)
         
-    coach.RootService(os.path.normpath("settings/root_settings_local.json"), 
+#    coach.RootService(os.path.normpath("settings/root_settings_local.json"), 
+#                      os.path.normpath("settings/root_secret_data.json"),
+#                      working_directory = wdir).run()
+    coach.RootService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
                       os.path.normpath("settings/root_secret_data.json"),
                       working_directory = wdir).run()
-    coach.DirectoryService(os.path.normpath("settings/directory_settings_local.json"), 
+    coach.DirectoryService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
                            working_directory = os.path.join(topdir, "framework")).run()
  
 

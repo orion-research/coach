@@ -48,6 +48,7 @@ and possible be alerted through email when in production. See http://flask.pocoo
 """
 
 # Standard libraries
+from inspect import getmro
 import json
 import logging
 import os
@@ -122,7 +123,21 @@ class Microservice:
     def get_setting(self, key):
         """
         Returns the settings value for the provided key, or an exception if it does not exist.
+        The settings file should be organized as a dictionary, where each entry has a class name as a key,
+        and another dictionary as its value.
+        The settings for a particular object is found by looking up the first class name in its class hierarchy,
+        that contains the key in its dictionary. 
+        It is also possible to put certain keys as global, in the top level dictionary, to set defaults for all classes.
         """
+        # Get the list of parent classes in method resolution order.
+        parents = [cls.__name__ for cls in getmro(self.__class__)]
+        # Look for the key in each parent's dictionary, and return the first found.
+        for p in parents:
+            try:
+                return self.settings[p][key]
+            except:
+                pass
+        # If the key is not defined for any specific class, look if it is defined on the global level.
         return self.settings[key]
 
 
