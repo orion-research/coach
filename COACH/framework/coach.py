@@ -229,7 +229,8 @@ class RootService(Microservice):
         try:
             self.caseDB = CaseDatabase(self.get_setting("database"), 
                                        secret_data["neo4j_user_name"], 
-                                       secret_data["neo4j_password"])
+                                       secret_data["neo4j_password"],
+                                       "CaseDB")
             self.ms.logger.info("Case database successfully connected")
         except:
             self.ms.logger.error("Fatal error: Case database cannot be accessed. Make sure that Neo4j is running!")
