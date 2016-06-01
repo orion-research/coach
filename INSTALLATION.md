@@ -90,7 +90,7 @@ Apache is installed and started as follows:
 
 During development, it is often necessary to restart Apache when changes have been made:
 
-	$ sudo /etc/init.d/apache2 restart
+	$ sudo service apache2 restart
 
 If something goes wrong, the Apache log is the first place to look for troubleshooting:
 
@@ -169,7 +169,7 @@ but needs to be created. The file should be placed in the COACH/framework/settin
 To be able to use Python 3 scripts with Apache, the following module needs to be added:
 
 	$ sudo apt-get install libapache2-mod-wsgi-py3
-	$ sudo /etc/init.d/apache2 restart
+	$ sudo service apache2 restart
 
 The configuration information for COACH must be made available to Apache:
 
@@ -196,7 +196,7 @@ Also, you need to change the permissions of the COACH files to allow Apache to e
 Now enable the site so that Apache can find it, and restart:
 
 	$ sudo a2ensite coach-development
-	$ sudo /etc/init.d/apache2 restart
+	$ sudo service apache2 restart
 
 COACH should now be up and running.
 
