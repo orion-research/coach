@@ -159,7 +159,7 @@ class Microservice:
             self.thread = threading.Thread(target = self.ms.run, kwargs = {"host": self.host, "port": self.port, "use_reloader": False, "threaded": True, "debug": True})
             self.thread.start()
         elif self.get_setting("mode") in ["development", "production"]:
-            self.thread = threading.Thread(target = self.ms.run, kwargs = {"host": self.host, "port": self.port, "use_reloader": False, "threaded": True, "debug": False})
+            self.thread = threading.Thread(target = self.ms.run, kwargs = {"host": self.host, "port": self.port, "use_reloader": False, "threaded": True, "debug": True})
             self.thread.start()
         else:
             self.ms.logger.error("Unknown server mode: " + self.get_setting("mode"))
