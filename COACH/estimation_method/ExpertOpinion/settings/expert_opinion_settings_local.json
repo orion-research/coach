@@ -1,7 +1,0 @@
-{
-	"description": "Settings for the expert opinion estimation method",
-	"name": "Expert opinion estimation method",
-	"mode": "local",
-	"host": "127.0.0.1",
-	"port": 5001
-}

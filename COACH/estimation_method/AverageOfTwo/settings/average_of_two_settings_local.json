@@ -1,7 +1,0 @@
-{
-	"description": "Settings for the AverageOfTwo estimation method",
-	"name": "Average of two estimation method",
-	"mode": "local",
-	"host": "127.0.0.1",
-	"port": 5004
-}

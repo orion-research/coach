@@ -1,7 +1,0 @@
-{
-	"description": "Settings for the AverageOfTwo estimation method",
-	"name": "Average of two estimation method",
-	"mode": "development",
-	"host": "appz-ext.sics.se",
-	"port": 5004
-}

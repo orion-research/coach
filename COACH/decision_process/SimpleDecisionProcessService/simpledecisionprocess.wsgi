@@ -6,7 +6,13 @@ The script should be in the same directory as the Python file it imports.
 import os
 import sys
 
-sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
+# Activate virtual environment
+activate_this = '/var/www/developmentenv/bin/activate_this.py'
+with open(activate_this) as file_:
+    exec(file_.read(), dict(__file__=activate_this))
+
+sys.path.append("/var/www/COACH/COACH/decision_process/SimpleDecisionProcessService")
+sys.path.append("/var/www/COACH")
 
 from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
 
@@ -16,5 +22,5 @@ if sys.version_info[0] < 3:
 
 from COACH.framework import coach
 
-application = SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.normpath("settings/decision_process_settings_development.json"),
-                                                                        working_directory = os.path.abspath(os.curdir)).ms
+application = SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
+                                                                        working_directory = "/var/www/COACH/COACH/decision_process/SimpleDecisionProcessService").ms

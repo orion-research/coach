@@ -97,6 +97,7 @@ class Microservice:
 
         # Create the microservice
         self.ms = Flask(self.name)
+        self.ms.root_path = working_directory
         
         # If a log file name is provided, enable logging to that file
         if "logfile" in self.settings:
@@ -244,7 +245,7 @@ class RootService(Microservice):
         Returns the version of the software running. It fetches this information from git.
         """
         try:
-            return subprocess.check_output(["git", "describe", "--all", "--long"]).decode("ascii")
+            return subprocess.check_output(["git", "describe", "--all", "--long"], cwd = self.working_directory).decode("ascii")
         except:
             return "No version information available"
 

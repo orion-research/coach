@@ -1,8 +1,0 @@
-{
-	"description": "Settings for an example decision process",
-	"name": "An example decision process",
-	"mode": "local",
-	"host": "127.0.0.1",
-	"port": 5002,
-	"logfile": "SimpleDecisionProcess.log"
-}

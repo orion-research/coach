@@ -50,7 +50,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
             return render_template("process_menu.html", url = request.url_root, case_id = request.values["case_id"])
         except Exception as e:
             self.ms.logger.error("Error in process_menu: " + str(e))
-            return "Error in process_menu: Please check log file!"
+            return "Error in process_menu: Please check log file!" + str(e) + str(request.values)
 
 
     def select_estimation_method_dialogue_transition(self):
