@@ -105,22 +105,30 @@ The following command installs this mechanism:
 (In some installations, you have to use pip3 instead of pip in all python module handling commands.)
 
 The COACH software will be installed in the /var/www directory, and that is where the virtual environment will also reside.
+
 	$ cd /var/www
 	$ sudo mkdir COACH
 	$ sudo virtualenv developmentenv
 
 The python command in developmentenv should point at Python version 3.x, and this can be checked using:
+
 	$ developmentenv/bin/python --version
 
 To step into the developmentenv, use:
+
 	$ source developmentenv/bin/activate
 
 All changes you make are now to this local environment. To later exit the local environment, use:
+
 	$ deactivate
 
+You may need to be the owner of this directory for some commands to work properly, so change the ownership:
+
+	$ sudo chown -R <your user id> /var/www/developmentenv
 
 ## Python libraries
 Having installed Python 3.x (whatever the latest version is), and the pip package manager (sudo apt-get python3-pip), do the following inside the local environment:
+
 	$ source developmentenv/bin/activate
 	$ sudo pip install flask
 	$ sudo pip install requests
@@ -131,26 +139,23 @@ Having installed Python 3.x (whatever the latest version is), and the pip packag
 To execute or develop COACH, you need to get the source code.
 
 Move to the COACH directory created before:
+
 	$ cd /var/www/COACH
 
 Then, use the following git commands:
+
 	$ sudo git init
 	$ sudo git pull https://github.com/orion-research/coach.git
 
 
 ## Configuration settings
-Depending on where COACH is installed, some settings files need to update with correct url paths.
-This includes the files COACH/framework/settings/root_settings_development.json, where the url path to directory must be updated,
-and similarily in COACH/framework/settings/directory_settings_development.json.
+Depending on where and how COACH is installed, the settings are in the file COACH/development_settings.json need to be updated.
 
 The file COACH/framework/settings/directory.json, where the directory information is stored, needs to be created.
 It should contain url paths to the different installed services, using this format:
 
 	[["decision_process", "Description of decision process", "url.to.decision.process"], 
 	 ["estimation_method", "Description of estimation method", "url.to.estimation.method"], ...]
-
-Similarly, the settings files for the different decision processes in COACH/decision_processes and the estimation methods in COACH/estimation_methods need
-to be updated.
 
 
 ## Secret data
@@ -166,9 +171,36 @@ but needs to be created. The file should be placed in the COACH/framework/settin
 
 ## Providing COACH through Apache
 
-To be able to use Python 3 scripts with Apache, the following module needs to be added:
+To be able to use Python 3 scripts with Apache, the mod_wsgi module needs to be added. It is important to use version 4.2+ of this module together with Python 3.4+.
 
-	$ sudo apt-get install libapache2-mod-wsgi-py3
+	$ sudo apt-get install apache2-dev
+	$ source developmentenv/bin/activate
+	$ pip install mod_wsgi
+	$ deactivate
+
+Now, Apache needs to be informed about this new module:
+
+	$ sudo developmentenv/bin/mod_wsgi-express install-module
+
+Edit the following file:
+
+	$ sudo nano /etc/apache2/mods-available/wsgi_express.load 
+
+In the file, enter the following text, and then save the file (ctrl-X):
+
+	LoadModule wsgi_module /usr/lib/apache2/modules/mod_wsgi-py34.cpython-34m.so
+
+Also edit the following file:
+
+	$ sudo nano /etc/apache2/mods-available/wsgi_express.conf
+
+In the file, enter the following text, and then save the file (ctrl-X):
+
+	WSGIPythonHome /var/www/developmentenv
+
+Enable the module, and restart Apache:
+
+	$ sudo a2enmod wsgi_express
 	$ sudo service apache2 restart
 
 The configuration information for COACH must be made available to Apache:
@@ -199,6 +231,16 @@ Now enable the site so that Apache can find it, and restart:
 	$ sudo service apache2 restart
 
 COACH should now be up and running.
+
+## Trouble shooting
+
+Apache does not give much feedback on errors in the wsgi setup. Therefore, it is advisable to test each *.wsgi file individually by 
+simply running `python file.wsgi` (or python3) from the terminal. This will detect issues such as path errors etc.
+If there is no output, everything should be ok.
+
+The Apache configuration files can be tested for syntax errors by running `apachectl -t`. 
+
+File permissions are important, and there is not much feedback if they are wrong.
 
 
 # Production server
