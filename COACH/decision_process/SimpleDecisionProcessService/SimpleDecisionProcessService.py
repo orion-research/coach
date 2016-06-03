@@ -63,7 +63,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         directories = json.loads(requests.get(root + "get_service_directories").text)
         services = []
         for d in directories:
-            services += json.loads(requests.get(d + "/get_services?type=estimation_method").text)
+            services += json.loads(requests.get(self.get_setting("protocol") + "://" + d + "/get_services?type=estimation_method").text)
 
         # Create the alternatives for a dropdown menu
         # TODO: It should show the current estimation method as preselected.

@@ -13,7 +13,7 @@
 	"name": "Root microservice for ORION project",
 	"port": 5000,
 	"database": "http://127.0.0.1:7474/db/data/",
-	"service_directories": ["http://orion.sics.se:5003"],
+	"service_directories": ["orion.sics.se:5003"],
 	"logfile": "/var/www/COACH/COACH/framework/root.log",
 	"authentication_database": "/var/www/COACH/COACH/framework/settings/authentication.json"
 },

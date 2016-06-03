@@ -343,7 +343,7 @@ class RootService(Microservice):
         services = []
         current_decision_process = self.caseDB.get_decision_process(session["case_id"])
         for d in directories:
-            services += json.loads(requests.get(d + "/get_services?type=decision_process").text)
+            services += json.loads(requests.get(self.get_setting("protocol") + "://" + d + "/get_services?type=decision_process").text)
         options = ["<OPTION value=\"%s\" %s> %s </A>" % (s[2], "selected" if s[2] == current_decision_process else "", s[1]) for s in services]
         
         dialogue = self.go_to_state(self.change_decision_process_dialogue, decision_processes = options)
