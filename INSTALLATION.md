@@ -238,7 +238,8 @@ Apache does not give much feedback on errors in the wsgi setup. Therefore, it is
 simply running `python file.wsgi` (or python3) from the terminal. This will detect issues such as path errors etc.
 If there is no output, everything should be ok.
 
-The Apache configuration files can be tested for syntax errors by running `apachectl -t`. 
+The Apache configuration files can be tested for syntax errors by running `apachectl -t`. The command `apachectl -S` can be used to 
+produce a listing of the different virtual hosts set up, to help discovering if they are conflicting in some way.
 
 File permissions are important, and there is not much feedback if they are wrong.
 
