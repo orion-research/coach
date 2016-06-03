@@ -3,7 +3,8 @@
 {
 	"description": "Common settings for all classes",
 	"mode": "development",
-	"host": "orion.sics.se"
+	"host": "orion.sics.se",
+	"protocol": "https"
 },
 
 "RootService":

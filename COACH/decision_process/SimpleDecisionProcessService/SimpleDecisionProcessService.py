@@ -90,11 +90,11 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
             options = ["<OPTION value=\"%s\"> %s </A>" % (a[1], a[0]) for a in decision_alternatives]
         
             # Get the estimation method's dialogue
-            estimation_dialogue = requests.get("http://" + estimation_method + "/dialogue").text
+            estimation_dialogue = requests.get(self.get_setting("protocol") + "://" + estimation_method + "/dialogue").text
         
             # Render the dialogue
             return self.go_to_state(self.perform_ranking_dialogue, options = options, estimation_dialogue = estimation_dialogue, 
-                                    this_process = "http://" + self.host + ":" + str(self.port) + "/",
+                                    this_process = self.get_setting("protocol") + "://" + self.host + ":" + str(self.port) + "/",
                                     root = root, case_id = case_id, estimation_method = estimation_method)
         else:
             return "You need to select an estimation method before you can rank alternatives!"
@@ -157,7 +157,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         params = dict()
         for p in set(request.values.keys()) - {"root", "case_id", "estimation_method", "alternative"}:
             params[p] = request.values[p]
-        value = requests.get("http://" + estimation_method + "/evaluate", params = params).text
+        value = requests.get(self.get_setting("protocol") + "://" + estimation_method + "/evaluate", params = params).text
     
         # Write estimate to the database
         # TODO: For now, just set it as an attribute of the alternative node. This needs to be improved!

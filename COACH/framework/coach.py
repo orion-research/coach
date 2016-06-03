@@ -17,10 +17,7 @@ services use general querys. Otherwise, the root must provide an API for a limit
 - The general principle for the external services is that they get access to one node in the database.
 To that node they may add attributes, and they may create subnodes linked from it.
 All this should happen through an API in the root service. The database itself should not be visible on the Internet.
-- Look into security. Authentication, e.g. http://blog.miguelgrinberg.com/post/restful-authentication-with-flask.
-HTTPS, e.g. http://stackoverflow.com/questions/29458548/can-you-add-https-functionality-to-a-python-flask-web-server. https://github.com/kennethreitz/flask-sslify. 
 - In the root settings, it should be possible set a regexp for what email addresses are allowed, to limit user creation.
-- Make https work!
 - It is necessary to have some kind of token to ensure that access is valid after logging it. Could it be saved in the session object?
 http://stackoverflow.com/questions/32510290/how-do-you-implement-token-authentication-in-flask.
 For each user, a token with expiration is generated, and the token is also stored in the session object.
@@ -323,7 +320,7 @@ class RootService(Microservice):
         try:
             decision_process = self.caseDB.get_decision_process(session["case_id"])
             if decision_process:
-                context["process_menu"] = requests.get("http://" + decision_process + "/process_menu", params = {"case_id": session["case_id"]}).text
+                context["process_menu"] = requests.get(self.get_setting("protocol") + "://" + decision_process + "/process_menu", params = {"case_id": session["case_id"]}).text
         except:
             pass
         return self.go_to_state(self.main_menu_state, **context)
@@ -469,7 +466,7 @@ class RootService(Microservice):
     def change_decision_process(self):
         url = request.form["url"]
         self.caseDB.change_decision_process(session["case_id"], url)
-        menu = requests.get("http://" + url + "/process_menu").text
+        menu = requests.get(self.get_setting("protocol") + "://" + url + "/process_menu").text
 
         return self.main_menu_transition(main_dialogue = "Decision process changed!", process_menu = menu)
 
