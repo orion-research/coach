@@ -236,7 +236,7 @@ COACH should now be up and running.
 ## Configuring https
 
 To ensure basic security, COACH should be set up to use certificates and encryption through https. As a first step,
-Apache is configured to use SSL:
+Apache is configured to use encryption:
 
 	$ sudo a2enmod ssl
 	$ sudo a2ensite default-ssl.conf
@@ -276,9 +276,26 @@ Make sure that the configuration file for any virtual host that should run https
 	SSLCertificateKeyFile /etc/letsencrypt/live/privkey.pem
 	SSLEngine on
 
+
 Finally, restart Apache again:
 
  	$ sudo service apache restart
+
+
+## Security hardening
+Based on the output of testing in a browser the URL `https://www.ssllabs.com/ssltest/analyze.html?d=example.com&latest`, some
+actions may be needed.
+
+The SSLv3 is not considered secure any more, so some settings may need to change. Find the appropriate files using:
+
+	$ grep -i -r "SSLProtocol" /etc/apache2
+
+In the indicated files, change `SSLProtocol all` to `SSLProtocol all -SSLv2 -SSLv3`.
+
+There are also issues with RC4 encryption. In the same file, the following lines should be added:
+
+	SSLHonorCipherOrder On
+	SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
 
 
 ## Trouble shooting
