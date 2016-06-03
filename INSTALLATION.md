@@ -232,6 +232,55 @@ Now enable the site so that Apache can find it, and restart:
 
 COACH should now be up and running.
 
+
+## Configuring https
+
+To ensure basic security, COACH should be set up to use certificates and encryption through https. As a first step,
+Apache is configured to use SSL:
+
+	$ sudo a2enmod ssl
+	$ sudo a2ensite default-ssl.conf
+	$ sudo service apache restart
+
+Certificates can be obtained using the free letsencrypt service. The following steps are needed to install the service:
+
+	$ sudo apt-get update
+	$ sudo git clone https://github.com/letsencrypt/letsencrypt /opt/letsencrypt
+
+To set up certificates, do the following (replacing example.com with your domain name):
+
+	$ cd /opt/letsencrypt
+	$ ./letsencrypt-auto --apache -d example.com
+	$ ./letsencrypt-auto --apache -d example.com -d www.example.com
+
+The last step starts (after a while) an interactive setup process. When it has been completed, the certificates can be found in
+`/etc/letsencrypt/live`, where the certificate is in `cert.pem` and the encryption key in `privkey.pem`.
+
+The installation can be tested from a browser using the URL `https://www.ssllabs.com/ssltest/analyze.html?d=example.com&latest`.
+
+The certificates have a limited validity, so it is advisable to automatically update them before expiration:
+
+	$ /opt/letsencrypt/letsencrypt-auto renew
+	$ sudo crontab -e
+
+The last command opens a file in an editor. Put the following text into one line of the file, and save it:
+
+	30 2 * * 1 /opt/letsencrypt/letsencrypt-auto renew >> /var/log/le-renew.log
+
+This will make the system update the certificates every Monday at 2:30 AM.
+
+Now the Apache virtual hosts must be told where to find the certificates, and also to use the SSL encryption. 
+Make sure that the configuration file for any virtual host that should run https contains the following lines:
+
+	SSLCertificateFile /etc/letsencrypt/live/cert.pem
+	SSLCertificateKeyFile /etc/letsencrypt/live/privkey.pem
+	SSLEngine on
+
+Finally, restart Apache again:
+
+ 	$ sudo service apache restart
+
+
 ## Trouble shooting
 
 Apache does not give much feedback on errors in the wsgi setup. Therefore, it is advisable to test each *.wsgi file individually by 
