@@ -164,7 +164,7 @@ but needs to be created. The file should be placed in the COACH/framework/settin
 
 	{
 		"neo4j_user_name": "your_neo4j_user_name",
-        	"neo4j_password": "your_neo4j_password",
+		"neo4j_password": "your_neo4j_password",
 		"secret_key": "whatever string of random characters you would like to use for encryption"
 	}
 
