@@ -11,7 +11,7 @@
 {
 	"description": "Settings for the root microservice",
 	"name": "Root microservice for ORION project",
-	"port": 5000,
+	"port": 80,
 	"database": "http://127.0.0.1:7474/db/data/",
 	"service_directories": ["orion.sics.se:5003"],
 	"logfile": "/var/www/COACH/COACH/framework/root.log",
