@@ -574,6 +574,10 @@ class RootService(Microservice):
         The code is based on: https://github.com/razius/github-webhook-handler/blob/master/index.py, but greatly simplified.
         """
         
+        # This endpoint only makes sense on servers
+        if self.get_setting("mode") == "local":
+            return "OK"
+        
         if request.method == 'GET':
             return 'OK'
         elif request.method == 'POST':
@@ -605,10 +609,8 @@ class RootService(Microservice):
             if not hmac.compare_digest(mac.hexdigest(), signature):
                 abort(403)
 
-# TODO: How to deal with sudo here????
-# See http://askubuntu.com/questions/155791/how-do-i-sudo-a-command-in-a-script-without-being-asked-for-a-password
-            # Run the script that updates the code from GitHub and restarts Apache
-            subp = subprocess.Popen("SUDO SH-SCRIPT THAT PERFORMS GIT PULL AND APACHE RESTART")
+            # Run the script that updates the code from GitHub and restarts Apache.
+            subp = subprocess.Popen("sudo " + self.get_setting("github_update_script"))
             subp.wait()
             return 'OK'
         

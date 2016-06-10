@@ -16,6 +16,13 @@
 	"service_directories": ["orion.sics.se:5003"],
 	"logfile": "/var/www/COACH/COACH/framework/root.log",
 	"authentication_database": "/var/www/COACH/COACH/framework/settings/authentication.json"
+	"email":
+	{
+		"server": "send.one.com",
+		"port": 587,
+		"sender": "noreply@orion-research.se"
+	},
+	"github_update_script" : "/var/www/COACH/github_update_script.sh"
 },
 
 "DirectoryService": 
