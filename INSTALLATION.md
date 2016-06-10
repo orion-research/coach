@@ -40,7 +40,10 @@ but needs to be created. The file should be placed in the COACH/framework/settin
 	{
 		"neo4j_user_name": "your_neo4j_user_name",
         	"neo4j_password": "your_neo4j_password",
-		"secret_key": "whatever string of random characters you would like to use for encryption"
+		"secret_key": "whatever string of random characters you would like to use for encryption",
+		"email_password": "the password for the email account used for sending email from COACH",
+		"github_key": "another string of random characters, only needed in case you plan to use GitHub webhooks",
+	        "password_hash_salt" : "a shorter random string"
 	}
 
 ## Running COACH
