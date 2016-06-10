@@ -24,7 +24,6 @@ For each user, a token with expiration is generated, and the token is also store
 Whenever an endpoint requiring authentication is called, it checks if the session token is still valid.
 If so, it gets a new token, and the timer is reset. If the token is no longer valid, the user is logged out.
 This can all be put into one method self.authenticate(), which is called at the beginning of each endpoint.
-- An email should be sent (e.g. using a special gmail account) to ask users to verify when registering.
 
 User interface:
 - Change the menu for case management. There should be one item for stakeholders, where current stakeholders can be listed and new ones added.
@@ -45,12 +44,14 @@ and possible be alerted through email when in production. See http://flask.pocoo
 """
 
 # Standard libraries
+from hashlib import sha1
+import hmac
 from inspect import getmro
+import ipaddress
 import json
 import logging
 import os
 import subprocess
-        
 import threading
 
 # Coach modules
@@ -58,7 +59,7 @@ from COACH.framework.authentication import Authentication
 from COACH.framework.casedb import CaseDatabase
 
 # Web server framework
-from flask import Flask, Response, request, session
+from flask import Flask, Response, request, session, abort
 from flask.views import View
 from flask.templating import render_template
 
@@ -220,8 +221,14 @@ class RootService(Microservice):
         # Setup encryption for settings cookies
         self.ms.secret_key = secret_data["secret_key"]
 
+        # Setup key for GitHub webhook
+        self.github_key = secret_data["github_key"]
+
         # Initialize the user database
-        self.authentication = Authentication(os.path.join(self.working_directory, self.get_setting("authentication_database")))
+        self.get_setting("email")["password"] = secret_data["email_password"]
+        root_service_url = self.get_setting("protocol") + "://" + self.get_setting("host") + ":" + str(self.get_setting("port"))
+        self.authentication = Authentication(os.path.join(self.working_directory, self.get_setting("authentication_database")),
+                                             self.get_setting("email"), root_service_url, secret_data["password_hash_salt"])
 
         # Initialize the case database
         try:
@@ -274,6 +281,7 @@ class RootService(Microservice):
         # TODO: Do all these have to be posts, to ensure that data is encrypted when HTTPS is implemented?
         self.ms.add_url_rule("/login_user", view_func = self.login_user, methods = ["POST"])
         self.ms.add_url_rule("/create_user", view_func = self.create_user, methods = ["POST"])
+        self.ms.add_url_rule("/confirm_account", view_func = self.confirm_account, methods = ["GET"])
         self.ms.add_url_rule("/create_case", view_func = self.create_case, methods = ["POST"])
         self.ms.add_url_rule("/logout", view_func = self.logout)
         self.ms.add_url_rule("/change_password", view_func = self.change_password)
@@ -290,7 +298,10 @@ class RootService(Microservice):
         self.ms.add_url_rule("/get_decision_alternatives", view_func = self.get_decision_alternatives)
         self.ms.add_url_rule("/change_alternative_property", view_func = self.change_alternative_property, methods = ["POST"])
         self.ms.add_url_rule("/get_alternative_property", view_func = self.get_alternative_property)
-        
+
+        # Endpoint for triggering an update when a new commit is available on GitHub    
+        self.ms.add_url_rule("/github_update", view_func = self.github_update, methods = ["GET", "POST"])
+
 
     def initial_transition(self):
         # Store the software version in the session object
@@ -415,10 +426,27 @@ class RootService(Microservice):
             return self.go_to_state(self.create_user_dialogue, error = "PasswordsNotEqual")
         else:
             # Otherwise, create the user in the database, and return to the initial dialogue.
-            self.authentication.create_user(user_id, password1, email, name)
+            try:
+                self.authentication.create_user(user_id, password1, email, name)
+            except Exception as e:
+                self.ms.logger.error("Failed to create user")
+                self.ms.logger.error("Exception: " + str(e))
             return self.go_to_state(self.initial_state)
 
 
+    def confirm_account(self):
+        """
+        Endpoint used by a user to confirm access to the email provided when setting up the account.
+        It takes two parameters, namely user id and a token. 
+        """
+        user_id = request.values.get("user")
+        token = request.values.get("token")
+        if self.authentication.confirm_account(user_id, token):
+            return "Account of " + user_id + " has been confirmed! You may now log in."
+        else:
+            return "Error: The token provided for validating account of " + user_id + " was not valid."
+    
+        
     def create_case(self):
         """
         Endpoint representing the transition from the create case dialogue to the main menu.
@@ -536,6 +564,54 @@ class RootService(Microservice):
         value = self.caseDB.get_alternative_property(request.values["alternative"], request.values["name"])
         return Response(value)
 
+
+    def github_update(self):
+        """
+        Webservice hook for automatic update on GitHub events. When the hook is called, it triggers a shell script that
+        pulls the latest commit from the GitHub directory, and then restarts Apache. 
+        Only requests from github.com are accepted, and a correct signature key must be provided.
+        
+        The code is based on: https://github.com/razius/github-webhook-handler/blob/master/index.py, but greatly simplified.
+        """
+        
+        if request.method == 'GET':
+            return 'OK'
+        elif request.method == 'POST':
+            # Store the IP address of the requester
+            request_ip = ipaddress.ip_address(u'{0}'.format(request.remote_addr))
+    
+            # Get the GitHub IP addresses used for hooks.
+            hook_blocks = requests.get('https://api.github.com/meta').json()['hooks']
+    
+            # Check if the POST request is from github.com
+            for block in hook_blocks:
+                if ipaddress.ip_address(request_ip) in ipaddress.ip_network(block):
+                    break  # the remote_addr is within the network range of github.
+            else:
+                abort(403)
+
+            # GitHub may send a "ping" request to test the hook.    
+            if request.headers.get('X-GitHub-Event') == "ping":
+                return json.dumps({'msg': 'Hi!'})
+
+            # All other event types than "push" and "ping" are not handled.
+            if request.headers.get('X-GitHub-Event') != "push":
+                return json.dumps({'msg': "wrong event type"})
+
+            # Check that request signature matches the key
+            key = self.github_key.encode()
+            signature = request.headers.get('X-Hub-Signature').split('=')[1]
+            mac = hmac.new(key, msg = request.data, digestmod = sha1)
+            if not hmac.compare_digest(mac.hexdigest(), signature):
+                abort(403)
+
+# TODO: How to deal with sudo here????
+# See http://askubuntu.com/questions/155791/how-do-i-sudo-a-command-in-a-script-without-being-asked-for-a-password
+            # Run the script that updates the code from GitHub and restarts Apache
+            subp = subprocess.Popen("SUDO SH-SCRIPT THAT PERFORMS GIT PULL AND APACHE RESTART")
+            subp.wait()
+            return 'OK'
+        
     
 class DirectoryService(Microservice):
     

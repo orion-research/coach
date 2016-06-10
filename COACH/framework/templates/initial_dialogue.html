@@ -22,7 +22,7 @@ This software is version {{ session["version"] }}.
 {% if error == "FieldMissing": %}
 Error: User name or password missing!
 {% elif error == "NoSuchUser": %}
-Error: No such user!
+Error: User does not exist, or has not been confirmed!
 {% elif error == "WrongPassword": %}
 Error: Wrong password!
 {% endif %} 

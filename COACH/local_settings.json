@@ -15,7 +15,13 @@
 	"database": "http://127.0.0.1:7474/db/data/",
 	"service_directories": ["127.0.0.1:5003"],
 	"logfile": "root.log",
-	"authentication_database": "settings/authentication.json"
+	"authentication_database": "settings/authentication.json",
+	"email":
+	{
+		"server": "send.one.com",
+		"port": 587,
+		"sender": "noreply@orion-research.se"
+	}
 },
 
 "DirectoryService": 
