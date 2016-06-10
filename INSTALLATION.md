@@ -316,5 +316,8 @@ In some situations, it appears that Apache chooses to use its default virtual ho
 to listen on port 80. This shows up as a default Apache page in the browser rather than the COACH login page. 
 A fix to this is to copy the contents of the COACH port 80 virtual host to the default host configuration file.
 
+## Configuring GitHub webhooks
+
+
 # Production server
 To be defined. Will be similar to development server.
