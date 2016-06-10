@@ -610,7 +610,7 @@ class RootService(Microservice):
                 abort(403)
 
             # Run the script that updates the code from GitHub and restarts Apache.
-            subp = subprocess.Popen("sudo " + self.get_setting("github_update_script"))
+            subp = subprocess.Popen("sudo bash " + self.get_setting("github_update_script"))
             subp.wait()
             return 'OK'
         
