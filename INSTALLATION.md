@@ -317,7 +317,7 @@ to listen on port 80. This shows up as a default Apache page in the browser rath
 A fix to this is to copy the contents of the COACH port 80 virtual host to the default host configuration file.
 
 ## Configuring GitHub webhooks
-To be defined later on.
+To be defined later on how to setup GitHub.
 
 
 # Production server
