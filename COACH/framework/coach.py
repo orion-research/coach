@@ -621,9 +621,12 @@ class RootService(Microservice):
                 abort(403)
 
             # Run the script that updates the code from GitHub and restarts Apache.
-            output = subprocess.check_output(["sudo",  "bash", self.get_setting("github_update_script")],
-                                             stderr = subprocess.STDOUT)
-            return "github_update executed with the following output:\n\n" + output
+            try:
+                output = subprocess.check_output(["sudo",  "bash", self.get_setting("github_update_script")],
+                                                 stderr = subprocess.STDOUT)
+                return "github_update successfully executed " + self.get_setting("github_update_script") + " with the following output:\n\n" + output
+            except subprocess.CalledProcessError as e:
+                return "github_update failed to execute " + e.cmd + " resulting in return code " + e.returncode + " and the following output:\n\n" + e.output
         
     
 class DirectoryService(Microservice):
