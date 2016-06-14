@@ -4,9 +4,12 @@ Created on 20 maj 2016
 @author: Jakob Axelsson
 '''
 
+# Standard libraries
+import json
+
 
 # Database connection
-from neo4j.v1 import GraphDatabase, basic_auth
+from neo4j.v1 import GraphDatabase, basic_auth, Node
 
 
 class CaseDatabase:
@@ -225,3 +228,37 @@ class CaseDatabase:
             return next(iter(self.query(q, locals())))["name"]
         except:
             return None
+        
+    
+    def export_case_data(self, case_id):
+        """
+        Returns all data stored in the database concerning a specific case, with sufficient information to be able to
+        restore an equivalent version of it.
+        
+        TODO: It should be possible to set the level of detail on what gets exported.
+        """
+
+        graph = dict()
+
+        # Get case node
+        q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} RETURN case"""
+        case_node = self.query(q, locals()).single()["case"]
+        graph["case"] = {"id" : case_node.id, "properties": case_node.properties}
+        
+        # Get stakeholders and their roles
+        q = """MATCH (case:Case:{label}) -[role:Stakeholder]-> (user:{label})
+               WHERE id(case) = {case_id}
+               RETURN user, role"""
+        graph["stakeholders"] = [{"id": result["user"].id, "properties": result["user"].properties, "role": result["role"].properties["role"]}
+                                 for result in self.query(q, locals())]
+
+        # Get alternatives
+        q = """MATCH (case:Case:{label}) -[:Alternative]-> (alt:Alternative:{label}) 
+               WHERE id(case) = {case_id} 
+               RETURN alt"""
+        graph["alternatives"] = [{"id": result["alt"].id, "properties": result["alt"].properties}
+                                 for result in self.query(q, locals())]
+        
+        # Return graph as json
+        return json.dumps(graph, indent = 4)
+    

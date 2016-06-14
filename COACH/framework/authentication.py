@@ -36,7 +36,7 @@ class Authentication:
         except:
             # File of services does not exist, so create it an empty dictionary and save it to the file
             self.users = dict()
-            data = json.dumps(self.users)
+            data = json.dumps(self.users, indent = 4)
             with open(self.users_filename, "w") as file:
                 file.write(data)
 

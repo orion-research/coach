@@ -13,6 +13,8 @@ from COACH.framework import coach
 from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
 from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.estimation_method.ExpertOpinion import ExpertOpinion
+from COACH.knowledge_repository import knowledge_repository
+
 
 if __name__ == '__main__':
     try:
@@ -36,6 +38,9 @@ if __name__ == '__main__':
                       working_directory = wdir).run()
     coach.DirectoryService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
                            working_directory = os.path.join(topdir, "framework")).run()
+    knowledge_repository.KnowledgeRepositoryService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
+                                                    os.path.normpath("settings/root_secret_data.json"),
+                                                    working_directory = wdir).run()
  
 
     # Start the decision process service

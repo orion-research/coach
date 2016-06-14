@@ -16,6 +16,7 @@
 	"service_directories": ["127.0.0.1:5003"],
 	"logfile": "root.log",
 	"authentication_database": "settings/authentication.json",
+	"knowledge_repository": "http://127.0.0.1:5005",
 	"email":
 	{
 		"server": "send.one.com",
@@ -30,6 +31,14 @@
 	"name": "An example directory",
 	"port": 5003,
 	"directory_file_name": "settings/directory.json"
+},
+
+"KnowledgeRepositoryService":
+{
+	"description": "Settings for the knowledge repository microservice",
+	"name": "Knowledge repository microservice for the ORION project",
+	"port": "5005",
+	"database": "http://127.0.0.1:7474/db/data/"
 },
 
 "SimpleDecisionProcessService":

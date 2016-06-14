@@ -290,6 +290,8 @@ class RootService(Microservice):
         self.ms.add_url_rule("/change_decision_process", view_func = self.change_decision_process, methods = ["POST"])
         self.ms.add_url_rule("/add_stakeholder", view_func = self.add_stakeholder)
         self.ms.add_url_rule("/create_alternative", view_func = self.create_alternative, methods = ["POST"])
+        self.ms.add_url_rule("/export_case_to_knowledge_repository", 
+                             view_func = self.export_case_to_knowledge_repository)
 
         # Endpoints for database and directory services for usage by other components
         self.ms.add_url_rule("/get_service_directories", view_func = self.get_service_directories)
@@ -518,6 +520,15 @@ class RootService(Microservice):
         return self.main_menu_transition(main_dialogue = "New alternative created!")
 
 
+    def export_case_to_knowledge_repository(self):
+        """
+        Exports the current case to the knowledge repository.
+        """
+        description = self.caseDB.export_case_data(session["case_id"])
+        requests.post(self.get_setting("knowledge_repository") + "/add_case", data = {"description": description})
+        return self.main_menu_transition(main_dialogue = "The following case data was exported:\n\n" + description)
+        
+
     def get_service_directories(self):
         """
         Returns the list of service directories registered with this service as a json file.
@@ -687,7 +698,7 @@ class DirectoryService(Microservice):
         
         self.services = [post for post in self.services if post[2] != url] + [(service_type, name, url)]
         with open(os.path.join(self.working_directory, self.file_name), "w") as file:
-            json.dump(self.services, file)
+            json.dump(self.services, file, indent = 4)
         return ""
 
 
