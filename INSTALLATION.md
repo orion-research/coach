@@ -334,4 +334,4 @@ To be defined. Will be similar to development server.
 	* Under Activate, select the checkbox.
 	* Press Add webhook.
 
-You also need to update the sudoers file to not require a password.
+You also need to update the sudoers file to not require a password, and file permissions need to be changed.
