@@ -331,3 +331,5 @@ To be defined. Will be similar to development server.
 	* Under Payload URL, enter: https://your.coach.server.url/github_update.
 	* Under Secret, enter a random string, which should also be included in the secret data file.
 	* Under Which events..., select "Just the push event".
+	* Under Activate, select the checkbox.
+	* Press Add webhook.
