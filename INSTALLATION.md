@@ -333,3 +333,5 @@ To be defined. Will be similar to development server.
 	* Under Which events..., select "Just the push event".
 	* Under Activate, select the checkbox.
 	* Press Add webhook.
+
+You also need to update the sudoers file to not require a password.
