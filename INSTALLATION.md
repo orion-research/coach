@@ -328,4 +328,6 @@ To activate it, log in to the GitHub account, select "Settings" and then select 
 # Production server
 To be defined. Will be similar to development server.
 
-	* Under Payload URL, enter: https://your.coach.server.url/github_update
+	* Under Payload URL, enter: https://your.coach.server.url/github_update.
+	* Under Secret, enter a random string, which should also be included in the secret data file.
+	* Under Which events..., select "Just the push event".
