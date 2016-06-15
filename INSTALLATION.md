@@ -321,6 +321,11 @@ A fix to this is to copy the contents of the COACH port 80 virtual host to the d
 
 COACH is prepared for automatic updates of the server version when new commits are made to GitHub.
 
+To activate it, log in to the GitHub account, select "Settings" and then select "Webhooks and services". Enter the following information:
+
+
 
 # Production server
 To be defined. Will be similar to development server.
+
+	* Under Payload URL, enter: https://your.coach.server.url/github_update
