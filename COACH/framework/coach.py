@@ -249,7 +249,7 @@ class RootService(Microservice):
         Returns the version of the software running. It fetches this information from git.
         """
         try:
-            return subprocess.check_output(["git", "describe", "--all", "--long"], cwd = self.working_directory).decode("ascii")[-7:]
+            return subprocess.check_output(["git", "describe", "--all", "--long"], cwd = self.working_directory).decode("ascii").rstrip()[-7:]
         except:
             return "No version information available"
 
