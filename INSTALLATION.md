@@ -335,3 +335,4 @@ To be defined. Will be similar to development server.
 	* Press Add webhook.
 
 You also need to update the sudoers file to not require a password, and file permissions need to be changed.
+The sudoers file must be edited using sudo visudo.
