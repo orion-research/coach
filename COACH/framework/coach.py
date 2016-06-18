@@ -622,7 +622,7 @@ class RootService(Microservice):
 
             # Run the script that updates the code from GitHub and restarts Apache.
             try:
-                output = subprocess.check_output(["sudo", "-n", "bash", self.get_setting("github_update_script")],
+                output = subprocess.check_output(["sudo", "-n", self.get_setting("github_update_script")],
                                                  stderr = subprocess.STDOUT)
                 return "github_update successfully executed " + self.get_setting("github_update_script") + " with the following output:\n\n" + output.decode("ascii")
             except subprocess.CalledProcessError as e:
