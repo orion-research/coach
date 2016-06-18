@@ -624,9 +624,9 @@ class RootService(Microservice):
             try:
                 output = subprocess.check_output(["sudo", "-n", "bash", self.get_setting("github_update_script")],
                                                  stderr = subprocess.STDOUT)
-                return "github_update successfully executed " + self.get_setting("github_update_script") + " with the following output:\n\n" + output
+                return "github_update successfully executed " + self.get_setting("github_update_script") + " with the following output:\n\n" + output.decode("ascii")
             except subprocess.CalledProcessError as e:
-                return "github_update failed to execute " + str(e.cmd) + " resulting in return code " + str(e.returncode) + " and the following output:\n\n" + str(e.output)
+                abort(500, "github_update failed to execute " + str(e.cmd) + " resulting in return code " + str(e.returncode) + " and the following output:\n\n" + e.output.decode("ascii"))
         
     
 class DirectoryService(Microservice):
