@@ -29,9 +29,18 @@ Having installed Python 3.x (whatever the latest version is), and the pip packag
 
 	$ pip install flask
 	$ pip install requests
-	$ pip install neo4j-driver=1.0.0
+	$ pip install neo4j-driver==1.0.0
 
 (In some installations, you have to use pip3 instead of pip in the above commands.)
+
+## Configuration settings
+
+The file COACH/framework/settings/directory.json, where the directory information is stored, needs to be created.
+It should contain url paths to the different installed services, using this format:
+
+	[["decision_process", "Description of decision process", "url.to.decision.process"], 
+	 ["estimation_method", "Description of estimation method", "url.to.estimation.method"], ...]
+
 
 ## Secret data
 In order for COACH to access the database, and also to encrypt some data, a file needs to be created that stores this information. Since this data is secret, it is not on GitHub,
