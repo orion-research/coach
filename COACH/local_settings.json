@@ -49,6 +49,13 @@
 	"logfile": "SimpleDecisionProcess.log"
 },
 
+"ContextModelService":
+{
+	"description": "Settings for the context model",
+	"name": "Context model",
+	"port": 5006,
+	"logfile": "ContextModel.log"
+},
 
 "AverageOfTwo":
 {
