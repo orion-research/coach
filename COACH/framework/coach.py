@@ -338,7 +338,7 @@ class RootService(Microservice):
             pass
 
         context_service = self.get_setting("context_service")
-        context["contextservice"] =  context_service + "/edit_context_dialogue?case_id=" + session["case_id"]
+        context["contextservice"] =  context_service + "/edit_context_dialogue?case_id=" + str(session["case_id"])
         
         return self.go_to_state(self.main_menu_state, **context)
 
