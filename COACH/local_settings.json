@@ -17,6 +17,7 @@
 	"logfile": "root.log",
 	"authentication_database": "settings/authentication.json",
 	"knowledge_repository": "http://127.0.0.1:5005",
+	"context_service": "http://127.0.0.1:5006",
 	"email":
 	{
 		"server": "send.one.com",

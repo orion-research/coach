@@ -249,7 +249,7 @@ class RootService(Microservice):
         Returns the version of the software running. It fetches this information from git.
         """
         try:
-            return subprocess.check_output(["git", "describe", "--all", "--long"], cwd = self.working_directory).decode("ascii").rstrip()[-7:]
+            return subprocess.check_output(["git", "describe", "--all", "--long"], cwd = self.working_directory).decode("ascii")[-7:]
         except:
             return "No version information available"
 
@@ -336,6 +336,10 @@ class RootService(Microservice):
                 context["process_menu"] = requests.get(self.get_setting("protocol") + "://" + decision_process + "/process_menu", params = {"case_id": session["case_id"]}).text
         except:
             pass
+
+        context_service = self.get_setting("context_service")
+        context["contextservice"] =  context_service + "/edit_context_dialogue?case_id=" + session["case_id"]
+        
         return self.go_to_state(self.main_menu_state, **context)
 
     
@@ -622,11 +626,11 @@ class RootService(Microservice):
 
             # Run the script that updates the code from GitHub and restarts Apache.
             try:
-                output = subprocess.check_output(["sudo", self.get_setting("github_update_script")],
+                output = subprocess.check_output(["sudo", "-n", "bash", self.get_setting("github_update_script")],
                                                  stderr = subprocess.STDOUT)
-                return "github_update successfully executed " + self.get_setting("github_update_script") + " with the following output:\n\n" + output.decode("ascii")
+                return "github_update successfully executed " + self.get_setting("github_update_script") + " with the following output:\n\n" + output
             except subprocess.CalledProcessError as e:
-                abort(500, "github_update failed to execute " + str(e.cmd) + " resulting in return code " + str(e.returncode) + " and the following output:\n\n" + e.output.decode("ascii"))
+                return "github_update failed to execute " + str(e.cmd) + " resulting in return code " + str(e.returncode) + " and the following output:\n\n" + str(e.output)
         
     
 class DirectoryService(Microservice):
