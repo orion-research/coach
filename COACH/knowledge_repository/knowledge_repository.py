@@ -69,8 +69,16 @@ class KnowledgeRepository:
             result = s.run(q.format(**context))
             self.close_session(s)
             return result
-
         
+
+    def asset_origins(self):
+        """
+        Queries the knowledge repository database and returns an iterable of all asset origins options.
+        """
+        q = """MATCH (ao:Origin:{label}) RETURN ao.name AS asset_origin"""
+        return [result["asset_origin"] for result in self.query(q, locals())]
+    
+    
     def add_case(self, case_description):
         """
         Adds a case to the KR from a description provided as a json string.

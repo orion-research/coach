@@ -334,12 +334,12 @@ class RootService(Microservice):
             decision_process = self.caseDB.get_decision_process(session["case_id"])
             if decision_process:
                 context["process_menu"] = requests.get(self.get_setting("protocol") + "://" + decision_process + "/process_menu", params = {"case_id": session["case_id"]}).text
+            context_service = self.get_setting("context_service")
+            if context_service:
+                context["contextservice"] =  context_service + "/edit_context_dialogue?case_id=" + str(session["case_id"])
         except:
             pass
 
-        context_service = self.get_setting("context_service")
-        context["contextservice"] =  context_service + "/edit_context_dialogue?case_id=" + str(session["case_id"])
-        
         return self.go_to_state(self.main_menu_state, **context)
 
     
