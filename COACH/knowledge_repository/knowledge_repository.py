@@ -86,7 +86,11 @@ class KnowledgeRepository:
         TODO: This is just a stub, it should go through the description and add it to the KR on its internal format
         using Neo4j queries.
         """
-        return
+        c_descr = json.loads(case_description)
+        case_node = c_descr.get('case')
+        node_properties = case_node.get('properties')
+        q = """CREATE (c:Case:{label} {id: "{case_node[id]}", title: "{node_properties[title]}", description: "{node_properties[description]}"}) RETURN id(c) AS case_id"""
+        self.query(q, locals())
         
         
 class KnowledgeRepositoryService(Microservice):
