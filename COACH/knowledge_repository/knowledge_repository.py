@@ -70,7 +70,29 @@ class KnowledgeRepository:
             self.close_session(s)
             return result
         
-
+    
+    def add_case(self, case_description):
+        """
+        Adds a case to the KR from a description provided as a json string.
+        
+        NOTES: This is just a stub, it should go through the description and add it to the KR on its internal format
+        using Neo4j queries.
+        - at now there is no check that a case already exists
+        - the addition is done in pieces without exploiting a proper transaction
+        """
+        # Retrieves case data from JSON format
+        c_descr = json.loads(case_description)
+        # Retrieves case node attributes and writes them into the KR. Then it retrieves the case_id
+        case_node = c_descr.get('case')
+        node_properties = case_node.get('properties')
+        q = """CREATE (c:Case:{label} {{id: "{case_node[id]}", title: "{node_properties[title]}", description: "{node_properties[description]}"}}) RETURN id(c) AS case_id"""
+        case_id = next(iter(self.query(q, locals())))["case_id"]
+        # Retrieves stakeholders information
+        c_stakeholders = c_descr.get('stakeholders')
+        # Stores stakeholders data into the KR
+        self.add_stakeholders(case_id, c_stakeholders)
+        
+        
     def asset_origins(self):
         """
         Queries the knowledge repository database and returns an iterable of all asset origins options.
@@ -79,18 +101,33 @@ class KnowledgeRepository:
         return [result["asset_origin"] for result in self.query(q, locals())]
     
     
-    def add_case(self, case_description):
+    def add_stakeholders(self, c_id, c_stakeholders):
         """
-        Adds a case to the KR from a description provided as a json string.
+        Adds stakeholders to the case c_id.
         
-        TODO: This is just a stub, it should go through the description and add it to the KR on its internal format
-        using Neo4j queries.
+        NOTES:
+        - the decision role of the stakeholder is added as a property of the stakeholder relationship
+        - the addition is done in pieces without exploiting a proper transaction
         """
-        c_descr = json.loads(case_description)
-        case_node = c_descr.get('case')
-        node_properties = case_node.get('properties')
-        q = """CREATE (c:Case:{label} {id: "{case_node[id]}", title: "{node_properties[title]}", description: "{node_properties[description]}"}) RETURN id(c) AS case_id"""
-        self.query(q, locals())
+        s = self.open_session()
+        # Iterate over the list elements and get appropriate attributes
+        for l_idx in range(len(c_stakeholders)):
+            s_id = c_stakeholders[l_idx].get('id')
+            s_prop = c_stakeholders[l_idx].get('properties')
+            role = c_stakeholders[l_idx].get('role')
+            # Create a new stakeholder, and get it's id
+            q1 = """CREATE (s:Stakeholder:{label} {{id: "{s_id}", name: "{s_prop[user_id]}"}}) RETURN id(s) AS sh_id"""
+            new_stakeholder = next(iter(self.query(q1, locals(), s)))["sh_id"]
+        
+            # Creates a corresponding new stakeholder relationship
+            q2 = """\
+            MATCH (c:Case:{label}), (ns:Stakeholder:{label})
+            WHERE id(c) = {c_id} AND id(ns) = {new_stakeholder}
+            MERGE (c) -[r:Stakeholder]-> (ns)
+            ON CREATE SET r.role = "{role}"
+            """
+            self.query(q2, locals(), s)
+        self.close_session(s)
         
         
 class KnowledgeRepositoryService(Microservice):
