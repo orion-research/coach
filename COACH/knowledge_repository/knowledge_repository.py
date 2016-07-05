@@ -94,6 +94,10 @@ class KnowledgeRepository:
         c_stakeholders = c_descr.get('stakeholders')
         # Stores stakeholders data into the KR
         self.add_stakeholders(case_id, c_stakeholders)
+        # Retrieves alternatives information
+        c_alternatives = c_descr.get('alternatives')
+        # Stores stakeholders data into the KR
+        self.add_alternatives(case_id, c_alternatives)
         
         
     def asset_origins(self):
@@ -119,7 +123,7 @@ class KnowledgeRepository:
             s_id = c_stakeholders[l_idx].get('id')
             s_prop = c_stakeholders[l_idx].get('properties')
             role = c_stakeholders[l_idx].get('role')
-            # Create a new stakeholder, and get it's id
+            # Create a new stakeholder if she does not exist, and get it's id
             q1 = """MERGE (s:Stakeholder:{label} {{id: "{s_id}", name: "{s_prop[user_id]}"}}) RETURN id(s) AS sh_id"""
             new_stakeholder = next(iter(self.query(q1, locals(), s)))["sh_id"]
         
@@ -127,8 +131,35 @@ class KnowledgeRepository:
             q2 = """\
             MATCH (c:Case:{label}), (ns:Stakeholder:{label})
             WHERE id(c) = {c_id} AND id(ns) = {new_stakeholder}
-            MERGE (c) -[r:Stakeholder]-> (ns)
-            ON CREATE SET r.role = "{role}"
+            MERGE (c) -[r:Stakeholder {{role: "{role}"}}]-> (ns)
+            """
+            self.query(q2, locals(), s)
+        self.close_session(s)
+        
+
+    def add_alternatives(self, c_id, c_alternatives):
+        """
+        Adds alternatives to the case c_id.
+        
+        NOTES:
+        - the title of the alternative is considered as the asset origin identifier
+        - as a consequence title and id are supposed to be unique
+        """
+        s = self.open_session()
+        # Iterate over the list elements and get appropriate attributes
+        for l_idx in range(len(c_alternatives)):
+            a_id = c_alternatives[l_idx].get('id')
+            a_prop = c_alternatives[l_idx].get('properties')
+            # Create a new alternative if it does not exist, and get it's id
+            q1 = """\
+            MERGE (ao:ASSET_ORIGIN:{label} {{name: "{a_prop[title]}"}}) RETURN id(ao) AS ao_id"""
+            new_alternative = next(iter(self.query(q1, locals(), s)))["ao_id"]
+        
+            # Creates a corresponding new alternative relationship
+            q2 = """\
+            MATCH (c:Case:{label}), (da:ASSET_ORIGIN:{label})
+            WHERE id(c) = {c_id} AND id(da) = {new_alternative}
+            MERGE (c) -[a:Alternative]-> (da)
             """
             self.query(q2, locals(), s)
         self.close_session(s)
