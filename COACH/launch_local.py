@@ -11,6 +11,7 @@ sys.path.append(os.path.join(os.curdir, os.pardir))
 
 from COACH.framework import coach
 from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
+from COACH.decision_process.PughService import PughService
 from COACH.context_model import ContextModelService
 from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.estimation_method.ExpertOpinion import ExpertOpinion
@@ -44,11 +45,16 @@ if __name__ == '__main__':
                                                     working_directory = wdir).run()
  
 
-    # Start the decision process service
+    # Start the decision process services
     wdir = os.path.join(topdir, os.path.normpath("decision_process/SimpleDecisionProcessService"))
     os.chdir(wdir)
     SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
                                                               working_directory = wdir).run()
+    
+    wdir = os.path.join(topdir, os.path.normpath("decision_process/PughService"))
+    os.chdir(wdir)
+    PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
+                            working_directory = wdir).run()
     
     # Start the context model service
     wdir = os.path.join(topdir, os.path.normpath("context_model"))

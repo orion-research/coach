@@ -1,0 +1,123 @@
+# Tutorial for creating new decision process services
+
+This short tutorial will explain how to create a new decision process service.
+The tutorial will be using the Pugh analysis service as an example.
+
+# Setting up the structure
+
+The first step is to create the directory where the source code of the new service will be stored.
+On the COACH repository, the directory COACH/decision_process contains a sub folder for each 
+decision process service, so it is recommended to create a new folder there for your new process.
+In the example, this folder is called PughService. (If you are using Eclipse, you can just left-click
+the package decision_process, and then select New > PyDev package, after which you will be prompted 
+
+To make Python understand that this folder should be considered a Python package, you need
+to create an empty file in the new folder called __init__.py. (If you used Eclipse when creating
+the folder, this file is created automatically for you.)
+
+In the folder, create a Python file with the name of the service, in this case PughService.py.
+(In Eclipse, you can do this by left-clicking the PughService folder, and then select 
+New > PyDev module. After that, you will be prompted for the module name, which is PughService, 
+and also to choose a template, in which case you can select the Class template.)
+
+In the same folder, also create a directory called templates. This will contain the html templates
+that are used to generate the user interface of the service.
+
+
+# Creating the initial class
+
+Decision processes are subclasses of the generic class coach.DecisionProcessService from the 
+COACH framework. To create a subclass of this, it is necessary to import the framework,
+and this in turn requires that the Python import path is set up properly. To achieve this,
+add the following lines in the beginning of your PughService.py file:
+
+	# Set python import path to include COACH top directory
+	import os
+	import sys
+	sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
+
+
+	# Coach framework
+	from COACH.framework import coach
+
+Now you can create a first version of your class by adding the following lines:
+
+	class PughService(coach.DecisionProcessService):
+	
+	    def process_menu(self):
+	        return "Hello, Pugh!"
+
+It is not necessary to have an __init__ method of this class, since the superclass provides that.
+(If you used Eclipse to create the file, you should delete the __init__ method created by
+the template.)
+
+The only method that is required in a DecisionProcessService subclass is process_menu,
+and you can create a temporary dummy for that by changing
+
+It can be convenient to be able to run your service as a stand alone program. If you want to 
+be able to do that, add the following line at the bottom of your file:
+
+	if __name__ == '__main__':
+    	    PughService(sys.argv[1]).run()
+
+Now you have all you need to actually execute the service. Of course, it does not do anything,
+but you can test that the basic setup is correct. However, first you must tell COACH about
+it.
+
+# Enabling the decision method for local development
+
+For local development, it is convenient to have a way of starting all services at once,
+and this is handled by the script launch_local.py in the COACH top folder. To make it aware
+of your service, you need to add the following line to that file among the import statements:
+
+	from COACH.decision_process.PughService import PughService
+
+Then add the following lines in the main method, among the other decision process services:
+
+	    wdir = os.path.join(topdir, os.path.normpath("decision_process/PughService"))
+	    os.chdir(wdir)
+	    PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
+	                            working_directory = wdir).run()
+
+You also need to provide some settings for the service, and these should be located in the file
+local_settings.json in the COACH top directory. Add the following lines somewhere in the file:
+
+	"PughService":
+	{
+		"description": "Settings for the Pugh decision process",
+		"name": "Pugh analysis",
+		"port": 5007,
+		"logfile": "Pugh.log"
+	},
+
+The value after "port" can be any valid http port number, as long as it is not already used
+by some other service. Typically, one would pick the next number after the once already listed
+for other services in the file.
+
+Finally, you need to add the new service to the directory, by editing the file directory.json
+in the directory COACH/framework/settings to include the following line:
+
+	["decision_process", "Pugh analysis", "127.0.0.1:5007"],
+
+Here, the port number in the IP address should be the same as the one used in the local_settings
+file.
+
+You can now start COACH by first starting Neo4j and the running launch_local.py.
+Use your browser to open 127.0.0.1:5000, then log in to COACH, open or create a decision case,
+and select "Change decision process". In the menu you get, your new service should appear.
+Select it, an then press "Select", and the line "Hello, Pugh!" should appear at the bottom left
+of the screen.
+
+You are now ready to start developing the logic of your decision process.
+
+# How COACH decision process services work
+
+Explain the interaction logic principles.
+
+# Porting the service to the development server
+To be added. The files that need updating are:
+- pugh.wsgi
+- development_settings.json
+- coach-development.conf
+- directory.json
+

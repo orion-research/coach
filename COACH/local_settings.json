@@ -50,6 +50,14 @@
 	"logfile": "SimpleDecisionProcess.log"
 },
 
+"PughService":
+{
+	"description": "Settings for the Pugh decision process",
+	"name": "Pugh analysis",
+	"port": 5007,
+	"logfile": "Pugh.log"
+},
+
 "ContextModelService":
 {
 	"description": "Settings for the context model",
