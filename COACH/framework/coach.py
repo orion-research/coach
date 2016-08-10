@@ -59,7 +59,7 @@ from COACH.framework.authentication import Authentication
 from COACH.framework.casedb import CaseDatabase
 
 # Web server framework
-from flask import Flask, Response, request, session, abort
+from flask import Flask, Response, request, session, abort, redirect
 from flask.views import View
 from flask.templating import render_template
 
@@ -191,6 +191,15 @@ class Microservice:
         The optional kwargs are variables that can be evaluated when rendering the dialogue.
         """
         return render_template(s, **kwargs)
+
+
+    def redirect_to_state(self, s, **kwargs):
+        """
+        Enters the state s, and displays its dialogue.
+        This method differs from go_to_state in that it reloads the side bar menus and page title, 
+        i.e. the whole page, and not just the dialogue.
+        """
+        return redirect(request.values["root"] + "main_menu?message=" + render_template(s, **kwargs))
 
 
 class RootService(Microservice):

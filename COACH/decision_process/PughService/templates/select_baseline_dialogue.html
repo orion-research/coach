@@ -1,0 +1,12 @@
+<H2>Select a baseline</H2>
+
+<FORM action="{{this_process | safe}}select_baseline" method="post">
+<SELECT name="baseline">
+{% for a in alternatives %}
+{{ a | safe }}
+{% endfor %}
+</SELECT>
+<INPUT type="hidden" name="root" value="{{root | safe}}"/>
+<INPUT type="hidden" name="case_id" value="{{case_id | safe}}"/>
+<INPUT type="submit" value="Select"/>
+</FORM>

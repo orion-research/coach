@@ -1,0 +1,15 @@
+<H2>Add a criterium</H2>
+
+<FORM action="{{this_process | safe}}add_criterium" method="post">
+Name: 
+<BR>
+<INPUT type="text" name="criterium" required>
+<BR>
+Weight:
+<BR>
+<INPUT type="number" name="weight" value="1" min="0">
+<BR>
+<INPUT type="hidden" name="root" value="{{root | safe}}"/>
+<INPUT type="hidden" name="case_id" value="{{case_id | safe}}"/>
+<INPUT type="submit" value="Add criterium">
+</FORM>

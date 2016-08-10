@@ -1,0 +1,25 @@
+<H2>Pugh analysis matrix</H2>
+
+<TABLE border="1">
+<TR>
+<TD></TD>
+{% for a in alternatives %}
+<TD> {{ a | safe }} </TD>
+{% endfor %}
+</TR>
+
+{% for c in criteria %}
+<TR>
+<TD> {{ c | safe }} </TD>
+</TR>
+{% endfor %}
+
+<TR>
+<TD>
+Sum
+</TD>
+{% for s in sums %}
+<TD> {{ s | safe }} </TD>
+{% endfor %}
+
+</TABLE>
