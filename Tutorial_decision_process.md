@@ -60,26 +60,8 @@ be able to do that, add the following line at the bottom of your file:
 	if __name__ == '__main__':
     	    PughService(sys.argv[1]).run()
 
-Now you have all you need to actually execute the service. Of course, it does not do anything,
-but you can test that the basic setup is correct. However, first you must tell COACH about
-it.
-
-# Enabling the decision method for local development
-
-For local development, it is convenient to have a way of starting all services at once,
-and this is handled by the script launch_local.py in the COACH top folder. To make it aware
-of your service, you need to add the following line to that file among the import statements:
-
-	from COACH.decision_process.PughService import PughService
-
-Then add the following lines in the main method, among the other decision process services:
-
-	    wdir = os.path.join(topdir, os.path.normpath("decision_process/PughService"))
-	    os.chdir(wdir)
-	    PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
-	                            working_directory = wdir).run()
-
-You also need to provide some settings for the service, and these should be located in the file
+Now you have all you need to actually execute the service. However, you also need to provide 
+some settings for the service, and these should be located in the file
 local_settings.json in the COACH top directory. Add the following lines somewhere in the file:
 
 	"PughService":
@@ -93,6 +75,33 @@ local_settings.json in the COACH top directory. Add the following lines somewher
 The value after "port" can be any valid http port number, as long as it is not already used
 by some other service. Typically, one would pick the next number after the once already listed
 for other services in the file.
+
+It is now possible to run the service stand-alone. Run PughService as a Python script,
+and supply the path to the local_settings.json file as a command line argument. This should
+result in a message similar to this:
+
+	 * Running on http://127.0.0.1:5007/ (Press CTRL+C to quit)
+
+Now, start your browser and point it to the adddress http://127.0.0.1:5007/process_menu,
+and you should see "Hello, Pugh!" on your screen.
+
+# Connecting the decision method to COACH for local development
+
+The next step is to link the decision method to the COACH framework, and as a first step,
+this should be done for the local development environment.
+
+For local development, it is convenient to have a way of starting all services at once,
+and this is handled by the script launch_local.py in the COACH top folder. To make it aware
+of your service, you need to add the following line to that file among the import statements:
+
+	from COACH.decision_process.PughService import PughService
+
+Then add the following lines in the main method, among the other decision process services:
+
+	    wdir = os.path.join(topdir, os.path.normpath("decision_process/PughService"))
+	    os.chdir(wdir)
+	    PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
+	                            working_directory = wdir).run()
 
 Finally, you need to add the new service to the directory, by editing the file directory.json
 in the directory COACH/framework/settings to include the following line:

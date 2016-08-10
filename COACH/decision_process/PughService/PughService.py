@@ -9,7 +9,6 @@ import os
 import sys
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
-
 # Coach framework
 from COACH.framework import coach
 
