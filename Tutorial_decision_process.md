@@ -10,9 +10,10 @@ On the COACH repository, the directory COACH/decision_process contains a sub fol
 decision process service, so it is recommended to create a new folder there for your new process.
 In the example, this folder is called PughService. (If you are using Eclipse, you can just left-click
 the package decision_process, and then select New > PyDev package, after which you will be prompted 
+for the package name.)
 
 To make Python understand that this folder should be considered a Python package, you need
-to create an empty file in the new folder called __init__.py. (If you used Eclipse when creating
+to create an empty file in the new folder called `__init__.py`. (If you used Eclipse when creating
 the folder, this file is created automatically for you.)
 
 In the folder, create a Python file with the name of the service, in this case PughService.py.
@@ -47,8 +48,8 @@ Now you can create a first version of your class by adding the following lines:
 	    def process_menu(self):
 	        return "Hello, Pugh!"
 
-It is not necessary to have an __init__ method of this class, since the superclass provides that.
-(If you used Eclipse to create the file, you should delete the __init__ method created by
+It is not necessary to have an `__init__` method of this class, since the superclass provides that.
+(If you used Eclipse to create the file, you should delete the `__init__` method created by
 the template.)
 
 The only method that is required in a DecisionProcessService subclass is process_menu,
