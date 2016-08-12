@@ -283,6 +283,23 @@ web framework that COACH employs.)
 
 You can now restart the COACH local implementation, and check that the process menu works.
 
+## Decision service data storage
+
+Before starting to implement the different endpoint methods that do the actual work, it must
+be decided how data associated with the particular decision service should be stored in the
+case database. This needs to be done through the API of the root service, since the case
+database is hidden behind that service, and currently this API gives two options: either
+to store data as attributes of the case node, or as attributes of the alternatives.
+
+In the Pugh service, the data will consist of a list of criteria each associated with a weight.
+These will be stored as dictionaries with the criterium name as the key and weight as the value,
+in the attribute criteria of the case node. Further, the data consists of the rating of
+each alternative for each criteria, and this will be stored again as a dictionary in each
+alternative node, with criteria as keys and the actual ratings as values.
+
+Finally, it must be stored which alternative is the baseline, and we do that through an
+attribute in the case node.
+
 ## Select baseline dialogue and transitions
 
 To implement the selection of a baseline, a HTML template for the dialogue is needed:
@@ -401,20 +418,25 @@ The transition to the dialogue basically just renders it:
 Finally, the endpoint for actually adding the new criterium looks like this:
 
 	    def add_criterium(self):
+	        """
+	        This method is called using POST when the user presses the select button in the add_criterium_dialogue.
+	        It gets three form parameters: root, which is the url of the root server, and criterium, which is the name of the new criterium,
+	        and weight which is its weight. The criteria are stored in the case database as a dictionary assigned to the criteria attribute
+	        of the case node. 
+	        """
 	        root = request.values["root"]
 	        case_id = request.values["case_id"]
 	        criterium = request.values["criterium"]
-        
-	        # TODO: How to store weight??
 	        weight = request.values["weight"]
 	
 	        # Get the current set of criteria from the case database, and add the new one to the set
 	        criteria = requests.get(root + "get_case_property", params = {"case_id": case_id, "name": "criteria"}).text
 	        if criteria:
 	            # Json does not allow '...' as string delimiters, so they must be changed to "..." 
-	            criteria = json.loads(criteria.replace("'", "\"")) + [criterium]
+	            criteria = json.loads(criteria.replace("'", "\""))
+	            criteria[criterium] = weight
 	        else:
-	            criteria = [criterium]
+	            criteria = { criterium : weight }
 	        
 	        # Write the updated set to the database
 	        requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "criteria", "value": str(criteria)})
@@ -423,11 +445,9 @@ Finally, the endpoint for actually adding the new criterium looks like this:
 	        return self.matrix_dialogue_transition(this_process = request.url_root, root = root, case_id = case_id)
 
 It requests the current set of criteria from the case database in the root service.
-If there were any already defined, the new one is added to the end of the list.
-Otherwise, the the criterium is added as the first one.
+If there were any already defined, the new one is added to the dictionary together with its weight.
+Otherwise, the criterium is added as the first one.
 Finally, the matrix dialogue is shown again, now with an extra row for the new criterium.
-
-TODO: UPDATE THIS FUNCTION TO ALSO STORE THE WEIGHT OF THE CRITERIUM.
 
 ## Change criterium dialogue transitions
 

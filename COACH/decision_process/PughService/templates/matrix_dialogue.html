@@ -1,8 +1,10 @@
 <H2>Pugh analysis matrix</H2>
 
+<FORM action="{{ this_process | safe }}change_rating" method="post">
 <TABLE border="1">
 <TR>
-<TD></TD>
+<TD>Criterium</TD>
+<TD>Weight</TD>
 {% for a in alternatives %}
 <TD> {{ a | safe }} </TD>
 {% endfor %}
@@ -10,7 +12,19 @@
 
 {% for c in criteria %}
 <TR>
-<TD> {{ c | safe }} </TD>
+<TD>
+{{ c | safe }}
+</TD>
+<TD>
+{{ weights[c] | safe }}
+</TD>
+
+{% for a in alternative_ids %}
+<TD> 
+<INPUT type="number" name="{{ a | safe }}:{{ c | safe }}" min="-1" max="1" value="{{ ranking[a][c] | safe }}">
+</TD>
+{% endfor %}
+
 </TR>
 {% endfor %}
 
@@ -18,8 +32,16 @@
 <TD>
 Sum
 </TD>
+<TD></TD>
 {% for s in sums %}
-<TD> {{ s | safe }} </TD>
+<TD> 
+{{ s | safe }} 
+</TD>
 {% endfor %}
 
 </TABLE>
+
+<INPUT type="hidden" name="root" value="{{root | safe}}"/>
+<INPUT type="hidden" name="case_id" value="{{case_id | safe}}"/>
+<INPUT type="submit" value="Save">
+</FORM>

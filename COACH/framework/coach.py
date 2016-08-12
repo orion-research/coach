@@ -7,9 +7,6 @@ The module coach contains the framework for developing components for COACH in P
 
 
 TODO:
-Deviations from architecture description:
-- Add a simple knowledge repository microservice, with only the ability to export a case to it
-
 Security:
 - How to handle authentication and database read/write access from other services?
 - Is it possible to restrict access for a client to only query on a limited set of the database? If so, this could be a way of letting 
@@ -40,7 +37,7 @@ Services:
 
 Development:
 - Add logging. All transitions should be logged, and should include data from the session object. Errors should also be logged,
-and possible be alerted through email when in production. See http://flask.pocoo.org/docs/0.10/errorhandling/.
+and possibly be alerted through email when in production. See http://flask.pocoo.org/docs/0.10/errorhandling/.
 """
 
 # Standard libraries
@@ -64,7 +61,6 @@ from flask.views import View
 from flask.templating import render_template
 
 import requests
-
 
 
 class Microservice:
@@ -191,15 +187,6 @@ class Microservice:
         The optional kwargs are variables that can be evaluated when rendering the dialogue.
         """
         return render_template(s, **kwargs)
-
-
-    def redirect_to_state(self, s, **kwargs):
-        """
-        Enters the state s, and displays its dialogue.
-        This method differs from go_to_state in that it reloads the side bar menus and page title, 
-        i.e. the whole page, and not just the dialogue.
-        """
-        return redirect(request.values["root"] + "main_menu?message=" + render_template(s, **kwargs))
 
 
 class RootService(Microservice):
@@ -575,7 +562,7 @@ class RootService(Microservice):
     
     def change_alternative_property(self):
         """
-        Changes a property of the indicated case id in the database.
+        Changes a property of the indicated alternative in the database.
         """
         self.caseDB.change_alternative_property(request.values["alternative"], request.values["name"], request.values["value"])
         return Response("Ok")
