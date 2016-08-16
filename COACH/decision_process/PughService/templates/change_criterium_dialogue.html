@@ -1,1 +1,22 @@
-Change criterium dialogue not yet implemented.
+<H2>Change criterium</H2>
+
+<FORM action="{{this_process | safe}}change_criterium" method="post">
+<SELECT name="criterium">
+{% for c in criteria %}
+{{ c | safe }}
+{% endfor %}
+</SELECT>
+
+New name: 
+<BR>
+<INPUT type="text" name="new_name">
+<BR>
+Weight:
+<BR>
+<INPUT type="number" name="new_weight" value="" min="0">
+<BR>
+<INPUT type="hidden" name="root" value="{{root | safe}}"/>
+<INPUT type="hidden" name="case_id" value="{{case_id | safe}}"/>
+<INPUT type="submit" name="button" value="Change criterium">
+<INPUT type="submit" name="button" value="Delete criterium">
+</FORM>

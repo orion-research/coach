@@ -47,6 +47,23 @@ class PughService(coach.DecisionProcessService):
         self.ms.add_url_rule("/change_rating", view_func = self.change_rating, methods = ["POST"])
         
 
+    # Auxiliary functions
+    
+    def get_criteria(self, root, case_id):
+        """
+        Queries the root service for the criteria associated with a certain case_id.
+        It returns a dictionary, with criteria name as keys and weights as values.
+        """
+        criteria = requests.get(root + "get_case_property", params = {"case_id": case_id, "name": "criteria"}).text
+        if criteria:
+            # Json does not allow '...' as string delimiters, so they must be changed to "..." 
+            return json.loads(criteria.replace("'", "\""))
+        else:
+            return dict()
+
+
+    # Endpoints
+
     def select_baseline_dialogue_transition(self):
         """
         Endpoint which lets the user select the baseline alternative.
@@ -61,19 +78,34 @@ class PughService(coach.DecisionProcessService):
         # Render the dialogue
         return self.go_to_state(self.select_baseline_dialogue, alternatives = options, this_process = request.url_root, 
                                 root = root, case_id = case_id)
-    
+        
     
     def add_criterium_dialogue_transition(self):
+        """
+        Endpoint which shows the dialogue for adding criteria.
+        """
         root = request.values["root"]
         case_id = request.values["case_id"]
         return self.go_to_state(self.add_criterium_dialogue, this_process = request.url_root, root = root, case_id = case_id)
     
     
     def change_criterium_dialogue_transition(self):
-        return "Not yet implemented!"
+        """
+        Endpoint which shows the dialogue for changing criteria.
+        """
+        root = request.values["root"]
+        case_id = request.values["case_id"]
+
+        criteria = self.get_criteria(root, case_id).keys()
+        options = ["<OPTION value=\"%s\"> %s </A>" % (c, c) for c in criteria]
+        
+        return self.go_to_state(self.change_criterium_dialogue, this_process = request.url_root, root = root, case_id = case_id, criteria = options)
     
     
     def matrix_dialogue_transition(self):
+        """
+        Endpoint which shows the Pugh matrix dialogue.
+        """
         root = request.values["root"]
         case_id = request.values["case_id"]
 
@@ -83,15 +115,9 @@ class PughService(coach.DecisionProcessService):
         alternative_ids = [a[1] for a in decision_alternatives]
         
         # Get criteria from the database
-        criteria = requests.get(root + "get_case_property", params = {"case_id": case_id, "name": "criteria"}).text
-        if criteria:
-            # Json does not allow '...' as string delimiters, so they must be changed to "..." 
-            weights = json.loads(criteria.replace("'", "\""))
-            criteria = weights.keys()
-        else:
-            criteria = []
-            weights = dict()
-
+        weights = self.get_criteria(root, case_id)
+        criteria = weights.keys()
+        
         # Get rankings from the database
         ranking = dict()
         for a in alternative_ids:
@@ -123,15 +149,12 @@ class PughService(coach.DecisionProcessService):
         It gets two form parameters: root, which is the url of the root server, and baseline, which is the id of the selected alternative.
         It changes the selection in the case database of the root server, and then shows the matrix dialogue.
         """
-        
         root = request.values["root"]
         baseline = request.values["baseline"]
         case_id = request.values["case_id"]
 
-        # Write the selection to the database.
+        # Write the selection to the database, and show a message
         requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "baseline", "value": baseline})
-
-        # Go to the matrix dialogue state
         return redirect(root + "main_menu?main_dialogue=" + request.url_root + "matrix_dialogue?case_id=" + str(case_id))
     
     
@@ -148,13 +171,8 @@ class PughService(coach.DecisionProcessService):
         weight = request.values["weight"]
 
         # Get the current set of criteria from the case database, and add the new one to the set
-        criteria = requests.get(root + "get_case_property", params = {"case_id": case_id, "name": "criteria"}).text
-        if criteria:
-            # Json does not allow '...' as string delimiters, so they must be changed to "..." 
-            criteria = json.loads(criteria.replace("'", "\""))
-            criteria[criterium] = weight
-        else:
-            criteria = { criterium : weight }
+        criteria = self.get_criteria(root, case_id)
+        criteria[criterium] = weight
         
         # Write the updated set to the database
         requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "criteria", "value": str(criteria)})
@@ -164,10 +182,63 @@ class PughService(coach.DecisionProcessService):
     
     
     def change_criterium(self):
-        return "Not yet implemented!"
+        """
+        This method is called using POST when the user presses either the change criterium or delete criterium buttons in the 
+        change_criterium_dialogue. The form parameters are root and case_id, the current name of the criterium to change, 
+        optionally a new name and optionally a new weight. There are two submit buttons in the form, and the one selected is indicated
+        in the button parameter. The method modifies the list of criteria in the root node, and also the ranking in each
+        alternative. 
+        """
+        root = request.values["root"]
+        case_id = request.values["case_id"]
+        criterium = request.values["criterium"]
+        new_name = request.values["new_name"]
+        new_weight = request.values["new_weight"]
+        action = request.form["button"]
+        
+        # Change or delete the criterium name in the list of criteria in the case node
+        criteria = self.get_criteria(root, case_id)
+        if action == "Delete criterium":
+            del criteria[criterium]
+        else:
+            if new_name and new_weight:
+                # Name and weight has changed, so delete old entry and add new data
+                criteria[new_name] = int(new_weight)
+                del criteria[criterium]
+            elif not new_name and new_weight:
+                # Only weight has changed
+                criteria[criterium] = int(new_weight)
+            elif new_name and not new_weight:
+                # Only name has changed
+                criteria[new_name] = criteria[criterium]
+                del criteria[criterium]
+        requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "criteria", "value": str(criteria)})
+        
+        # Change or delete the criterium name and weight in the rankings in each alternative node
+        decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
+        alternative_ids = [a[1] for a in decision_alternatives]
+
+        for a in alternative_ids:
+            alternative_rankings = requests.get(root + "get_alternative_property", params = {"alternative": a, "name": "ranking"}).text
+            if alternative_rankings:
+                # Json does not allow '...' as string delimiters, so they must be changed to "..." 
+                ranking = json.loads(alternative_rankings.replace("'", "\""))
+                if criterium in ranking:
+                    if new_name and action == "Change criterium":
+                        ranking[new_name] = ranking[criterium]
+                        del ranking[criterium]
+                    elif action == "Delete criterium":
+                        del ranking[criterium]
+                    requests.post(root + "change_alternative_property", data = {"alternative": str(a), "name": "ranking", "value": str(ranking)})
+        
+        return redirect(root + "main_menu?message=Changed criterium!")
     
     
     def change_rating(self):
+        """
+        This method is called using POST when the user presses the save button in the Pugh matrix dialogue. It updates the values
+        of the ranking of each alternative according to the current values in the dialogue.
+        """
         root = request.values["root"]
         case_id = request.values["case_id"]
 
@@ -176,12 +247,7 @@ class PughService(coach.DecisionProcessService):
         alternative_ids = [a[1] for a in decision_alternatives]
         
         # Get criteria from the database
-        criteria = requests.get(root + "get_case_property", params = {"case_id": case_id, "name": "criteria"}).text
-        if criteria:
-            # Json does not allow '...' as string delimiters, so they must be changed to "..." 
-            criteria = json.loads(criteria.replace("'", "\"")).keys()
-        else:
-            criteria = []
+        criteria = self.get_criteria(root, case_id).keys()
 
         # For each alternative, build a map from criteria to value and write it to the database
         for a in alternative_ids:

@@ -7,7 +7,7 @@ It assumes that you have installed COACH locally according to the installation i
 # Setting up the structure
 
 The first step is to create the directory where the source code of the new service will be stored.
-On the COACH repository, the directory COACH/decision_process contains a sub folder for each 
+In the COACH repository, the directory COACH/decision_process contains a sub folder for each 
 decision process service, so it is recommended to create a new folder there for your new process.
 In the example, this folder is called PughService. (If you are using Eclipse, you can just left-click
 the package decision_process, and then select New > PyDev package, after which you will be prompted 
@@ -53,7 +53,7 @@ It is not necessary to have an `__init__` method of this class, since the superc
 the template.)
 
 The only method that is required in a DecisionProcessService subclass is process_menu,
-and you can create a temporary dummy for that by changing
+and in the code above, a temporary dummy for that has been added.
 
 It can be convenient to be able to run your service as a stand alone program. If you want to 
 be able to do that, add the following line at the bottom of your file:
@@ -74,9 +74,9 @@ local_settings.json in the COACH top directory. Add the following lines somewher
 	},
 
 The value after "port" can be any valid http port number, as long as it is not already used
-by some other service. Typically, one would pick the next number after the once already listed
+by some other service. Typically, one would pick the next number after the ones already listed
 for other services in the file. (Note that it is possible to add more fields to this file,
-so if your decision process contains other settings this is the place to put them.)
+so if your decision process needs its own settings, then this is the place to put them.)
 
 It is now possible to run the service stand-alone. Run PughService as a Python script,
 and supply the path to the local_settings.json file as a command line argument. This should
@@ -105,7 +105,7 @@ Then add the following lines in the main method, among the other decision proces
 	    PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
 	                            working_directory = wdir).run()
 
-Finally, you need to add the new service to the directory, by editing the file directory.json
+Finally, you need to add the new service to the services directory, by editing the file directory.json
 in the directory COACH/framework/settings to include the following line:
 
 	["decision_process", "Pugh analysis", "127.0.0.1:5007"],
@@ -113,7 +113,7 @@ in the directory COACH/framework/settings to include the following line:
 Here, the port number in the IP address should be the same as the one used in the local_settings
 file.
 
-You can now start COACH by first starting Neo4j and the running launch_local.py.
+You can now start COACH by first starting Neo4j and then running launch_local.py.
 Use your browser to open 127.0.0.1:5000, then log in to COACH, open or create a decision case,
 and select "Change decision process". In the menu you get, your new service should appear.
 Select it, an then press "Select", and the line "Hello, Pugh!" should appear at the bottom left
@@ -155,33 +155,34 @@ weights to distinguish their importance.
 
 We will implement this process with four states: 
 * The initial state lets the user select the baseline alternative. Note that defining 
-alternatives is part of the generic COACH framework, and does not have to be dealt with here. (We will not deal with the
-possibility of changing the baseline as part of this tutorial.) 
-* The main state displays the matrix, and is the view that will be shown throughout 
-most of the decision process.
+alternatives is part of the generic COACH framework, and does not have to be dealt with here. 
+(We will not deal with the possibility of changing the baseline as part of this tutorial.) 
+* The main state displays the Pugh analysis matrix.
 * To add new criterium, a dialogue is needed.
 * Also, to change the name or weight or a criterium, or remove it, another dialogue is needed.
+* Finally, a message state is used to show messages as a result of actions.
 
 The transitions are:
-* An initial transition to the select baseline state. This is triggered from the process
+* A transition from any state to the select baseline state. This is triggered from the process
 menu.
-* A transition from the select baseline state to the matrix dialogue state, with the side
+* A transition from the select baseline state to the message state, with the side
 effect of saving the selected baseline to the case database. This is triggered by a button
 in the dialogue.
-* A transition from the matrix dialogue state to the add criterium state. This is triggered
+* A transition from any state to the add criterium state. This is triggered
 from the process menu.
-* A transition from the add criterium state back to the matrix dialogue state, with the side
+* A transition from the add criterium state to the message state, with the side
 effect of adding the criterium to the case database. This is triggered by a button in the 
 dialogue.
-* A transition from the matrix dialogue state to the change criterium state. This is triggered
+* A transition from any state to the change criterium state. This is triggered
 from the process menu.
-* A transition from the change criterium state back to the matrix dialogue state, with the side
+* A transition from the change criterium state to the message state, with the side
 effect of changing or removing the criterium to the case database. This is triggered by
 a button in the dialogue.
-* A transition from the matrix dialogue state to itself, with the side effect of changing
+* A transition from the matrix dialogue state to the message state, with the side effect of changing
 the rating in a cell in the matrix. This is triggered by a Javascript function embedded in the
 dialogue, which in turn is triggered when the user makes a choice in the dropdown menu
 in the cell.
+* A transition from any state to the matrix dialogue state. This is triggered from the process menu.
 
 ## State machine implementation
 
@@ -200,18 +201,19 @@ The following code sets up the state machine:
 	    def create_endpoints(self):
 	        # Initialize the API
 	        super(PughService, self).create_endpoints()
-
+	
 	        # States, represented by dialogues
 	        self.select_baseline_dialogue = self.create_state("select_baseline_dialogue.html")
 	        self.matrix_dialogue = self.create_state("matrix_dialogue.html")
 	        self.add_criterium_dialogue = self.create_state("add_criterium_dialogue.html")
 	        self.change_criterium_dialogue = self.create_state("change_criterium_dialogue.html")
-        
+	        
 	        # Endpoints for transitions between the states without side effects
 	        self.ms.add_url_rule("/select_baseline_dialogue", view_func = self.select_baseline_dialogue_transition)
 	        self.ms.add_url_rule("/add_criterium_dialogue", view_func = self.add_criterium_dialogue_transition)
 	        self.ms.add_url_rule("/change_criterium_dialogue", view_func = self.change_criterium_dialogue_transition)
-        
+	        self.ms.add_url_rule("/matrix_dialogue", view_func = self.matrix_dialogue_transition)
+	        
 	        # Endpoints for transitions between states with side effects
 	        self.ms.add_url_rule("/select_baseline", view_func = self.select_baseline, methods = ["POST"])
 	        self.ms.add_url_rule("/add_criterium", view_func = self.add_criterium, methods = ["POST"])
@@ -239,6 +241,9 @@ For the time being, we just add stubs for the triggering methods:
 	        return "Not yet implemented!"
 	    
 	    def change_criterium_dialogue_transition(self):
+	        return "Not yet implemented!"
+	    
+	    def matrix_dialogue_transition(self):
 	        return "Not yet implemented!"
 	    
 	    def select_baseline(self):
@@ -274,6 +279,7 @@ The HTML template for the process menu will look like follows:
 	<LI><A HREF="/main_menu?main_dialogue={{url}}select_baseline_dialogue?case_id={{ case_id | safe }}">Select baseline</A></LI>
 	<LI><A HREF="/main_menu?main_dialogue={{url}}add_criterium_dialogue?case_id={{ case_id | safe }}">Add criterium</A></LI>
 	<LI><A HREF="/main_menu?main_dialogue={{url}}change_criterium_dialogue?case_id={{ case_id | safe }}">Change criterium</A></LI>
+	<LI><A HREF="/main_menu?main_dialogue={{url}}matrix_dialogue?case_id={{ case_id | safe }}">Pugh matrix</A></LI>
 
 Each line is a list item representing a menu choice, that just triggers the corresponding
 endpoints. The double curly braces `{{ ... }}` are used to insert the parameters that were 
@@ -368,23 +374,11 @@ select_baseline endpoint gets invoked. Its method is as follows:
 	        baseline = request.values["baseline"]
 	        case_id = request.values["case_id"]
 
-	        # Write the selection to the database.
+	        # Write the selection to the database, and show a message
 	        requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "baseline", "value": baseline})
-	
-	        # Go to the matrix dialogue state
-	        return self.matrix_dialogue_transition(this_process = request.url_root, root = root, case_id = case_id)
+	        return redirect(root + "main_menu?main_dialogue=" + request.url_root + "matrix_dialogue?case_id=" + str(case_id))
 
-It writes the id of the selected alternative to the case database as a property of the case node.
-It then displays the Pugh matrix dialogue.
-
-Since the matrix dialogue will build the matrix from the database, we will provide a helper
-function for the transition to that dialogue, which initially just looks like this:
-
-	    def matrix_dialogue_transition(self, this_process, root, case_id):
-	        return self.redirect_to_state(self.matrix_dialogue, this_process = request.url_root, root = root, case_id = case_id)
-
-
-TODO: EXPLAIN DIFFERENCE BETWEEN go_to_state AND redirect_to_state, AND WHEN TO USE WHICH.
+It writes the id of the selected alternative to the case database as a property of the case node, and then shows a message.
 
 
 ## Add criterium dialogue and transitions
@@ -411,6 +405,9 @@ a text field for the name of the criterion, and a numerical field for its weight
 The transition to the dialogue basically just renders it:
 
 	    def add_criterium_dialogue_transition(self):
+	        """
+	        Endpoint which shows the dialogue for adding criteria.
+	        """
 	        root = request.values["root"]
 	        case_id = request.values["case_id"]
 	        return self.go_to_state(self.add_criterium_dialogue, this_process = request.url_root, root = root, case_id = case_id)
@@ -430,24 +427,28 @@ Finally, the endpoint for actually adding the new criterium looks like this:
 	        weight = request.values["weight"]
 	
 	        # Get the current set of criteria from the case database, and add the new one to the set
-	        criteria = requests.get(root + "get_case_property", params = {"case_id": case_id, "name": "criteria"}).text
-	        if criteria:
-	            # Json does not allow '...' as string delimiters, so they must be changed to "..." 
-	            criteria = json.loads(criteria.replace("'", "\""))
-	            criteria[criterium] = weight
-	        else:
-	            criteria = { criterium : weight }
+	        criteria = self.get_criteria(root, case_id)
+	        criteria[criterium] = weight
 	        
 	        # Write the updated set to the database
 	        requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "criteria", "value": str(criteria)})
 	
 	        # Go to the matrix dialogue state
-	        return self.matrix_dialogue_transition(this_process = request.url_root, root = root, case_id = case_id)
+	        return redirect(root + "main_menu?main_dialogue=" + request.url_root + "matrix_dialogue?case_id=" + str(case_id))
 
-It requests the current set of criteria from the case database in the root service.
-If there were any already defined, the new one is added to the dictionary together with its weight.
-Otherwise, the criterium is added as the first one.
-Finally, the matrix dialogue is shown again, now with an extra row for the new criterium.
+It requests the current set of criteria from the case database in the root service, using the following auxiliary function:
+
+	    def get_criteria(self, root, case_id):
+	        """
+	        Queries the root service for the criteria associated with a certain case_id.
+	        It returns a dictionary, with criteria name as keys and weights as values.
+	        """
+	        criteria = requests.get(root + "get_case_property", params = {"case_id": case_id, "name": "criteria"}).text
+	        if criteria:
+	            # Json does not allow '...' as string delimiters, so they must be changed to "..." 
+	            return json.loads(criteria.replace("'", "\""))
+	        else:
+	            return dict()
 
 ## Change criterium dialogue transitions
 
@@ -457,11 +458,216 @@ Also, a delete button is included, to remove the criterion altogether.
 For the database interaction, the criterion is not just added, but the previous values
 are instead replaced.
 
-TODO: ADD THE CODE FOR THIS.
+The HTML code for the dialogue is:
+
+	<H2>Change criterium</H2>
+	
+	<FORM action="{{this_process | safe}}change_criterium" method="post">
+	<SELECT name="criterium">
+	{% for c in criteria %}
+	{{ c | safe }}
+	{% endfor %}
+	</SELECT>
+	
+	New name: 
+	<BR>
+	<INPUT type="text" name="new_name">
+	<BR>
+	Weight:
+	<BR>
+	<INPUT type="number" name="new_weight" value="" min="0">
+	<BR>
+	<INPUT type="hidden" name="root" value="{{root | safe}}"/>
+	<INPUT type="hidden" name="case_id" value="{{case_id | safe}}"/>
+	<INPUT type="submit" name="button" value="Change criterium">
+	<INPUT type="submit" name="button" value="Delete criterium">
+	</FORM>
+
+It is rendered using the following endpoint:
+
+	    def change_criterium_dialogue_transition(self):
+	        """
+	        Endpoint which shows the dialogue for changing criteria.
+	        """
+	        root = request.values["root"]
+	        case_id = request.values["case_id"]
+	
+	        criteria = self.get_criteria(root, case_id).keys()
+	        options = ["<OPTION value=\"%s\"> %s </A>" % (c, c) for c in criteria]
+	        
+	        return self.go_to_state(self.change_criterium_dialogue, this_process = request.url_root, root = root, case_id = case_id, criteria = options)
+
+The endpoint for actually changing the criterium is:
+
+	    def change_criterium(self):
+	        """
+	        This method is called using POST when the user presses either the change criterium or delete criterium buttons in the 
+	        change_criterium_dialogue. The form parameters are root and case_id, the current name of the criterium to change, 
+	        optionally a new name and optionally a new weight. There are two submit buttons in the form, and the one selected is indicated
+	        in the button parameter. The method modifies the list of criteria in the root node, and also the ranking in each
+	        alternative. 
+	        """
+	        root = request.values["root"]
+	        case_id = request.values["case_id"]
+	        criterium = request.values["criterium"]
+	        new_name = request.values["new_name"]
+	        new_weight = request.values["new_weight"]
+	        action = request.form["button"]
+	        
+	        # Change or delete the criterium name in the list of criteria in the case node
+	        criteria = self.get_criteria(root, case_id)
+	        if action == "Delete criterium":
+	            del criteria[criterium]
+	        else:
+	            if new_name and new_weight:
+	                # Name and weight has changed, so delete old entry and add new data
+	                criteria[new_name] = int(new_weight)
+	                del criteria[criterium]
+	            elif not new_name and new_weight:
+	                # Only weight has changed
+	                criteria[criterium] = int(new_weight)
+	            elif new_name and not new_weight:
+	                # Only name has changed
+	                criteria[new_name] = criteria[criterium]
+	                del criteria[criterium]
+	        requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "criteria", "value": str(criteria)})
+	        
+	        # Change or delete the criterium name and weight in the rankings in each alternative node
+	        decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
+	        alternative_ids = [a[1] for a in decision_alternatives]
+	
+	        for a in alternative_ids:
+	            alternative_rankings = requests.get(root + "get_alternative_property", params = {"alternative": a, "name": "ranking"}).text
+	            if alternative_rankings:
+	                # Json does not allow '...' as string delimiters, so they must be changed to "..." 
+	                ranking = json.loads(alternative_rankings.replace("'", "\""))
+	                if criterium in ranking:
+	                    if new_name and action == "Change criterium":
+	                        ranking[new_name] = ranking[criterium]
+	                        del ranking[criterium]
+	                    elif action == "Delete criterium":
+	                        del ranking[criterium]
+	                    requests.post(root + "change_alternative_property", data = {"alternative": str(a), "name": "ranking", "value": str(ranking)})
+	        
+	        return redirect(root + "main_menu?message=Changed criterium!")
 
 ## Matrix dialogue and transitions
 
-TODO: ADD THIS.
+The matrix dialogue shows the Pugh table, with controls for changing the ranking of each alternative, and a save button to save those changes:
+
+	<TD>Criterium</TD>
+	<TD>Weight</TD>
+	{% for a in alternatives %}
+	<TD> {{ a | safe }} </TD>
+	{% endfor %}
+	</TR>
+	
+	{% for c in criteria %}
+	<TR>
+	<TD>
+	{{ c | safe }}
+	</TD>
+	<TD>
+	{{ weights[c] | safe }}
+	</TD>
+	
+	{% for a in alternative_ids %}
+	<TD> 
+	<INPUT type="number" name="{{ a | safe }}:{{ c | safe }}" min="-1" max="1" value="{{ ranking[a][c] | safe }}">
+	</TD>
+	{% endfor %}
+	
+	</TR>
+	{% endfor %}
+	
+	<TR>
+	<TD>
+	Sum
+	</TD>
+	<TD></TD>
+	{% for s in sums %}
+	<TD> 
+	{{ s | safe }} 
+	</TD>
+	{% endfor %}
+
+</TABLE>
+
+<INPUT type="hidden" name="root" value="{{root | safe}}"/>
+<INPUT type="hidden" name="case_id" value="{{case_id | safe}}"/>
+<INPUT type="submit" value="Save">
+</FORM>
+
+The dialogue is rendered by the following endpoint:
+
+	    def matrix_dialogue_transition(self):
+	        """
+	        Endpoint which shows the Pugh matrix dialogue.
+	        """
+	        root = request.values["root"]
+	        case_id = request.values["case_id"]
+	
+	        # Get alternatives from the database
+	        decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
+	        alternatives = [a[0] for a in decision_alternatives]
+	        alternative_ids = [a[1] for a in decision_alternatives]
+	        
+	        # Get criteria from the database
+	        weights = self.get_criteria(root, case_id)
+	        criteria = weights.keys()
+	        
+	        # Get rankings from the database
+	        ranking = dict()
+	        for a in alternative_ids:
+	            alternative_rankings = requests.get(root + "get_alternative_property", params = {"alternative": a, "name": "ranking"}).text
+	            if alternative_rankings:
+	                # Json does not allow '...' as string delimiters, so they must be changed to "..." 
+	                ranking[a] = json.loads(alternative_rankings.replace("'", "\""))
+	            else:
+	                ranking[a] = dict()
+	        
+	        # Set default value to zero for missing rankings
+	        for a in alternative_ids:
+	            for c in criteria:
+	                if c not in ranking[a]:
+	                    ranking[a][c] = 0
+	        
+	        # Calculate the evaluation sums
+	        sums = [sum([int(weights[c]) * int(r) for (c, r) in ranking[a].items()]) for a in alternative_ids]
+	        
+	        # Render the dialogue        
+	        return self.go_to_state(self.matrix_dialogue, this_process = request.url_root, root = root, case_id = case_id,
+	                                alternatives = alternatives, alternative_ids = alternative_ids, 
+	                                criteria = criteria, weights = weights, ranking = ranking, sums = sums)
+
+As can be seen, this dialogue interacts quite heavily with the database, since the matrix shows all the criteria with weights, 
+and all the alternatives with their ranking.
+
+When the user presses the save button, the following endpoint is called:
+
+	    def change_rating(self):
+	        """
+	        This method is called using POST when the user presses the save button in the Pugh matrix dialogue. It updates the values
+	        of the ranking of each alternative according to the current values in the dialogue.
+	        """
+	        root = request.values["root"]
+	        case_id = request.values["case_id"]
+	
+	        # Get alternatives from the database
+	        decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
+	        alternative_ids = [a[1] for a in decision_alternatives]
+	        
+	        # Get criteria from the database
+	        criteria = self.get_criteria(root, case_id).keys()
+	
+	        # For each alternative, build a map from criteria to value and write it to the database
+	        for a in alternative_ids:
+	            ranking = { c : request.values[str(a) + ":" + c] for c in criteria }
+	            requests.post(root + "change_alternative_property", data = {"alternative": str(a), "name": "ranking", "value": str(ranking)})
+	        
+	        # Show a message that the data has changed
+	        return redirect(root + "main_menu?message=Pugh analysis matrix updated")
+
 
 # Porting the service to the development server
 To be added. The files that need updating are:
