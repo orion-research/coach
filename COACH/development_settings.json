@@ -1,66 +1,66 @@
 {
-    "object": {
-        "protocol": "https",
-        "description": "Common settings for all classes",
-        "host": "orion.sics.se",
-        "mode": "development"
-    },
     "SimpleDecisionProcessService": {
-        "port": 5002,
-        "description": "Settings for SimpleDecisionProcessService",
         "name": "A decision process service",
-        "logfile": "SimpleDecisionProcessService.log"
+        "description": "Settings for SimpleDecisionProcessService",
+        "logfile": "SimpleDecisionProcessService.log",
+        "port": 5002
     },
-    "KnowledgeRepositoryService": {
-        "database": "http://127.0.0.1:7474/db/data/",
-        "port": 5005,
-        "description": "Settings for KnowledgeRepositoryService",
-        "name": "Knowledge repository microservice for the ORION project"
+    "ContextModelService": {
+        "name": "A context model service for COACH",
+        "description": "Settings for ContextModelService",
+        "logfile": "ContextModel.log",
+        "port": 5006
+    },
+    "AverageOfTwo": {
+        "name": "Average of two estimation method",
+        "description": "Settings for AverageOfTwo",
+        "port": 5004
     },
     "DirectoryService": {
-        "port": 5003,
-        "description": "Settings for DirectoryService",
         "name": "Directory service for COACH",
-        "directory_file_name": "settings/development_directory.json"
+        "directory_file_name": "settings/development_directory.json",
+        "description": "Settings for DirectoryService",
+        "port": 5003
     },
-    "PughService": {
-        "port": 5007,
-        "description": "Settings for PughService",
-        "name": "Pugh analysis",
-        "logfile": "PughService.log"
+    "ExpertOpinion": {
+        "name": "Expert opinion estimation method",
+        "description": "Settings for ExpertOpinion",
+        "port": 5001
     },
     "RootService": {
-        "context_service": "https://orion.sics.se:5006",
-        "port": 443,
-        "description": "Settings for RootService",
+        "name": "COACH Root microservice for ORION project",
         "authentication_database": "settings/authentication.json",
-        "database": "http://127.0.0.1:7474/db/data/",
-        "email": {
-            "port": 587,
-            "sender": "noreply@orion-research.se",
-            "server": "send.one.com"
-        },
-        "knowledge_repository": "https://orion.sics.se:5005",
+        "context_service": "https://orion.sics.se:5006",
+        "description": "Settings for RootService",
+        "logfile": "root.log",
         "service_directories": [
             "orion.sics.se:5003"
         ],
-        "name": "COACH Root microservice for ORION project",
-        "logfile": "root.log"
+        "port": 443,
+        "email": {
+            "server": "send.one.com",
+            "sender": "noreply@orion-research.se",
+            "port": 587
+        },
+        "knowledge_repository": "https://orion.sics.se:5005",
+        "database": "http://127.0.0.1:7474/db/data/"
     },
-    "ContextModelService": {
-        "port": 5006,
-        "description": "Settings for ContextModelService",
-        "name": "A context model service for COACH",
-        "logfile": "ContextModel.log"
+    "PughService": {
+        "name": "Pugh analysis",
+        "description": "Settings for PughService",
+        "logfile": "PughService.log",
+        "port": 5007
     },
-    "AverageOfTwo": {
-        "port": 5004,
-        "description": "Settings for AverageOfTwo",
-        "name": "Average of two estimation method"
+    "object": {
+        "host": "orion.sics.se",
+        "description": "Common settings for all classes",
+        "protocol": "https",
+        "mode": "development"
     },
-    "ExpertOpinion": {
-        "port": 5001,
-        "description": "Settings for ExpertOpinion",
-        "name": "Expert opinion estimation method"
+    "KnowledgeRepositoryService": {
+        "name": "Knowledge repository microservice for the ORION project",
+        "description": "Settings for KnowledgeRepositoryService",
+        "database": "http://127.0.0.1:7474/db/data/",
+        "port": 5005
     }
 }

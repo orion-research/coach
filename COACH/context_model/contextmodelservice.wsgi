@@ -23,5 +23,5 @@ if sys.version_info[0] < 3:
 
 from COACH.framework import coach
 
-application = context_model.ContextModelService(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
+application = ContextModelService.ContextModelService(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
                                                     working_directory = "/var/www/COACH/COACH/context_model").ms

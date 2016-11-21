@@ -291,6 +291,15 @@ class ContextModelService(Service):
 """
         return result.format(settings_file_name = configuration.settings_file_name, path = path)
 
+    
+    def wsgi_application(self, configuration):
+        """
+        Returns the wsgi application call for this service.
+        """
+        template = """ContextModelService.ContextModelService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
+                                                    working_directory = "/var/www/COACH/{file_path}").ms"""
+        return template.format(file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
+
 
 class KnowledgeRepositoryService(Service):
     
