@@ -4,13 +4,6 @@ The configurations include both local stand-alone local installation and server 
 The library contains functions to generate the necessary glue file for hosting services and ensure that everything is
 properly linked.
 
-TODO:
-- Put them in the correct files instead of on the terminal. 
-
-- Templates for services that are not yet defined, i.e. where the "<service_name>.py" file does not exist. 
-Includes the directory and __init__.py file. Method in each subclass of Service (primarily this is for decision models and estimation methods).
-
-
 Created on 18 nov. 2016
 
 @author: Jakob Axelsson
@@ -44,7 +37,7 @@ class Service(object):
         Returns an import statement for this service.
         This is used both for generating wsgi-files and launch files.
         """
-        return "from " + self.path + " import " + self.name + "\n"
+        return "from COACH." + self.path + " import " + self.name + "\n"
         
         
     def directory_entry(self, configuration):
@@ -72,7 +65,7 @@ activate_this = '/var/www/developmentenv/bin/activate_this.py'
 with open(activate_this) as file_:
     exec(file_.read(), dict(__file__=activate_this))
 
-sys.path.append("/var/www/COACH/{file_path}")
+sys.path.append("/var/www/COACH/COACH/{file_path}")
 sys.path.append("/var/www/COACH")
 
 {import_statement}
@@ -95,7 +88,7 @@ application = {application}
         Returns the wsgi application call for this service.
         """
         template = """{package_name}.{name}(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                                    working_directory = "/var/www/COACH/{file_path}").ms"""
+                                                    working_directory = "/var/www/COACH/COACH/{file_path}").ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
@@ -107,15 +100,15 @@ application = {application}
         template = """
 <virtualhost *:{port}>
     ServerName {base_url}
-    WSGIDaemonProcess {daemon_name} user={user_name} group={group_name} threads=5 python-path=/var/www/COACH/{file_path}:/var/www/developmentenv/lib/python3.4/site-packages
-    WSGIScriptAlias / /var/www/COACH/{file_path}/{name_lower}.wsgi
+    WSGIDaemonProcess {daemon_name} user={user_name} group={group_name} threads=5 python-path=/var/www/COACH/COACH/{file_path}:/var/www/developmentenv/lib/python3.4/site-packages
+    WSGIScriptAlias / /var/www/COACH/COACH/{file_path}/{name_lower}.wsgi
 
     SSLCertificateFile      /etc/letsencrypt/live/orion.sics.se/cert.pem
     SSLCertificateKeyFile /etc/letsencrypt/live/orion.sics.se/privkey.pem
     SSLCertificateChainFile /etc/letsencrypt/live/orion.sics.se/chain.pem
     SSLEngine on
 
-    <directory /var/www/COACH/{file_path}>
+    <directory /var/www/COACH/COACH/{file_path}>
         WSGIProcessGroup {daemon_name}
         WSGIApplicationGroup %{{GLOBAL}}
         WSGIScriptReloading On
@@ -127,6 +120,15 @@ application = {application}
         return template.format(port = port, base_url = configuration.base_url, user_name = configuration.user_name, 
                                group_name = configuration.group_name, file_path = "/".join(self.path.split(".")),
                                name_lower = self.name.lower(), daemon_name = "coach-" + configuration.mode + "-" + self.name.lower())
+
+
+    def minimal_functional_service(self):
+        """
+        Returns a string which is the Python code for a functional minimal service. The default behavior is to return None,
+        which means that it is not possible to autogenerate a minimal functional service. Subclasses may override this.
+        """
+        return None
+    
     
 class RootService(Service):
     
@@ -179,15 +181,15 @@ class RootService(Service):
         Returns a Python statement that launches this service in a given configuration.
         """
 
-        path = "/".join(self.path.split(".")[1:])
+        file_path = "/".join(self.path.split("."))
         result = """
-    wdir = os.path.join(topdir, os.path.normpath("{path}"))
+    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
     os.chdir(wdir)
     coach.RootService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
                       os.path.normpath("settings/root_secret_data.json"),
                       working_directory = wdir).run()
 """
-        return result.format(settings_file_name = configuration.settings_file_name, path = path)
+        return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
     
     def wsgi_application(self, configuration):
@@ -197,7 +199,7 @@ class RootService(Service):
         """
         template = """coach.RootService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
                                                     os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
-                                                    working_directory = os.path.abspath("/var/www/COACH/{file_path}")).ms"""
+                                                    working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
@@ -236,14 +238,14 @@ class DirectoryService(Service):
         Returns a Python statement that launches this service in a given configuration.
         """
 
-        path = "/".join(self.path.split(".")[1:])
+        file_path = "/".join(self.path.split("."))
         result = """    
-    wdir = os.path.join(topdir, os.path.normpath("{path}"))
+    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
     os.chdir(wdir)
     coach.DirectoryService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
                            working_directory = os.path.join(topdir, "framework")).run()
 """
-        return result.format(settings_file_name = configuration.settings_file_name, path = path)
+        return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
 
     def directory_entries(self, configuration):
@@ -260,7 +262,7 @@ class DirectoryService(Service):
         The directory service uses the application coach.DirectoryService.
         """
         template = """coach.DirectoryService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                                    working_directory = os.path.abspath("/var/www/COACH/{file_path}")).ms"""
+                                                    working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
         return template.format(file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
 
@@ -282,14 +284,13 @@ class ContextModelService(Service):
         Returns a Python statement that launches this service in a given configuration.
         """
 
-        path = "/".join(self.path.split(".")[1:])
         result = """    
     wdir = os.path.join(topdir, os.path.normpath("context_model"))
     os.chdir(wdir)
     ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
                                                               working_directory = wdir).run()
 """
-        return result.format(settings_file_name = configuration.settings_file_name, path = path)
+        return result.format(settings_file_name = configuration.settings_file_name)
 
     
     def wsgi_application(self, configuration):
@@ -297,7 +298,7 @@ class ContextModelService(Service):
         Returns the wsgi application call for this service.
         """
         template = """ContextModelService.ContextModelService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                                    working_directory = "/var/www/COACH/{file_path}").ms"""
+                                                    working_directory = "/var/www/COACH/COACH/{file_path}").ms"""
         return template.format(file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
 
@@ -328,7 +329,6 @@ class KnowledgeRepositoryService(Service):
         Returns a Python statement that launches this service in a given configuration.
         """
 
-        path = "/".join(self.path.split(".")[1:])
         result = """    
     wdir = os.path.join(topdir, "framework")
     os.chdir(wdir)
@@ -336,7 +336,7 @@ class KnowledgeRepositoryService(Service):
                                                     os.path.normpath("settings/root_secret_data.json"),
                                                     working_directory = wdir).run()
 """
-        return result.format(settings_file_name = configuration.settings_file_name, path = path)
+        return result.format(settings_file_name = configuration.settings_file_name)
 
     
     def wsgi_application(self, configuration):
@@ -346,7 +346,7 @@ class KnowledgeRepositoryService(Service):
         """
         template = """{package_name}.{name}(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
                                                     os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
-                                                    working_directory = os.path.abspath("/var/www/COACH/{file_path}")).ms"""
+                                                    working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
@@ -376,14 +376,38 @@ class DecisionProcessService(Service):
         Returns a Python statement that launches this service in a given configuration.
         """
         
-        path = "/".join(self.path.split(".")[1:])
+        file_path = "/".join(self.path.split("."))
         result = """    
-    wdir = os.path.join(topdir, os.path.normpath("{path}"))
+    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
     os.chdir(wdir)
     {name}.{name}(os.path.join(topdir, os.path.normpath("{settings_file_name}")), working_directory = wdir).run()
 """
-        return result.format(name = self.name, path = path, settings_file_name = configuration.settings_file_name)
-    
+        return result.format(name = self.name, file_path = file_path, settings_file_name = configuration.settings_file_name)
+
+
+    def minimal_functional_service(self):
+        """
+        Returns a string which is the Python code for a functional minimal component of this kind.
+        """
+        template = """
+# Set python import path to include COACH top directory
+import os
+import sys
+sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
+
+# Coach framework
+from COACH.framework import coach
+
+class {name}(coach.DecisionProcessService):
+
+    def process_menu(self):
+        return "Automatically generated process menu for {name}"
+        
+if __name__ == '__main__':
+        {name}(sys.argv[1]).run()
+"""
+        return template.format(name = self.name)
+
 
 class EstimationMethodService(Service):
 
@@ -409,17 +433,51 @@ class EstimationMethodService(Service):
         Returns a Python statement that launches this service in a given configuration.
         """
         
-        path = "/".join(self.path.split(".")[1:])
+        file_path = "/".join(self.path.split("."))
         result = """    
-    wdir = os.path.join(topdir, os.path.normpath("{path}"))
+    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
     os.chdir(wdir)
     coach.EstimationMethodService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
                               handling_class = {name}.{name},
                               working_directory = wdir).run()
 """
-        return result.format(name = self.name, path = path, settings_file_name = configuration.settings_file_name)
+        return result.format(name = self.name, file_path = file_path, settings_file_name = configuration.settings_file_name)
 
     
+    def minimal_functional_service(self):
+        """
+        Returns a string which is the Python code for a functional minimal component of this kind.
+        """
+        template = """
+# Set python import path to include COACH top directory
+import os
+import sys
+sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
+
+
+from COACH.framework import coach
+
+
+class {name}(coach.EstimationMethod):
+    
+    def info(self, params):
+        return "This is an undefined estimation method."
+    
+    
+    def parameter_names(self):
+        return []
+    
+    
+    def evaluate(self, params):
+        return str(0.0)
+
+
+if __name__ == '__main__':
+    coach.EstimationMethodService(sys.argv[1], {name}).run()
+"""
+        return template.format(name = self.name)
+
+
     def wsgi_application(self, configuration):
         """
         Returns the wsgi application call for this service.
@@ -428,7 +486,7 @@ class EstimationMethodService(Service):
         """
         template = """coach.EstimationMethodService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
                                                     handling_class = {package_name}.{name},
-                                                    working_directory = "/var/www/COACH/{file_path}").ms"""
+                                                    working_directory = "/var/www/COACH/COACH/{file_path}").ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
@@ -478,8 +536,6 @@ class Configuration(object):
         stating that the file was generated by this script and the time and date. The parameter script_name contains the name of the script.
         """
 
-#        print(os.path.dirname(os.path.realpath(script_name)))
-#        print(os.path.normpath(file_name))
         os_file_name = os.path.join(os.path.dirname(os.path.realpath(script_name)), os.path.normpath(file_name))
         print(" - Generating file " + os_file_name)
         with open(os_file_name, "w") as f:
@@ -502,7 +558,7 @@ class Configuration(object):
         # Generate directory entries for all directory services allocated on this configuration.
         for s in self.services_with_ports.keys():
             if isinstance(s, DirectoryService):
-                file_name = "/".join(s.path.split(".")[1:])+ "/settings/" + self.mode + "_directory.json"
+                file_name = "/".join(s.path.split("."))+ "/settings/" + self.mode + "_directory.json"
                 self.generate_file(script_name, file_name, json.dumps(s.directory_entries(self), indent = 4))
         
         # Generate the settings file
@@ -517,10 +573,23 @@ class Configuration(object):
             result[s.name] = s.settings(self)
         self.generate_file(script_name, self.settings_file_name, json.dumps(result, indent = 4))
         
-        
+        # Generate templates for services that do not yet have source code.        
         # - Templates for services that are not yet defined, i.e. where the "service_name.py" file does not exist. Includes the directory and __init__.py file.
-    
-        
+        for s in self.services_with_ports.keys():
+            # Check if a default minimal implementation is available
+            code = s.minimal_functional_service()
+            if code:
+                # Check if the corresponding Python module already exists, and if not, generate it together with the necessary package structure.
+                directory = os.path.realpath("COACH/" + "/".join(s.path.split(".")))
+                file_name = os.path.join(directory, s.name + ".py")
+                if os.path.isfile(file_name):
+                    print(" - " + file_name + " already exists")
+                else:
+                    os.makedirs(directory, exist_ok = True)
+                    self.generate_file(script_name, file_name, code)
+                    open(directory + "/__init__.py", "a").close()
+
+
 class LocalConfiguration(Configuration):
     """
     A LocalConfiguration object represents an environment where COACH is ran stand-alone. 
@@ -578,19 +647,15 @@ class ApacheConfiguration(Configuration):
     """
 
     def __init__(self, mode, base_url, services_with_ports, protocol, settings_file_name, 
-                 user_name, group_name, certificate_path, python_path):
+                 user_name, group_name):
         """
         Creates an ApacheConfiguration object. It extends the Configuration constructor with the following parameters:
         - user_name: the user name under which the Apache server is running.
         - group_name: the group name under which the Apache server is running.
-        - certificate_path: the file path to the security certificates used by Apache.
-        - python_path: the file path to where Python is installed.
         """
         super().__init__(mode, base_url, services_with_ports, protocol, settings_file_name)
         self.user_name = user_name
         self.group_name = group_name
-        self.certificate_path = certificate_path
-        self.python_path = python_path
 
 
     def generate(self, script_name):
@@ -612,6 +677,6 @@ class ApacheConfiguration(Configuration):
         # Apache .wsgi files for each component.
         for s in self.services_with_ports.keys():
             content = "# " + self.generated_file_stamp(script_name) + s.wsgi(self)
-            self.generate_file(script_name, "/".join(s.path.split(".")[1:]) + "/" + s.name.lower() + ".wsgi", content)
+            self.generate_file(script_name, "/".join(s.path.split(".")) + "/" + s.name.lower() + ".wsgi", content)
 
 

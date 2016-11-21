@@ -12,37 +12,35 @@ from COACH.deployment import *
 
 
 # Decision process services
-simple = DecisionProcessService("SimpleDecisionProcessService", "A decision process service", "COACH.decision_process.SimpleDecisionProcessService")
-pugh = DecisionProcessService("PughService", "Pugh analysis", "COACH.decision_process.PughService")
+simple = DecisionProcessService("SimpleDecisionProcessService", "A decision process service", "decision_process.SimpleDecisionProcessService")
+pugh = DecisionProcessService("PughService", "Pugh analysis", "decision_process.PughService")
 
 # Estimation method services
-average_of_two = EstimationMethodService("AverageOfTwo", "Average of two estimation method", "COACH.estimation_method.AverageOfTwo")
-expert_opinion = EstimationMethodService("ExpertOpinion", "Expert opinion estimation method", "COACH.estimation_method.ExpertOpinion")
+average_of_two = EstimationMethodService("AverageOfTwo", "Average of two estimation method", "estimation_method.AverageOfTwo")
+expert_opinion = EstimationMethodService("ExpertOpinion", "Expert opinion estimation method", "estimation_method.ExpertOpinion")
 
 services_listed_in_directory = [simple, pugh, average_of_two, expert_opinion]
 
 
 # Directory services
-directory = DirectoryService("DirectoryService", "Directory service for COACH", "COACH.framework", services_listed_in_directory)
+directory = DirectoryService("DirectoryService", "Directory service for COACH", "framework", services_listed_in_directory)
 
 # Context model services
-context_model = ContextModelService("ContextModelService", "A context model service for COACH", "COACH.context_model")
+context_model = ContextModelService("ContextModelService", "A context model service for COACH", "context_model")
 
 # Knowledge repository services
 knowledge_repository = KnowledgeRepositoryService("KnowledgeRepositoryService", 
                                                   "Knowledge repository microservice for the ORION project", 
-                                                  "COACH.knowledge_repository", 
+                                                  "knowledge_repository", 
                                                   "http://127.0.0.1:7474/db/data/")
 
 # Root service
-root = RootService("RootService", "COACH Root microservice for ORION project", "COACH.framework", "http://127.0.0.1:7474/db/data/", 
+root = RootService("RootService", "COACH Root microservice for ORION project", "framework", "http://127.0.0.1:7474/db/data/", 
                    [directory], "settings/authentication.json", knowledge_repository, context_model, 
                    {"server": "send.one.com", "port": 587, "sender": "noreply@orion-research.se"})
 
 
-all_services = [root, directory, context_model, knowledge_repository, simple, pugh, average_of_two, expert_opinion]
-
-
+all_services = [services_listed_in_directory] + [root, directory, context_model, knowledge_repository]
 
 # Configurations on which the services will be deployed
 
@@ -63,7 +61,7 @@ development_services_with_ports = services_with_ports.copy()
 development_services_with_ports[root] = 443
 
 development = ApacheConfiguration("development", "orion.sics.se", development_services_with_ports, "https", "development_settings.json", 
-                                  "jax", "www-data", "a path", "a path")
+                                  "jax", "www-data")
 
 configurations = [local, development]
 
