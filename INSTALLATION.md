@@ -312,36 +312,35 @@ There are also issues with RC4 encryption. In the same file, the following lines
 
 ## Trouble shooting
 
-Apache does not give much feedback on errors in the wsgi setup. Therefore, it is advisable to test each *.wsgi file individually by 
+- Apache does not give much feedback on errors in the wsgi setup. Therefore, it is advisable to test each *.wsgi file individually by 
 simply running `python file.wsgi` (or python3) from the terminal. This will detect issues such as path errors etc.
 If there is no output, everything should be ok.
 
-The Apache configuration files can be tested for syntax errors by running `apachectl -t`. The command `apachectl -S` can be used to 
+- The Apache configuration files can be tested for syntax errors by running `apachectl -t`. The command `apachectl -S` can be used to 
 produce a listing of the different virtual hosts set up, to help discovering if they are conflicting in some way.
 
-File permissions are important, and there is not much feedback if they are wrong.
+- File permissions are important, and there is not much feedback if they are wrong.
 
-In some situations, it appears that Apache chooses to use its default virtual host rather than the one provided by COACH
+- In some situations, it appears that Apache chooses to use its default virtual host rather than the one provided by COACH
 to listen on port 80. This shows up as a default Apache page in the browser rather than the COACH login page. 
 A fix to this is to copy the contents of the COACH port 80 virtual host to the default host configuration file.
 
+- The ports used by COACH services must be open to the Internet in the firewalls to allow external access to the server. If a port is closed, one possible indication is a very long (many seconds) response time for a request, followed by a message in the browser indicating that the service was not available.
 
 ## Configuring GitHub webhooks
 
 COACH is prepared for automatic updates of the server version when new commits are made to GitHub.
 
 To activate it, log in to the GitHub account, select "Settings" and then select "Webhooks and services". Enter the following information:
+- Under Payload URL, enter: https://your.coach.server.url/github_update.
+- Under Secret, enter a random string, which should also be included in the secret data file.
+- Under Which events..., select "Just the push event".
+- Under Activate, select the checkbox.
+- Press Add webhook.
 
-
+You also need to update the sudoers file to not require a password, and file permissions need to be changed.
+The sudoers file must be edited using sudo visudo.
 
 # Production server
 To be defined. Will be similar to development server.
 
-	* Under Payload URL, enter: https://your.coach.server.url/github_update.
-	* Under Secret, enter a random string, which should also be included in the secret data file.
-	* Under Which events..., select "Just the push event".
-	* Under Activate, select the checkbox.
-	* Press Add webhook.
-
-You also need to update the sudoers file to not require a password, and file permissions need to be changed.
-The sudoers file must be edited using sudo visudo.
