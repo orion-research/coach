@@ -9,7 +9,7 @@ You will need to install the following software to be able to execute COACH:
 
 
 # Local development
-These instructions assume you will be running COACH on your local PC. It is convenient to use Eclipse as an IDE, but not a requirement.
+These instructions assume you will be running COACH on your local PC. It is convenient to use Eclipse as an IDE, but not a requirement. It is also convenient to use source code analysis tools to improve quality, such as PyLint (see https://codeyarns.com/2015/01/02/how-to-use-pylint-for-eclipse/ on how to combine this with Eclipse).
 
 ## Neo4j
 Neo4j Community Edition needs to be installed on your local machine, and be started.
@@ -326,6 +326,8 @@ to listen on port 80. This shows up as a default Apache page in the browser rath
 A fix to this is to copy the contents of the COACH port 80 virtual host to the default host configuration file.
 
 - The ports used by COACH services must be open to the Internet in the firewalls to allow external access to the server. If a port is closed, one possible indication is a very long (many seconds) response time for a request, followed by a message in the browser indicating that the service was not available.
+
+- Sometimes, it can appear that a code change did not take effect. If so, it could be the browser that caches pages from the previous version instead of showing a newly generated page. Check that the version number shown on the page corresponds to the current version of the source code, and if not, do a hard update of the page.
 
 ## Configuring GitHub webhooks
 
