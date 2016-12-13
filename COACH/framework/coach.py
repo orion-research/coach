@@ -1,4 +1,4 @@
-"""
+"""  
 Created on 16 mars 2016
 
 @author: Jakob Axelsson
@@ -56,11 +56,32 @@ from COACH.framework.authentication import Authentication
 from COACH.framework.casedb import CaseDatabase
 
 # Web server framework
-from flask import Flask, Response, request, session, abort, redirect
+from flask import Flask, Response, request, session, abort
 from flask.views import View
 from flask.templating import render_template
 
 import requests
+
+
+import inspect
+        
+def endpoint(url_path, http_methods):
+    """
+    endpoint is intended to be used as a decorator for the methods of a service class that should be used
+    as endpoints. The function takes two arguments, a url path and a list of methods to be used with it.
+    These arguments are added as attributes to the decorated method. This attributes are inspected by
+    the create_endpoints method, and used to set up the method as an appropriate flask endpoint.
+
+    Instead of just returning a function, a callable class is created. This is because Flask seems to 
+    require that all endpoints are implemented by different function objects.
+    """
+
+    def decorator(f):
+        f.url_path = url_path
+        f.http_methods = http_methods
+        return f
+    
+    return decorator
 
 
 class Microservice:
@@ -163,11 +184,32 @@ class Microservice:
     def create_endpoints(self):
         """
         create_endpoints is used by the __init__ method to define the API of the microservice.
-        Override this method in subclasses to add service endpoints.
+        It automatically creates endpoints for methods decorated with the @endpoint decorator.
+        Override this method in subclasses to add service endpoints manually.
         """
-        pass
+        # Get a list of all methods for this class.
+        for (_, m) in inspect.getmembers(self):
+            # All endpoint methods are given the attribute url_path by the @endpoint decorator, which contains the url path,
+            # and the attribute http_methods, which contains a list of the http methods that it can be used with.
+            if hasattr(m, "url_path"):
+                self.ms.add_url_rule(m.url_path, view_func = self.endpoint_wrapper(m), endpoint = m.__name__,
+                                     methods = m.http_methods)
 
 
+
+    def endpoint_wrapper(self, m):
+        
+        def wrapping():
+            """
+            The endpoint wrapping fetches the request values supplied for each of the method's parameter names
+            and adds them as arguments to the method.
+            """
+            args = [request.values[p.name] for (_, p) in inspect.signature(m).parameters.items()]
+            return m(*args)
+        
+        return wrapping
+    
+    
     def create_state(self, state_dialogue, endpoint = None):
         """
         Creates a state that can be used in state machine like control flows.
@@ -725,7 +767,10 @@ class DecisionProcessService(Microservice):
     """
     
     def create_endpoints(self):
-        # Initialize the API
+        # Initialize the default API
+        super(DecisionProcessService, self).create_endpoints()
+
+        # Add endpoint for process menu
         self.ms.add_url_rule("/process_menu", view_func = self.process_menu)
 
 
@@ -737,7 +782,10 @@ class EstimationMethodService(Microservice):
     """
     
     def create_endpoints(self):
-        # Initialize the API
+        # Initialize the default API
+        super(EstimationMethodService, self).create_endpoints()
+
+        # Add endpoint for estimation service specific methods
         self.ms.add_url_rule("/info", view_func = self.handling_class.as_view("info"))
         self.ms.add_url_rule("/dialogue", view_func = self.handling_class.as_view("dialogue"))
         self.ms.add_url_rule("/evaluate", view_func = self.handling_class.as_view("evaluate"))

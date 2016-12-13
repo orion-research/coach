@@ -10,9 +10,9 @@ import os
 import sys
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
-
 # Coach framework
 from COACH.framework import coach
+from COACH.framework.coach import endpoint
 
 # Standard libraries
 import json
@@ -27,7 +27,7 @@ import requests
 class SimpleDecisionProcessService(coach.DecisionProcessService):
 
     def create_endpoints(self):
-        # Initialize the API
+        # Initialize the default API
         super(SimpleDecisionProcessService, self).create_endpoints()
 
         # States, represented by dialogues
@@ -35,15 +35,6 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         self.perform_ranking_dialogue = self.create_state("perform_ranking_dialogue.html")
         self.show_ranking_dialogue = self.create_state("show_ranking_dialogue.html")
         
-        # Endpoints for transitions between the states without side effects
-        self.ms.add_url_rule("/select_estimation_method_dialogue", view_func = self.select_estimation_method_dialogue_transition)
-        self.ms.add_url_rule("/perform_ranking_dialogue", view_func = self.perform_ranking_dialogue_transition)
-        self.ms.add_url_rule("/show_ranking_dialogue", view_func = self.show_ranking_dialogue_transition)
-        
-        # Endpoints for transitions between states with side effects
-        self.ms.add_url_rule("/select_estimation_method", view_func = self.select_estimation_method, methods = ["POST"])
-        self.ms.add_url_rule("/perform_ranking", view_func = self.perform_ranking, methods = ["POST"])
-
 
     def process_menu(self):
         try:
@@ -53,12 +44,11 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
             return "Error in process_menu: Please check log file!" + str(e) + str(request.values)
 
 
-    def select_estimation_method_dialogue_transition(self):
+    @endpoint("/select_estimation_method_dialogue", ["GET"])
+    def select_estimation_method_dialogue_transition(self, root, case_id):
         """
         Endpoint which lets the user select which estimation method to use for this decision process.
         """
-        root = request.values["root"]
-        case_id = request.values["case_id"]
         # Fetch the available services from the directories available in the root.
         directories = json.loads(requests.get(root + "get_service_directories").text)
         services = []
@@ -75,13 +65,11 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
                                 root = root, case_id = case_id)
 
 
-    def perform_ranking_dialogue_transition(self):
+    @endpoint("/perform_ranking_dialogue", ["GET"])
+    def perform_ranking_dialogue_transition(self, root, case_id):
         """
         Endpoint which lets the user rank each of the alternatives using the selected estimation method dialogue.
         """
-        root = request.values["root"]
-        case_id = request.values["case_id"]
-
         estimation_method = requests.get(root + "get_case_property", params = {"case_id": case_id, "name": "estimation_method"}).text
 
         if estimation_method:
@@ -100,13 +88,11 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
             return "You need to select an estimation method before you can rank alternatives!"
         
 
-    def show_ranking_dialogue_transition(self):
+    @endpoint("/show_ranking_dialogue", ["GET"])
+    def show_ranking_dialogue_transition(self, root, case_id):
         """
         Endpoint which shows the alternatives in rank order. Unranked alternatives are at the bottom.
         """
-        root = request.values["root"]
-        case_id = request.values["case_id"]
-
         # Get the alternatives for the case.
         decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
         
@@ -124,34 +110,26 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         return self.go_to_state(self.show_ranking_dialogue, ranked = ranked_alternatives, unranked = unranked_alternatives)
 
 
-    def select_estimation_method(self):
+    @endpoint("/select_estimation_method", ["POST"])
+    def select_estimation_method(self, root, method, case_id):
         """
         This method is called using POST when the user presses the select button in the select_estimation_method_dialogue.
         It gets to form parameters: root, which is the url of the root server, and method, which is the url of the selected estimation method.
         It changes the selection in the case database of the root server, and then returns a status message to be shown in the main dialogue window.
         """
-        
         # Write the selection to the database.
-        root = request.values["root"]
-        method = request.values["method"]
-        case_id = request.values["case_id"]
         requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "estimation_method", "value": method})
 
         message = requests.utils.quote("Estimation method changed to ") + method
         return redirect(root + "main_menu?message=" + message)
     
     
-    def perform_ranking(self):
+    @endpoint("/perform_ranking", ["POST"])
+    def perform_ranking(self, root, alternative, case_id, estimation_method):
         """
         This method is called using POST when the user presses the button in the estimation method dialogue as part of the ranking dialogue.
         It calculates the estimate and writes it to the database and then returns a status message showing the updated estimate value in the main dialogue window.
         """
-        
-        root = request.values["root"]
-        alternative = request.values["alternative"]
-        case_id = request.values["case_id"]
-        estimation_method = request.values["estimation_method"]
-
         # Calculate estimate. This is done by removing the values "root", "case_id", "estimation_method" and "alternative" from the dictionary of values. 
         # The rest should be estimation method arguments, and are passed to the evaluate endpoint of the estimation method.
         params = dict()
