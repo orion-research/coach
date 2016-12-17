@@ -26,16 +26,6 @@ import requests
 
 class SimpleDecisionProcessService(coach.DecisionProcessService):
 
-    def create_endpoints(self):
-        # Initialize the default API
-        super(SimpleDecisionProcessService, self).create_endpoints()
-
-        # States, represented by dialogues
-        self.select_estimation_method_dialogue = self.create_state("select_estimation_method_dialogue.html")
-        self.perform_ranking_dialogue = self.create_state("perform_ranking_dialogue.html")
-        self.show_ranking_dialogue = self.create_state("show_ranking_dialogue.html")
-        
-
     def process_menu(self):
         try:
             return render_template("process_menu.html", url = request.url_root, case_id = request.values["case_id"])
@@ -61,8 +51,8 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         options = ["<OPTION value=\"%s\"> %s </A>" % (s[2], s[1]) for s in services]
 
         # Render the dialogue
-        return self.go_to_state(self.select_estimation_method_dialogue, estimation_methods = options, this_process = request.url_root, 
-                                root = root, case_id = case_id)
+        return render_template("select_estimation_method_dialogue.html", estimation_methods = options, this_process = request.url_root, 
+                               root = root, case_id = case_id)
 
 
     @endpoint("/perform_ranking_dialogue", ["GET"])
@@ -70,6 +60,8 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         """
         Endpoint which lets the user rank each of the alternatives using the selected estimation method dialogue.
         """
+        print(root)
+        print(case_id)
         estimation_method = requests.get(root + "get_case_property", params = {"case_id": case_id, "name": "estimation_method"}).text
 
         if estimation_method:
@@ -80,10 +72,9 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
             # Get the estimation method's dialogue
             estimation_dialogue = requests.get(self.get_setting("protocol") + "://" + estimation_method + "/dialogue").text
         
-            # Render the dialogue
-            return self.go_to_state(self.perform_ranking_dialogue, options = options, estimation_dialogue = estimation_dialogue, 
-                                    this_process = self.get_setting("protocol") + "://" + self.host + ":" + str(self.port) + "/",
-                                    root = root, case_id = case_id, estimation_method = estimation_method)
+            return render_template("perform_ranking_dialogue.html", options = options, estimation_dialogue = estimation_dialogue, 
+                                   this_process = self.get_setting("protocol") + "://" + self.host + ":" + str(self.port) + "/",
+                                   root = root, case_id = case_id, estimation_method = estimation_method)
         else:
             return "You need to select an estimation method before you can rank alternatives!"
         
@@ -106,8 +97,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         # Render the dialogue
         ranked_alternatives = [a + ": estimation = " + e for (a, e) in ranked_alternatives]
         unranked_alternatives = [a + ": no estimation" for a in unranked_alternatives]
-        
-        return self.go_to_state(self.show_ranking_dialogue, ranked = ranked_alternatives, unranked = unranked_alternatives)
+        return render_template("show_ranking_dialogue.html", ranked = ranked_alternatives, unranked = unranked_alternatives)
 
 
     @endpoint("/select_estimation_method", ["POST"])

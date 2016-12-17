@@ -210,6 +210,31 @@ class Microservice:
         return wrapping
     
     
+    @endpoint("/test_ui", ["GET", "POST"])
+    def test_ui(self):
+        """
+        Returns an automatically generated html page which allows testing of individual endpoints manually through 
+        a web browser.
+        """
+        result = "<HTML>\n<H1>Endpoints of the microservice " + type(self).__name__ + "</H1>\n"
+        result += "<P>NOTE: references to services should include the protocol and a trailing / (e.g. http://127.0.0.1:5002/)</P>"
+        for (_, m) in inspect.getmembers(self):
+            if hasattr(m, "url_path"):
+                result += "<FORM action=\"" + m.url_path + "\""
+                result += " method=\"" + m.http_methods[0] + "\">\n"
+                result += "<FIELDSET>\n"
+                result += "<LEGEND><H2>" + m.url_path + "</H2></LEGEND>\n"
+                result += "<H3>HTTP method(s):</H3>" + ", ".join(m.http_methods) + "<BR>\n"
+                result += "<H3>Description:</H3>\n" + m.__doc__ + "<BR><BR>\n"
+                for (_, p) in inspect.signature(m).parameters.items():
+                    result += p.name + ": <BR>\n"
+                    result += "<INPUT TYPE=\"text\" name=\"" + p.name + "\"><BR>\n"
+                result += "<INPUT type=\"submit\" value=\"Submit\">\n"
+                result += "</FIELDSET>\n\n</FORM>\n\n\n"
+        result += "</HTML>"
+        return result
+    
+    
     def create_state(self, state_dialogue, endpoint = None):
         """
         Creates a state that can be used in state machine like control flows.
