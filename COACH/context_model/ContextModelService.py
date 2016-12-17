@@ -14,9 +14,7 @@ sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 # Coach framework
 from COACH.framework import coach
-
-# Standard libraries
-import json
+from COACH.framework.coach import endpoint
 
 # Web server framework
 from flask import request, redirect
@@ -28,38 +26,19 @@ import requests
 class ContextModelService(coach.Microservice):
 # JC: Or should this be one specialization of a common ContextModel Service class defined in coach.py??? 
 
-
-
-    def create_endpoints(self):
-
-        self.ms.logger.info("Creating endpoints!")
-        
-        # States, represented by dialogues
-        self.edit_context_dialogue = self.create_state("edit_context_dialogue.html")
-        
-        # Endpoints for transitions between the states without side effects
-        self.ms.add_url_rule("/edit_context_dialogue", view_func = self.edit_context_dialogue_transition)
-        
-        # Endpoints for transitions between states with side effects
-        self.ms.add_url_rule("/edit_context", view_func = self.edit_context, methods = ["POST"])
-
-
-
-    def edit_context_dialogue_transition(self):
+    @endpoint("/edit_context_dialogue", ["GET"])
+    def edit_context_dialogue_transition(self, root, case_id):
         """
         Endpoint which lets the user edit context information.
         """
-        root = request.values["root"]
-        case_id = request.values["case_id"]
-        
         context_text = requests.get(root + "get_case_property", params = {"case_id": case_id, "name": "context_text"}).text
         
-        return self.go_to_state(self.edit_context_dialogue, this_process = request.url_root,  
-                                root = root, case_id = case_id, context_text = context_text)     
+        return render_template("edit_context_dialogue.html", this_process = request.url_root,  
+                               root = root, case_id = case_id, context_text = context_text)     
 
         
-
-    def edit_context(self):
+    @endpoint("/edit_context", ["POST"])
+    def edit_context(self, root, case_id, context_text):
         """
         This method is called using POST when the user presses the save button in the edit_context_dialogue_transition.
         It gets several form parameters: 
@@ -68,12 +47,7 @@ class ContextModelService(coach.Microservice):
         context_text : The text entered in the main context text area
         It writes the new context information to the database, and then returns a status message to be shown in the main dialogue window.
         """
-        
-        root = request.values["root"]
-        case_id = request.values["case_id"]
-        context_text = request.values["context_text"]
-        
-         # Write the new context information to the database.
+        # Write the new context information to the database.
         requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "context_text", "value": context_text})
 
         message = requests.utils.quote("Context information saved. ("+ context_text + ")") 

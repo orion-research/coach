@@ -188,12 +188,14 @@ class Microservice:
         Override this method in subclasses to add service endpoints manually.
         """
         # Get a list of all methods for this class.
+        print("Creating endpoints for " + self.__class__.__name__ + "(" + self.host + ":" + str(self.port) + ")")
         for (_, m) in inspect.getmembers(self):
             # All endpoint methods are given the attribute url_path by the @endpoint decorator, which contains the url path,
             # and the attribute http_methods, which contains a list of the http methods that it can be used with.
             if hasattr(m, "url_path"):
                 self.ms.add_url_rule(m.url_path, view_func = self.endpoint_wrapper(m), endpoint = m.__name__,
                                      methods = m.http_methods)
+                print("   - " + m.__name__ + " created")
 
 
 
