@@ -13,6 +13,7 @@ import sys
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 from COACH.framework.coach import Microservice
+from COACH.framework.coach import endpoint
 
 from flask import request
 
@@ -190,16 +191,10 @@ class KnowledgeRepositoryService(Microservice):
             self.ms.logger.error("Fatal error: Knowledge repository cannot be accessed. Make sure that Neo4j is running!")
 
             
-    def create_endpoints(self):
-        """
-        Initialize the API as web service endpoints.
-        """
-        self.ms.add_url_rule("/add_case", view_func = self.add_case, methods = ["POST"])
-        
-        
-    def add_case(self):
+    @endpoint("/add_case", ["POST"])    
+    def add_case(self, description):
         """
         Endpoint for handling the addition of a new case to the KR.
         """
-        self.KR.add_case(request.values.get("description"))
+        self.KR.add_case(description)
         return "Ok"

@@ -25,29 +25,6 @@ import requests
 
 class PughService(coach.DecisionProcessService):
 
-    def create_endpoints(self):
-        # Initialize the API
-        super(PughService, self).create_endpoints()
-
-        # States, represented by dialogues
-        self.select_baseline_dialogue = self.create_state("select_baseline_dialogue.html")
-        self.matrix_dialogue = self.create_state("matrix_dialogue.html")
-        self.add_criterium_dialogue = self.create_state("add_criterium_dialogue.html")
-        self.change_criterium_dialogue = self.create_state("change_criterium_dialogue.html")
-        
-        # Endpoints for transitions between the states without side effects
-#        self.ms.add_url_rule("/select_baseline_dialogue", view_func = self.select_baseline_dialogue_transition)
-#        self.ms.add_url_rule("/add_criterium_dialogue", view_func = self.add_criterium_dialogue_transition)
-#        self.ms.add_url_rule("/change_criterium_dialogue", view_func = self.change_criterium_dialogue_transition)
-#        self.ms.add_url_rule("/matrix_dialogue", view_func = self.matrix_dialogue_transition)
-        
-        # Endpoints for transitions between states with side effects
-#        self.ms.add_url_rule("/select_baseline", view_func = self.select_baseline, methods = ["POST"])
-#        self.ms.add_url_rule("/add_criterium", view_func = self.add_criterium, methods = ["POST"])
-#        self.ms.add_url_rule("/change_criterium", view_func = self.change_criterium, methods = ["POST"])
-#        self.ms.add_url_rule("/change_rating", view_func = self.change_rating, methods = ["POST"])
-        
-
     # Auxiliary functions
     
     def get_criteria(self, root, case_id):
@@ -70,9 +47,6 @@ class PughService(coach.DecisionProcessService):
         """
         Endpoint which lets the user select the baseline alternative.
         """
-#        root = request.values["root"]
-#        case_id = request.values["case_id"]
-        
         # Get the decision alternatives from root and build a list to be fitted into a dropdown menu
         decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
         options = ["<OPTION value=\"%s\"> %s </A>" % (a[1], a[0]) for a in decision_alternatives]
@@ -87,8 +61,6 @@ class PughService(coach.DecisionProcessService):
         """
         Endpoint which shows the dialogue for adding criteria.
         """
-#        root = request.values["root"]
-#        case_id = request.values["case_id"]
         return render_template("add_criterium_dialogue.html", this_process = request.url_root, root = root, case_id = case_id)
     
     
@@ -97,9 +69,6 @@ class PughService(coach.DecisionProcessService):
         """
         Endpoint which shows the dialogue for changing criteria.
         """
-#        root = request.values["root"]
-#        case_id = request.values["case_id"]
-
         criteria = self.get_criteria(root, case_id).keys()
         options = ["<OPTION value=\"%s\"> %s </A>" % (c, c) for c in criteria]
         
@@ -111,9 +80,6 @@ class PughService(coach.DecisionProcessService):
         """
         Endpoint which shows the Pugh matrix dialogue.
         """
-#        root = request.values["root"]
-#        case_id = request.values["case_id"]
-
         # Get alternatives from the database
         decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
         alternatives = [a[0] for a in decision_alternatives]
@@ -155,10 +121,6 @@ class PughService(coach.DecisionProcessService):
         It gets two form parameters: root, which is the url of the root server, and baseline, which is the id of the selected alternative.
         It changes the selection in the case database of the root server, and then shows the matrix dialogue.
         """
-#        root = request.values["root"]
-#        baseline = request.values["baseline"]
-#        case_id = request.values["case_id"]
-
         # Write the selection to the database, and show a message
         requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "baseline", "value": baseline})
         return redirect(root + "main_menu?main_dialogue=" + request.url_root + "matrix_dialogue?case_id=" + str(case_id))
@@ -172,11 +134,6 @@ class PughService(coach.DecisionProcessService):
         and weight which is its weight. The criteria are stored in the case database as a dictionary assigned to the criteria attribute
         of the case node. 
         """
-#        root = request.values["root"]
-#        case_id = request.values["case_id"]
-#        criterium = request.values["criterium"]
-#        weight = request.values["weight"]
-
         # Get the current set of criteria from the case database, and add the new one to the set
         criteria = self.get_criteria(root, case_id)
         criteria[criterium] = weight
@@ -197,13 +154,6 @@ class PughService(coach.DecisionProcessService):
         in the button parameter. The method modifies the list of criteria in the root node, and also the ranking in each
         alternative. 
         """
-#        root = request.values["root"]
-#        case_id = request.values["case_id"]
-#        criterium = request.values["criterium"]
-#        new_name = request.values["new_name"]
-#        new_weight = request.values["new_weight"]
-#        action = request.form["button"]
-        
         # Change or delete the criterium name in the list of criteria in the case node
         criteria = self.get_criteria(root, case_id)
         if action == "Delete criterium":
@@ -248,9 +198,6 @@ class PughService(coach.DecisionProcessService):
         This method is called using POST when the user presses the save button in the Pugh matrix dialogue. It updates the values
         of the ranking of each alternative according to the current values in the dialogue.
         """
-#        root = request.values["root"]
-#        case_id = request.values["case_id"]
-
         # Get alternatives from the database
         decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
         alternative_ids = [a[1] for a in decision_alternatives]
