@@ -42,6 +42,15 @@ class PughService(coach.DecisionProcessService):
 
     # Endpoints
 
+    @endpoint("/process_menu", ["GET"])
+    def process_menu(self):
+        try:
+            return render_template("process_menu.html", url = request.url_root, case_id = request.values["case_id"])
+        except Exception as e:
+            self.ms.logger.error("Error in process_menu: " + str(e))
+            return "Error in process_menu: Please check log file!" + str(e) + str(request.values)
+
+
     @endpoint("/select_baseline_dialogue", ["GET"])
     def select_baseline_dialogue_transition(self, root, case_id):
         """
@@ -56,64 +65,6 @@ class PughService(coach.DecisionProcessService):
                                root = root, case_id = case_id)
         
     
-    @endpoint("/add_criterium_dialogue", ["GET"])
-    def add_criterium_dialogue_transition(self, root, case_id):
-        """
-        Endpoint which shows the dialogue for adding criteria.
-        """
-        return render_template("add_criterium_dialogue.html", this_process = request.url_root, root = root, case_id = case_id)
-    
-    
-    @endpoint("/change_criterium_dialogue", ["GET"])
-    def change_criterium_dialogue_transition(self, root, case_id):
-        """
-        Endpoint which shows the dialogue for changing criteria.
-        """
-        criteria = self.get_criteria(root, case_id).keys()
-        options = ["<OPTION value=\"%s\"> %s </A>" % (c, c) for c in criteria]
-        
-        return render_template("change_criterium_dialogue.html", this_process = request.url_root, root = root, case_id = case_id, criteria = options)
-    
-    
-    @endpoint("/matrix_dialogue", ["GET"])
-    def matrix_dialogue_transition(self, root, case_id):
-        """
-        Endpoint which shows the Pugh matrix dialogue.
-        """
-        # Get alternatives from the database
-        decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
-        alternatives = [a[0] for a in decision_alternatives]
-        alternative_ids = [a[1] for a in decision_alternatives]
-        
-        # Get criteria from the database
-        weights = self.get_criteria(root, case_id)
-        criteria = weights.keys()
-        
-        # Get rankings from the database
-        ranking = dict()
-        for a in alternative_ids:
-            alternative_rankings = requests.get(root + "get_alternative_property", params = {"alternative": a, "name": "ranking"}).text
-            if alternative_rankings:
-                # Json does not allow '...' as string delimiters, so they must be changed to "..." 
-                ranking[a] = json.loads(alternative_rankings.replace("'", "\""))
-            else:
-                ranking[a] = dict()
-        
-        # Set default value to zero for missing rankings
-        for a in alternative_ids:
-            for c in criteria:
-                if c not in ranking[a]:
-                    ranking[a][c] = 0
-        
-        # Calculate the evaluation sums
-        sums = [sum([int(weights[c]) * int(r) for (c, r) in ranking[a].items()]) for a in alternative_ids]
-        
-        # Render the dialogue        
-        return render_template("matrix_dialogue.html", this_process = request.url_root, root = root, case_id = case_id,
-                               alternatives = alternatives, alternative_ids = alternative_ids, 
-                               criteria = criteria, weights = weights, ranking = ranking, sums = sums)
-    
-    
     @endpoint("/select_baseline", ["POST"])
     def select_baseline(self, root, baseline, case_id):
         """
@@ -124,6 +75,14 @@ class PughService(coach.DecisionProcessService):
         # Write the selection to the database, and show a message
         requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "baseline", "value": baseline})
         return redirect(root + "main_menu?main_dialogue=" + request.url_root + "matrix_dialogue?case_id=" + str(case_id))
+    
+    
+    @endpoint("/add_criterium_dialogue", ["GET"])
+    def add_criterium_dialogue_transition(self, root, case_id):
+        """
+        Endpoint which shows the dialogue for adding criteria.
+        """
+        return render_template("add_criterium_dialogue.html", this_process = request.url_root, root = root, case_id = case_id)
     
     
     @endpoint("/add_criterium", ["POST"])
@@ -143,6 +102,17 @@ class PughService(coach.DecisionProcessService):
 
         # Go to the matrix dialogue state
         return redirect(root + "main_menu?main_dialogue=" + request.url_root + "matrix_dialogue?case_id=" + str(case_id))
+    
+    
+    @endpoint("/change_criterium_dialogue", ["GET"])
+    def change_criterium_dialogue_transition(self, root, case_id):
+        """
+        Endpoint which shows the dialogue for changing criteria.
+        """
+        criteria = self.get_criteria(root, case_id).keys()
+        options = ["<OPTION value=\"%s\"> %s </A>" % (c, c) for c in criteria]
+        
+        return render_template("change_criterium_dialogue.html", this_process = request.url_root, root = root, case_id = case_id, criteria = options)
     
     
     @endpoint("/change_criterium", ["POST"])
@@ -192,6 +162,45 @@ class PughService(coach.DecisionProcessService):
         return redirect(root + "main_menu?message=Changed criterium!")
     
     
+    @endpoint("/matrix_dialogue", ["GET"])
+    def matrix_dialogue_transition(self, root, case_id):
+        """
+        Endpoint which shows the Pugh matrix dialogue.
+        """
+        # Get alternatives from the database
+        decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
+        alternatives = [a[0] for a in decision_alternatives]
+        alternative_ids = [a[1] for a in decision_alternatives]
+        
+        # Get criteria from the database
+        weights = self.get_criteria(root, case_id)
+        criteria = weights.keys()
+        
+        # Get rankings from the database
+        ranking = dict()
+        for a in alternative_ids:
+            alternative_rankings = requests.get(root + "get_alternative_property", params = {"alternative": a, "name": "ranking"}).text
+            if alternative_rankings:
+                # Json does not allow '...' as string delimiters, so they must be changed to "..." 
+                ranking[a] = json.loads(alternative_rankings.replace("'", "\""))
+            else:
+                ranking[a] = dict()
+        
+        # Set default value to zero for missing rankings
+        for a in alternative_ids:
+            for c in criteria:
+                if c not in ranking[a]:
+                    ranking[a][c] = 0
+        
+        # Calculate the evaluation sums
+        sums = [sum([int(weights[c]) * int(r) for (c, r) in ranking[a].items()]) for a in alternative_ids]
+        
+        # Render the dialogue        
+        return render_template("matrix_dialogue.html", this_process = request.url_root, root = root, case_id = case_id,
+                               alternatives = alternatives, alternative_ids = alternative_ids, 
+                               criteria = criteria, weights = weights, ranking = ranking, sums = sums)
+    
+    
     @endpoint("/change_rating", ["POST"])
     def change_rating(self, root, case_id):
         """
@@ -213,15 +222,6 @@ class PughService(coach.DecisionProcessService):
         # Show a message that the data has changed
         return redirect(root + "main_menu?message=Pugh analysis matrix updated")
         
-
-    @endpoint("/process_menu", ["GET"])
-    def process_menu(self):
-        try:
-            return render_template("process_menu.html", url = request.url_root, case_id = request.values["case_id"])
-        except Exception as e:
-            self.ms.logger.error("Error in process_menu: " + str(e))
-            return "Error in process_menu: Please check log file!" + str(e) + str(request.values)
-
 
 if __name__ == '__main__':
     PughService(sys.argv[1]).run()

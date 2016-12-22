@@ -46,16 +46,28 @@ You will get a list of messages on the screen, indicating which files have been 
 which is the file we will edit to implement the new service. If you are using Eclipse, you need to import this file, by right-clicking on
 the folder `decision_process` and selecting `Refresh`. The contents of the file is as follows:
 
-	# Set python import path to include COACH top directory
-	import os
-	import sys
-	sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
-	
-	# Coach framework
-	from COACH.framework import coach
-	
+        # Set python import path to include COACH top directory
+        import os
+        import sys
+        sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
+        
+        # Coach framework
+        from COACH.framework import coach
+        from COACH.framework.coach import endpoint
+        
+        # Standard libraries
+        import json
+        
+        # Web server framework
+        from flask import request, redirect
+        from flask.templating import render_template
+        
+        import requests
+        
+        
 	class PughService(coach.DecisionProcessService):
 	
+            @endpoint("/process_menu", ["GET"])
 	    def process_menu(self):
 	        return "Automatically generated process menu for PughService"
 	        
@@ -63,8 +75,9 @@ the folder `decision_process` and selecting `Refresh`. The contents of the file 
 	        PughService(sys.argv[1]).run()
 
 
+The file sets up the libraries that are needed for implementing the service. 
 The only method that is required in a DecisionProcessService subclass is process_menu,
-and in the code above, a temporary dummy for that has been added.
+and in the code above, a temporary dummy for that has been added. 
 
 (It can be convenient to be able to run your service as a stand alone program, and this is the purpose of the last two lines in the file.)
 
@@ -75,9 +88,12 @@ result in a message similar to this:
 
 	 * Running on http://127.0.0.1:5007/ (Press CTRL+C to quit)
 
-Now, start your web browser and point it to the address http://127.0.0.1:5007/process_menu,
+Now, start your web browser and point it to the address `http://127.0.0.1:5007/process_menu`,
 and you should see "Automatically generated process menu for PughService" on your screen.
 
+There is also a feature which allows you to test all endpoints through an interactive interface. 
+It is available at `http://127.0.0.1:5007/test_ui`. As we add more endpoints, you may return to
+this page to check that they have been properly added.
 
 # Running the decision method as part of COACH locally
 
@@ -101,15 +117,16 @@ from the case database.
 Transitions are triggered by user interactions, such as clicking a link or pressing a button,
 either in the process menu or in the dialogue. 
 These interactions are sent to the service by invoking a URL, and these URLs are captured 
-using something called endpoints. The endpoints are implemented as Python functions, and they 
-are declared as endpoints in a method called create_endpoints, which is called by the superclass
-during class initialization.
+using something called endpoints. The endpoints are implemented as Python functions.
+The decorator `@endpoint` preceeding the method definition is the mechanism
+used to indicate that this is a microservice endpoint, and the URL used to reach it is indicated together with the list of HTTP methods
+that should be supported, as shown in the first instance of our class listed above.
+
 
 So the steps you need to take when implementing your decision process are:
 1. Design the state machine and transitions.
 2. For each state, create an HTML template showing the dialogue.
-3. For each transition, write a Python function and declare it as an endpoint in the 
-create_endpoints method.
+3. For each transition, write a Python function and declare it as an endpoint using the `@endpoint` decorator.
 
 # Process logic for the example decision process service
 
@@ -154,84 +171,12 @@ dialogue, which in turn is triggered when the user makes a choice in the dropdow
 in the cell.
 * A transition from any state to the matrix dialogue state. This is triggered from the process menu.
 
-## State machine implementation
-
-The web server implementation relies on the Flask framework, so certain functions need to
-be imported from this library:
-
-	# Web server framework
-	from flask import request
-	from flask.templating import render_template
-	
-	import requests
-
-
-The following code sets up the state machine:
-
-	    def create_endpoints(self):
-	        # Initialize the API
-	        super(PughService, self).create_endpoints()
-	
-	        # States, represented by dialogues
-	        self.select_baseline_dialogue = self.create_state("select_baseline_dialogue.html")
-	        self.matrix_dialogue = self.create_state("matrix_dialogue.html")
-	        self.add_criterium_dialogue = self.create_state("add_criterium_dialogue.html")
-	        self.change_criterium_dialogue = self.create_state("change_criterium_dialogue.html")
-	        
-	        # Endpoints for transitions between the states without side effects
-	        self.ms.add_url_rule("/select_baseline_dialogue", view_func = self.select_baseline_dialogue_transition)
-	        self.ms.add_url_rule("/add_criterium_dialogue", view_func = self.add_criterium_dialogue_transition)
-	        self.ms.add_url_rule("/change_criterium_dialogue", view_func = self.change_criterium_dialogue_transition)
-	        self.ms.add_url_rule("/matrix_dialogue", view_func = self.matrix_dialogue_transition)
-	        
-	        # Endpoints for transitions between states with side effects
-	        self.ms.add_url_rule("/select_baseline", view_func = self.select_baseline, methods = ["POST"])
-	        self.ms.add_url_rule("/add_criterium", view_func = self.add_criterium, methods = ["POST"])
-	        self.ms.add_url_rule("/change_criterium", view_func = self.change_criterium, methods = ["POST"])
-	        self.ms.add_url_rule("/change_rating", view_func = self.change_rating, methods = ["POST"])
-        
-The create_endpoint method overrides the one in the super class, so first we need to call it
-in the superclass, to make sure that some default endpoints are set up.
-
-In the next block, the states are defined, each state being associated with a HTML template,
-which must also be created in the templates folder.
-
-The second block is used for opening new dialogues, and the third for executing transitions
-with side effects. The view_func argument indicates which method of the class will be triggered
-by the end point, and all these methods need to be added to the class. Note that it is not
-explicit here what states the transisions connect, but the new state will be set at the 
-end of the triggered method.
-
-For the time being, we just add stubs for the triggering methods:
-
-	    def select_baseline_dialogue_transition(self):
-	        return "Not yet implemented!"
-	    
-	    def add_criterium_dialogue_transition(self):
-	        return "Not yet implemented!"
-	    
-	    def change_criterium_dialogue_transition(self):
-	        return "Not yet implemented!"
-	    
-	    def matrix_dialogue_transition(self):
-	        return "Not yet implemented!"
-	    
-	    def select_baseline(self):
-	        return "Not yet implemented!"
-	    
-	    def add_criterium(self):
-	        return "Not yet implemented!"
-	    
-	    def change_criterium(self):
-	        return "Not yet implemented!"
-	    
-	    def change_rating(self):
-	        return "Not yet implemented!"
 
 ## Process menu
 
-We will now also put the process menu in place. It requires an update of the process_menu method:
+We will now put the process menu in place. It requires an update of the process_menu method:
 
+            @endpoint("/process_menu", ["GET"])
 	    def process_menu(self):
 	        try:
 	            return render_template("process_menu.html", url = request.url_root, case_id = request.values["case_id"])
@@ -259,6 +204,25 @@ endpoints. The double curly braces `{{ ... }}` are used to insert the parameters
 supplied to the rendering function. (For more details on the template syntax,
 look up documentation on the Jinja2 template engine, which is used by the Flask
 web framework that COACH employs.)
+
+The HTML template refers to a number of new endpoints representing states, and these have to be provided. Therefore, for the time being,
+we just add stubs for the triggering methods:
+
+            @endpoint("/select_baseline_dialogue", ["GET"])
+            def select_baseline_dialogue_transition(self):
+                return "Not yet implemented!"
+            
+            @endpoint("/add_criterium_dialogue", ["GET"])
+            def add_criterium_dialogue_transition(self):
+                return "Not yet implemented!"
+            
+            @endpoint("/change_criterium_dialogue", ["GET"])
+            def change_criterium_dialogue_transition(self):
+                return "Not yet implemented!"
+            
+            @endpoint("/matrix_dialogue", ["GET"])
+            def matrix_dialogue_transition(self):
+                return "Not yet implemented!"
 
 You can now restart the COACH local implementation, and check that the process menu works.
 
@@ -310,13 +274,11 @@ be passed to the endpoint every time.
 To render this dialogue, the endpoint method select_baseline_dialogue_transition needs to be
 implemented:
 
-	    def select_baseline_dialogue_transition(self):
+            @endpoint("/select_baseline_dialogue", ["GET"])
+            def select_baseline_dialogue_transition(self, root, case_id):
 	        """
 	        Endpoint which lets the user select the baseline alternative.
 	        """
-	        root = request.values["root"]
-	        case_id = request.values["case_id"]
-        
 	        # Get the decision alternatives from root and build a list to be fitted into a dropdown menu
 	        decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
 	        options = ["<OPTION value=\"%s\"> %s </A>" % (a[1], a[0]) for a in decision_alternatives]
@@ -325,29 +287,24 @@ implemented:
 	        return self.go_to_state(self.select_baseline_dialogue, alternatives = options, this_process = request.url_root, 
 	                                root = root, case_id = case_id)
 
+Note that the method now takes two arguments, root and case_id. These are automatically bound to the values supplied in the http
+request (in this case as GET parameters, in a URL call similar to `.../select_baseline_dialogue?root="..."&case_id=xxx`, but the
+same mechanism also works for POST parameters present in a form element in the HTML page).
+
 The decision alternatives to choose from are stored in the case database, which is held by
 the root service. Therefore, a request for this data has to be made in order to build
 the list of alternatives.
 
-Since the alternatives are provided from the root service as a json string, the json library
-needs to be imported:
-
-	import json
-
 When the user has chosen a baseline in the menu, and presses the select button, the
 select_baseline endpoint gets invoked. Its method is as follows:
 
-	    def select_baseline(self):
+            @endpoint("/select_baseline", ["POST"])
+            def select_baseline(self, root, baseline, case_id):
 	        """
 	        This method is called using POST when the user presses the select button in the select_baseline_dialogue.
 	        It gets two form parameters: root, which is the url of the root server, and baseline, which is the id of the selected alternative.
 	        It changes the selection in the case database of the root server, and then shows the matrix dialogue.
 	        """
-        
-	        root = request.values["root"]
-	        baseline = request.values["baseline"]
-	        case_id = request.values["case_id"]
-
 	        # Write the selection to the database, and show a message
 	        requests.post(root + "change_case_property", data = {"case_id": str(case_id), "name": "baseline", "value": baseline})
 	        return redirect(root + "main_menu?main_dialogue=" + request.url_root + "matrix_dialogue?case_id=" + str(case_id))
@@ -379,28 +336,23 @@ The file `templates\add_criterium_dialogue.html` should contain:
 
 The transition to the dialogue basically just renders it:
 
-	    def add_criterium_dialogue_transition(self):
+            @endpoint("/add_criterium_dialogue", ["GET"])
+            def add_criterium_dialogue_transition(self, root, case_id):
 	        """
 	        Endpoint which shows the dialogue for adding criteria.
 	        """
-	        root = request.values["root"]
-	        case_id = request.values["case_id"]
 	        return self.go_to_state(self.add_criterium_dialogue, this_process = request.url_root, root = root, case_id = case_id)
 
 Finally, the endpoint for actually adding the new criterium looks like this:
 
-	    def add_criterium(self):
+            @endpoint("/add_criterium", ["POST"])
+            def add_criterium(self, root, case_id, criterium, weight):
 	        """
 	        This method is called using POST when the user presses the select button in the add_criterium_dialogue.
 	        It gets three form parameters: root, which is the url of the root server, and criterium, which is the name of the new criterium,
 	        and weight which is its weight. The criteria are stored in the case database as a dictionary assigned to the criteria attribute
 	        of the case node. 
 	        """
-	        root = request.values["root"]
-	        case_id = request.values["case_id"]
-	        criterium = request.values["criterium"]
-	        weight = request.values["weight"]
-	
 	        # Get the current set of criteria from the case database, and add the new one to the set
 	        criteria = self.get_criteria(root, case_id)
 	        criteria[criterium] = weight
@@ -460,13 +412,11 @@ The HTML code for the dialogue is in `templates\change_criterium_dialogue`:
 
 It is rendered using the following endpoint:
 
-	    def change_criterium_dialogue_transition(self):
+            @endpoint("/change_criterium_dialogue", ["GET"])
+            def change_criterium_dialogue_transition(self, root, case_id):
 	        """
 	        Endpoint which shows the dialogue for changing criteria.
 	        """
-	        root = request.values["root"]
-	        case_id = request.values["case_id"]
-	
 	        criteria = self.get_criteria(root, case_id).keys()
 	        options = ["<OPTION value=\"%s\"> %s </A>" % (c, c) for c in criteria]
 	        
@@ -474,7 +424,8 @@ It is rendered using the following endpoint:
 
 The endpoint for actually changing the criterium is:
 
-	    def change_criterium(self):
+            @endpoint("/change_criterium", ["POST"])
+            def change_criterium(self, root, case_id, criterium, new_name, new_weight, action):
 	        """
 	        This method is called using POST when the user presses either the change criterium or delete criterium buttons in the 
 	        change_criterium_dialogue. The form parameters are root and case_id, the current name of the criterium to change, 
@@ -482,13 +433,6 @@ The endpoint for actually changing the criterium is:
 	        in the button parameter. The method modifies the list of criteria in the root node, and also the ranking in each
 	        alternative. 
 	        """
-	        root = request.values["root"]
-	        case_id = request.values["case_id"]
-	        criterium = request.values["criterium"]
-	        new_name = request.values["new_name"]
-	        new_weight = request.values["new_weight"]
-	        action = request.form["button"]
-	        
 	        # Change or delete the criterium name in the list of criteria in the case node
 	        criteria = self.get_criteria(root, case_id)
 	        if action == "Delete criterium":
@@ -576,13 +520,11 @@ The file `templates/matrix_dialogue` should contain:
 
 The dialogue is rendered by the following endpoint:
 
-	    def matrix_dialogue_transition(self):
+            @endpoint("/matrix_dialogue", ["GET"])
+            def matrix_dialogue_transition(self, root, case_id):
 	        """
 	        Endpoint which shows the Pugh matrix dialogue.
 	        """
-	        root = request.values["root"]
-	        case_id = request.values["case_id"]
-	
 	        # Get alternatives from the database
 	        decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
 	        alternatives = [a[0] for a in decision_alternatives]
@@ -621,14 +563,12 @@ and all the alternatives with their ranking.
 
 When the user presses the save button, the following endpoint is called:
 
-	    def change_rating(self):
+            @endpoint("/change_rating", ["POST"])
+            def change_rating(self, root, case_id):
 	        """
 	        This method is called using POST when the user presses the save button in the Pugh matrix dialogue. It updates the values
 	        of the ranking of each alternative according to the current values in the dialogue.
 	        """
-	        root = request.values["root"]
-	        case_id = request.values["case_id"]
-	
 	        # Get alternatives from the database
 	        decision_alternatives = json.loads(requests.get(root + "get_decision_alternatives", params = {"case_id": case_id}).text)
 	        alternative_ids = [a[1] for a in decision_alternatives]
