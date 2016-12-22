@@ -26,6 +26,7 @@ import requests
 
 class SimpleDecisionProcessService(coach.DecisionProcessService):
 
+    @endpoint("/process_menu", ["GET"])
     def process_menu(self):
         try:
             return render_template("process_menu.html", url = request.url_root, case_id = request.values["case_id"])

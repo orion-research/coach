@@ -198,16 +198,27 @@ class Microservice:
                 print("   - " + m.__name__ + " created")
 
 
+    # Class variables trace and trace_indent are used to control console trace output from endpoint calls. 
+    trace = True
+    trace_indent = 0
 
     def endpoint_wrapper(self, m):
         
         def wrapping():
             """
             The endpoint wrapping fetches the request values supplied for each of the method's parameter names
-            and adds them as arguments to the method.
+            and adds them as arguments to the method. Trace output to the console can be obtained by setting
+            the class variable trace to True.
             """
             args = [request.values[p.name] for (_, p) in inspect.signature(m).parameters.items()]
-            return m(*args)
+            if self.trace: 
+                print(self.trace_indent * "    " + m.__name__ + "(" + ", ".join(args) + ")")
+                self.trace_indent += 1
+            result = m(*args)
+            if self.trace: 
+                self.trace_indent -= 1
+                print(self.trace_indent * "    " + "result from " + m.__name__ + ": " + (str(result).split("\n", 1)[0]))
+            return result
         
         return wrapping
     
@@ -227,7 +238,10 @@ class Microservice:
                 result += "<FIELDSET>\n"
                 result += "<LEGEND><H2>" + m.url_path + "</H2></LEGEND>\n"
                 result += "<H3>HTTP method(s):</H3>" + ", ".join(m.http_methods) + "<BR>\n"
-                result += "<H3>Description:</H3>\n" + m.__doc__ + "<BR><BR>\n"
+                if m.__doc__:
+                    result += "<H3>Description:</H3>\n" + m.__doc__ + "<BR><BR>\n"
+                else:
+                    result += "<H3>Description:</H3>\nDescription missing<BR><BR>\n"
                 for (_, p) in inspect.signature(m).parameters.items():
                     result += p.name + ": <BR>\n"
                     result += "<INPUT TYPE=\"text\" name=\"" + p.name + "\"><BR>\n"
@@ -237,27 +251,6 @@ class Microservice:
         return result
     
     
-    def create_state(self, state_dialogue, endpoint = None):
-        """
-        Creates a state that can be used in state machine like control flows.
-        state_dialogue is the name of the html template file to be rendered when the state is entered.
-        Currently, the state is just the dialogue file name.
-        If endpoint is provided, that endpoint is added to the list of endpoints.
-        """
-        
-        if endpoint:
-            self.ms.add_url_rule(endpoint, view_func = lambda : self.go_to_state(state_dialogue))
-        return state_dialogue
-
-    
-    def go_to_state(self, s, **kwargs):
-        """
-        Enters the state s, and displays its dialogue.
-        The optional kwargs are variables that can be evaluated when rendering the dialogue.
-        """
-        return render_template(s, **kwargs)
-
-
 class RootService(Microservice):
     
     """
@@ -319,71 +312,29 @@ class RootService(Microservice):
             return "No version information available"
 
     
-    def create_endpoints(self):
-        # States, represented by dialogues
-        self.initial_state = self.create_state("initial_dialogue.html")
-        self.create_user_dialogue = self.create_state("create_user_dialogue.html")
-        self.main_menu_state = self.create_state("main_menu.html")
-        self.create_case_dialogue = self.create_state("create_case_dialogue.html")
-        self.open_case_dialogue = self.create_state("open_case_dialogue.html")
-        self.change_decision_process_dialogue = self.create_state("change_decision_process_dialogue.html")
-        self.add_stakeholder_dialogue = self.create_state("add_stakeholder_dialogue.html")
-        self.create_alternative_dialogue = self.create_state("create_alternative_dialogue.html")
-        self.edit_case_description_dialogue = self.create_state("edit_case_description_dialogue.html")
-        
-        # Endpoints for transitions between the states without side effects
-        self.ms.add_url_rule("/", view_func = self.initial_transition)
-        self.ms.add_url_rule("/create_user_dialogue", view_func = self.create_user_dialogue_transition)
-        self.ms.add_url_rule("/main_menu", view_func = self.main_menu_transition, methods = ["GET", "POST"])
-        self.ms.add_url_rule("/create_case_dialogue", view_func = self.create_case_dialogue_transition)
-        self.ms.add_url_rule("/open_case_dialogue", view_func = self.open_case_dialogue_transition)
-        self.ms.add_url_rule("/change_decision_process_dialogue", view_func = self.change_decision_process_dialogue_transition)
-        self.ms.add_url_rule("/add_stakeholder_dialogue", view_func = self.add_stakeholder_dialogue_transition)
-        self.ms.add_url_rule("/create_alternative_dialogue", view_func = self.create_alternative_dialogue_transition)
-        self.ms.add_url_rule("/edit_case_description_dialogue", view_func = self.edit_case_description_dialogue_transition)
-        
-        # Endpoints for transitions between states with side effects
-        # TODO: Do all these have to be posts, to ensure that data is encrypted when HTTPS is implemented?
-        self.ms.add_url_rule("/login_user", view_func = self.login_user, methods = ["POST"])
-        self.ms.add_url_rule("/create_user", view_func = self.create_user, methods = ["POST"])
-        self.ms.add_url_rule("/confirm_account", view_func = self.confirm_account, methods = ["GET"])
-        self.ms.add_url_rule("/create_case", view_func = self.create_case, methods = ["POST"])
-        self.ms.add_url_rule("/logout", view_func = self.logout)
-        self.ms.add_url_rule("/change_password", view_func = self.change_password)
-        self.ms.add_url_rule("/open_case", view_func = self.open_case)
-        self.ms.add_url_rule("/change_case_description", view_func = self.change_case_description, methods = ["POST"])
-        self.ms.add_url_rule("/change_decision_process", view_func = self.change_decision_process, methods = ["POST"])
-        self.ms.add_url_rule("/add_stakeholder", view_func = self.add_stakeholder)
-        self.ms.add_url_rule("/create_alternative", view_func = self.create_alternative, methods = ["POST"])
-        self.ms.add_url_rule("/export_case_to_knowledge_repository", 
-                             view_func = self.export_case_to_knowledge_repository)
-
-        # Endpoints for database and directory services for usage by other components
-        self.ms.add_url_rule("/get_service_directories", view_func = self.get_service_directories)
-        self.ms.add_url_rule("/change_case_property", view_func = self.change_case_property, methods = ["POST"])
-        self.ms.add_url_rule("/get_case_property", view_func = self.get_case_property)
-        self.ms.add_url_rule("/get_decision_alternatives", view_func = self.get_decision_alternatives)
-        self.ms.add_url_rule("/change_alternative_property", view_func = self.change_alternative_property, methods = ["POST"])
-        self.ms.add_url_rule("/get_alternative_property", view_func = self.get_alternative_property)
-
-        # Endpoint for triggering an update when a new commit is available on GitHub    
-        self.ms.add_url_rule("/github_update", view_func = self.github_update, methods = ["GET", "POST"])
-
-
+    @endpoint("/", ["GET"])
     def initial_transition(self):
         # Store the software version in the session object
         session["version"] = self.get_version()
+        return render_template("initial_dialogue.html")
 
-        return self.go_to_state(self.initial_state)
 
-
+    @endpoint("/create_user_dialogue", ["GET"])
     def create_user_dialogue_transition(self):
-        return self.go_to_state(self.create_user_dialogue)
+        return render_template("create_user_dialogue.html")
 
+    
+    @endpoint("/main_menu", ["GET", "POST"])
+    def main_menu_endpoint(self):
+        """
+        Endpoint defining transitions to the main menu.
+        """
+        return self.main_menu_transition()
+    
     
     def main_menu_transition(self, **kwargs):
         """
-        Transition to the main menu. If the argument main_dialogue is passed with the call, it is first fetched from the URLs provided.
+        Internal function used for transition to the main menu. If the argument main_dialogue is passed with the call, it is first fetched from the URLs provided.
         If the case in the database has a decision method selected, its process method is fetched and included in the context.
         """
         context = kwargs
@@ -405,21 +356,24 @@ class RootService(Microservice):
         except:
             pass
 
-        return self.go_to_state(self.main_menu_state, **context)
+        return render_template("main_menu.html", **context)
 
     
+    @endpoint("/create_case_dialogue", ["GET"])
     def create_case_dialogue_transition(self):
-        return self.go_to_state(self.create_case_dialogue)
+        return render_template("create_case_dialogue.html")
 
     
+    @endpoint("/open_case_dialogue", ["GET"])
     def open_case_dialogue_transition(self):
         # Create links to the user's cases
         links = ["<A HREF=\"/open_case?case_id=%s\">%s</A>" % pair for pair in self.caseDB.user_cases(session["user_id"])]
 
-        dialogue = self.go_to_state(self.open_case_dialogue, user_cases = links)
+        dialogue = render_template("open_case_dialogue.html", user_cases = links)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
+    @endpoint("/change_decision_process_dialogue", ["GET"])
     def change_decision_process_dialogue_transition(self):
         directories = self.get_setting("service_directories")
         services = []
@@ -428,10 +382,11 @@ class RootService(Microservice):
             services += json.loads(requests.get(self.get_setting("protocol") + "://" + d + "/get_services?type=decision_process").text)
         options = ["<OPTION value=\"%s\" %s> %s </A>" % (s[2], "selected" if s[2] == current_decision_process else "", s[1]) for s in services]
         
-        dialogue = self.go_to_state(self.change_decision_process_dialogue, decision_processes = options)
+        dialogue = render_template("change_decision_process_dialogue.html", decision_processes = options)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
+    @endpoint("/add_stakeholder_dialogue", ["GET"])
     def add_stakeholder_dialogue_transition(self):
         # Create links to the decision processes
         # Get all users who exist both in the authentication list and in the case DB
@@ -439,35 +394,35 @@ class RootService(Microservice):
         users = [(u, self.authentication.get_user_name(u)) for u in user_ids]
         links = ["<A HREF=\"/add_stakeholder?user_id=%s\"> %s </A>" % pair for pair in users]
         
-        dialogue = self.go_to_state(self.add_stakeholder_dialogue, stakeholders = links)
+        dialogue = render_template("add_stakeholder_dialogue.html", stakeholders = links)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
+    @endpoint("/create_alternative_dialogue", ["GET"])
     def create_alternative_dialogue_transition(self):
-        return self.go_to_state(self.create_alternative_dialogue)
+        return render_template("create_alternative_dialogue.html")
 
     
+    @endpoint("/edit_case_description_dialogue", ["GET"])    
     def edit_case_description_dialogue_transition(self):
         (title, description) = self.caseDB.get_case_description(session["case_id"])
-        return self.go_to_state(self.edit_case_description_dialogue, title = title, description = description)
+        return render_template("edit_case_description_dialogue.html", title = title, description = description)
 
     
-    def login_user(self):
+    @endpoint("/login_user", ["POST"])
+    def login_user(self, user_id, password):
         """
         Endpoint representing the transition from the initial dialogue to the main menu.
         """
-        user_id = request.form["user_id"]
-        password = request.form["password"]
-        
         if user_id == "" or password == "":
             # If user_id or password is missing, show the dialogue again with an error message
-            return self.go_to_state(self.initial_state, error = "FieldMissing")
+            return render_template("initial_dialogue.html", error = "FieldMissing")
         elif not self.authentication.user_exists(user_id):
             # If user_id does not exist, show the dialogue again with an error message
-            return self.go_to_state(self.initial_state, error = "NoSuchUser")
+            return render_template("initial_dialogue.html", error = "NoSuchUser")
         elif not self.authentication.check_user_password(user_id, password):
             # If the wrong password was entered, show the dialogue again with an error message
-            return self.go_to_state(self.initial_state, error = "WrongPassword")
+            return render_template("initial_dialogue.html", error = "WrongPassword")
         else:
             # Login successful, save some data in the session object, and go to main menu
             session["user_id"] = user_id
@@ -476,25 +431,19 @@ class RootService(Microservice):
             return self.main_menu_transition()
 
 
-    def create_user(self):
+    @endpoint("/create_user", ["POST"])
+    def create_user(self, user_id, password1, password2, name, email):
         """
         Endpoint representing the transition from the create user dialogue to the main menu.
         If the user exists, it returns to the create user dialogue and displays a message about this.
         As a transition action, it creates the new user in the database.
         """
-        
-        user_id = request.form["user_id"]
-        password1 = request.form["password1"]
-        password2 = request.form["password2"]
-        name = request.form["name"]
-        email = request.form["email"]
-        
         # TODO: Show the correct values pre-filled when the dialogue is reopened. 
         if self.authentication.user_exists(user_id):
             # If the user already exists, go back to the create user dialogue, with a message
-            return self.go_to_state(self.create_user_dialogue, error = "UserExists")
+            return render_template("create_user_dialogue.html", error = "UserExists")
         elif password1 != password2:
-            return self.go_to_state(self.create_user_dialogue, error = "PasswordsNotEqual")
+            return render_template("create_user_dialogue.html", error = "PasswordsNotEqual")
         else:
             # Otherwise, create the user in the database, and return to the initial dialogue.
             try:
@@ -502,44 +451,39 @@ class RootService(Microservice):
             except Exception as e:
                 self.ms.logger.error("Failed to create user")
                 self.ms.logger.error("Exception: " + str(e))
-            return self.go_to_state(self.initial_state)
+            return render_template("initial_dialogue.html")
 
 
-    def confirm_account(self):
+    @endpoint("/confirm_account", ["POST"])
+    def confirm_account(self, user_id, token):
         """
         Endpoint used by a user to confirm access to the email provided when setting up the account.
         It takes two parameters, namely user id and a token. 
         """
-        user_id = request.values.get("user")
-        token = request.values.get("token")
         if self.authentication.confirm_account(user_id, token):
             return "Account of " + user_id + " has been confirmed! You may now log in."
         else:
             return "Error: The token provided for validating account of " + user_id + " was not valid."
     
         
-    def create_case(self):
+    @endpoint("/create_case", ["POST"])
+    def create_case(self, title, description):
         """
         Endpoint representing the transition from the create case dialogue to the main menu.
         As a transition action, it creates the new case in the database, and connects the current user to it.
         """
-        
-        title = request.form["title"]
-        description = request.form["description"]
-        
         session["case_id"] = self.caseDB.create_case(title, description, session["user_id"])
-        
         return self.main_menu_transition()
 
 
-    def open_case(self):
+    @endpoint("/open_case", ["GET"])
+    def open_case(self, case_id):
         # TODO: Instead of showing case id on screen, it should be the case name + id
-
-        session["case_id"] = request.values["case_id"]
-
+        session["case_id"] = case_id
         return self.main_menu_transition()
         
 
+    @endpoint("/logout", ["GET"])
     def logout(self):
         """
         Endpoint representing the transition to the logged out state, which is the same as the initial state.
@@ -547,48 +491,46 @@ class RootService(Microservice):
         """
         session.pop("user_id", None)
         session.pop("case_id", None)
-        return self.go_to_state(self.initial_state)
+        return render_template("initial_dialogue.html")
 
 
+    @endpoint("/change_password", ["GET"])
     def change_password(self):
         return self.main_menu_transition(main_dialogue = "Not yet implemented!")
 
 
-    def change_case_description(self):
-        title = request.form["title"]
-        description = request.form["description"]
+    @endpoint("/change_case_description", ["POST"])
+    def change_case_description(self, title, description):
         self.caseDB.change_case_description(session["case_id"], title, description)
-
         return self.main_menu_transition(main_dialogue = "Case description changed!")
 
 
-    def change_decision_process(self):
-        url = request.form["url"]
+    @endpoint("/change_decision_process", ["POST"])
+    def change_decision_process(self, url):
         self.caseDB.change_decision_process(session["case_id"], url)
-        menu = requests.get(self.get_setting("protocol") + "://" + url + "/process_menu").text
-
+        menu = requests.get(self.get_setting("protocol") + "://" + url + "/process_menu", params = {"case_id": session["case_id"]}).text
         return self.main_menu_transition(main_dialogue = "Decision process changed!", process_menu = menu)
 
 
-    def add_stakeholder(self):
+    @endpoint("/add_stakeholder", ["GET"])
+    def add_stakeholder(self, user_id):
         """
         Adds a Stakeholder relationship between the current case and the user given as argument, with the role contributor.
         """
-        user_id = request.args.get("user_id", None)
         self.caseDB.add_stakeholder(user_id, session["case_id"])
         return self.main_menu_transition(main_dialogue = "Stakeholder added!")
 
 
-    def create_alternative(self):
+    @endpoint("/create_alternative", ["POST"])
+    def create_alternative(self, title, description):
         """
         Adds a new decision alternative and adds a relation from the case to the alternative.
         """
-        title = request.form["title"]
-        description = request.form["description"]
         self.caseDB.create_alternative(title, description, session["case_id"])
         return self.main_menu_transition(main_dialogue = "New alternative created!")
 
 
+    @endpoint("/export_case_to_knowledge_repository", ["GET"])
     def export_case_to_knowledge_repository(self):
         """
         Exports the current case to the knowledge repository.
@@ -598,6 +540,7 @@ class RootService(Microservice):
         return self.main_menu_transition(main_dialogue = "The following case data was exported:\n\n" + description)
         
 
+    @endpoint("/get_service_directories", ["GET"])
     def get_service_directories(self):
         """
         Returns the list of service directories registered with this service as a json file.
@@ -605,46 +548,52 @@ class RootService(Microservice):
         return Response(json.dumps(self.service_directories))
 
     
-    def change_case_property(self):
+    @endpoint("/change_case_property", ["POST"])
+    def change_case_property(self, case_id, name, value):
         """
         Changes a property of the indicated case id in the database.
         """
-        self.caseDB.change_case_property(request.values["case_id"], request.values["name"], request.values["value"])
+        self.caseDB.change_case_property(case_id, name, value)
         return Response("Ok")
 
 
-    def get_decision_alternatives(self):
+    @endpoint("/get_decision_alternatives", ["GET"])
+    def get_decision_alternatives(self, case_id):
         """
         Returns the list of decision alternatives associated with a case id, as a json file.
         """
-        alternatives = self.caseDB.get_decision_alternatives(request.values["case_id"])
+        alternatives = self.caseDB.get_decision_alternatives(case_id)
         return Response(json.dumps(alternatives))
     
-    
-    def get_case_property(self):
+
+    @endpoint("/get_case_property", ["GET"])
+    def get_case_property(self, case_id, name):
         """
         Gets the value of a certain property of the indicated case id in the database.
         """
-        value = self.caseDB.get_case_property(request.values["case_id"], request.values["name"])
+        value = self.caseDB.get_case_property(case_id, name)
         return Response(value)
 
     
-    def change_alternative_property(self):
+    @endpoint("/change_alternative_property", ["POST"])
+    def change_alternative_property(self, alternative, name, value):
         """
         Changes a property of the indicated alternative in the database.
         """
-        self.caseDB.change_alternative_property(request.values["alternative"], request.values["name"], request.values["value"])
+        self.caseDB.change_alternative_property(alternative, name, value)
         return Response("Ok")
 
 
-    def get_alternative_property(self):
+    @endpoint("/get_alternative_property", ["GET"])
+    def get_alternative_property(self, alternative, name):
         """
         Gets the value of a certain property of the indicated alternative in the database.
         """
-        value = self.caseDB.get_alternative_property(request.values["alternative"], request.values["name"])
+        value = self.caseDB.get_alternative_property(alternative, name)
         return Response(value)
 
 
+    @endpoint("/github_update", ["GET", "POST"])
     def github_update(self):
         """
         Webservice hook for automatic update on GitHub events. When the hook is called, it triggers a shell script that
@@ -735,13 +684,7 @@ class DirectoryService(Microservice):
                 file.write(data)
                 
     
-    def create_endpoints(self):
-        # Initialize the API
-        self.ms.add_url_rule("/get_services", view_func = self.get_services)
-        self.ms.add_url_rule("/add_service", view_func = self.add_service)
-        self.ms.add_url_rule("/remove_service", view_func = self.remove_service)
-
-
+    @endpoint("/get_services", ["GET"])
     def get_services(self):
         """
         Returns a list of available services of the given type, in json format.
@@ -759,27 +702,23 @@ class DirectoryService(Microservice):
             return json.dumps([s for s in self.services])
 
 
-    def add_service(self):
+    @endpoint("/add_service", ["GET"])
+    def add_service(self, service_type, name, url):
         """
         Adds a new service, with type, name, and URL, and saves the services file.
         If the given URL already exists, it should be removed.
         """
-        service_type = request.args.get("type", "")
-        name = request.args.get("name", "")
-        url = request.args.get("url", "")
-        
         self.services = [post for post in self.services if post[2] != url] + [(service_type, name, url)]
         with open(os.path.join(self.working_directory, self.file_name), "w") as file:
             json.dump(self.services, file, indent = 4)
         return ""
 
 
-    def remove_service(self):
+    @endpoint("/remove_service", ["GET"])
+    def remove_service(self, url):
         """
         Removes a service based on its URL.
         """
-        url = request.args.get("url", "")
-        
         self.services = [post for post in self.services if post[2] != url]
         with open(os.path.join(self.working_directory, self.file_name), "w") as file:
             json.dump(self.services, file)
@@ -792,13 +731,14 @@ class DecisionProcessService(Microservice):
     Class for decision process microservices. It can provide a process menu to the Root Service, 
     and when the user selects different process steps, further endpoints of the decision process can be invoked. 
     """
+    pass
     
-    def create_endpoints(self):
+#    def create_endpoints(self):
         # Initialize the default API
-        super(DecisionProcessService, self).create_endpoints()
+#        super(DecisionProcessService, self).create_endpoints()
 
-        # Add endpoint for process menu
-        self.ms.add_url_rule("/process_menu", view_func = self.process_menu)
+        # Add endpoint for process menu.
+#        self.ms.add_url_rule("/process_menu", view_func = self.endpoint_wrapper(self.process_menu))
 
 
 class EstimationMethodService(Microservice):

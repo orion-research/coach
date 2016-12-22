@@ -214,6 +214,7 @@ class PughService(coach.DecisionProcessService):
         return redirect(root + "main_menu?message=Pugh analysis matrix updated")
         
 
+    @endpoint("/process_menu", ["GET"])
     def process_menu(self):
         try:
             return render_template("process_menu.html", url = request.url_root, case_id = request.values["case_id"])
