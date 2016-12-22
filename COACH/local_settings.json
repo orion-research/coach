@@ -1,50 +1,14 @@
 {
-    "ExpertOpinion": {
-        "name": "Expert opinion estimation method",
-        "port": 5001,
-        "description": "Settings for ExpertOpinion"
+    "AverageOfTwo": {
+        "name": "Average of two estimation method",
+        "port": 5004,
+        "description": "Settings for AverageOfTwo"
     },
-    "RootService": {
-        "name": "COACH Root microservice for ORION project",
-        "context_service": "http://127.0.0.1:5006",
-        "port": 5000,
-        "service_directories": [
-            "127.0.0.1:5003"
-        ],
-        "description": "Settings for RootService",
-        "knowledge_repository": "http://127.0.0.1:5005",
-        "email": {
-            "server": "send.one.com",
-            "sender": "noreply@orion-research.se",
-            "port": 587
-        },
-        "database": "http://127.0.0.1:7474/db/data/",
-        "authentication_database": "settings/authentication.json",
-        "logfile": "root.log"
-    },
-    "SimpleDecisionProcessService": {
-        "name": "A decision process service",
-        "logfile": "SimpleDecisionProcessService.log",
-        "port": 5002,
-        "description": "Settings for SimpleDecisionProcessService"
-    },
-    "ContextModelService": {
-        "name": "A context model service for COACH",
-        "logfile": "ContextModel.log",
-        "port": 5006,
-        "description": "Settings for ContextModelService"
-    },
-    "DirectoryService": {
-        "name": "Directory service for COACH",
-        "directory_file_name": "settings/local_directory.json",
-        "port": 5003,
-        "description": "Settings for DirectoryService"
-    },
-    "PughService": {
-        "name": "Pugh analysis",
-        "logfile": "PughService.log",
-        "port": 5007,
-        "description": "Settings for PughService"
+    "object": {
+        "protocol": "http",
+        "host": "127.0.0.1",
+        "mode": "local",
+        "description": "Common settings for all classes"
     },
     "KnowledgeRepositoryService": {
         "name": "Knowledge repository microservice for the ORION project",
@@ -52,15 +16,51 @@
         "port": 5005,
         "description": "Settings for KnowledgeRepositoryService"
     },
-    "AverageOfTwo": {
-        "name": "Average of two estimation method",
-        "port": 5004,
-        "description": "Settings for AverageOfTwo"
+    "DirectoryService": {
+        "name": "Directory service for COACH",
+        "directory_file_name": "settings/local_directory.json",
+        "port": 5003,
+        "description": "Settings for DirectoryService"
     },
-    "object": {
-        "host": "127.0.0.1",
-        "mode": "local",
-        "protocol": "http",
-        "description": "Common settings for all classes"
+    "SimpleDecisionProcessService": {
+        "name": "A decision process service",
+        "port": 5002,
+        "logfile": "SimpleDecisionProcessService.log",
+        "description": "Settings for SimpleDecisionProcessService"
+    },
+    "RootService": {
+        "database": "http://127.0.0.1:7474/db/data/",
+        "service_directories": [
+            "127.0.0.1:5003"
+        ],
+        "knowledge_repository": "http://127.0.0.1:5005",
+        "context_service": "http://127.0.0.1:5006",
+        "logfile": "root.log",
+        "authentication_database": "settings/authentication.json",
+        "description": "Settings for RootService",
+        "name": "COACH Root microservice for ORION project",
+        "port": 5000,
+        "email": {
+            "server": "send.one.com",
+            "sender": "noreply@orion-research.se",
+            "port": 587
+        }
+    },
+    "ExpertOpinion": {
+        "name": "Expert opinion estimation method",
+        "port": 5001,
+        "description": "Settings for ExpertOpinion"
+    },
+    "PughService": {
+        "name": "Pugh analysis",
+        "port": 5007,
+        "logfile": "PughService.log",
+        "description": "Settings for PughService"
+    },
+    "ContextModelService": {
+        "name": "A context model service for COACH",
+        "port": 5006,
+        "logfile": "ContextModel.log",
+        "description": "Settings for ContextModelService"
     }
 }
