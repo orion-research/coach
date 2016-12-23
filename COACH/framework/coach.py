@@ -64,6 +64,9 @@ import requests
 
 
 import inspect
+
+
+# Auxiliary functions
         
 def endpoint(url_path, http_methods):
     """
@@ -82,6 +85,22 @@ def endpoint(url_path, http_methods):
         return f
     
     return decorator
+
+
+def get_service(url, endpoint, **kwargs):
+    """
+    get_service is a convenience function for calling a microservice using the http method get.
+    The result of the service is returned as text. 
+    """
+    return requests.get(url + "/"  + endpoint, params = kwargs).text
+
+
+def post_service(url, endpoint, **kwargs):
+    """
+    post_service is a convenience function for calling a microservice using the http method post.
+    No result is returned.
+    """
+    requests.post(url + "/"  + endpoint, data = kwargs)
 
 
 class Microservice:
@@ -284,9 +303,9 @@ class RootService(Microservice):
 
         # Initialize the user database
         self.get_setting("email")["password"] = secret_data["email_password"]
-        root_service_url = self.get_setting("protocol") + "://" + self.get_setting("host") + ":" + str(self.get_setting("port"))
+        self.root_service_url = self.get_setting("protocol") + "://" + self.get_setting("host") + ":" + str(self.get_setting("port"))
         self.authentication = Authentication(os.path.join(self.working_directory, self.get_setting("authentication_database")),
-                                             self.get_setting("email"), root_service_url, secret_data["password_hash_salt"])
+                                             self.get_setting("email"), self.root_service_url, secret_data["password_hash_salt"])
 
         # Initialize the case database
         try:
@@ -334,30 +353,58 @@ class RootService(Microservice):
     
     def main_menu_transition(self, **kwargs):
         """
-        Internal function used for transition to the main menu. If the argument main_dialogue is passed with the call, it is first fetched from the URLs provided.
+        Internal function used for transition to the main menu. 
         If the case in the database has a decision method selected, its process method is fetched and included in the context.
         """
         context = kwargs
-        for arg in ["main_dialogue"]:
-            url = request.values.get(arg)
-            if url:
-                # Fetch data from the provided url, passing the url of the root server as an argument to allow database access etc.
-                context[arg] = requests.get(url, params = {"root": request.url_root}).text
-        # If 
-        if "message" in request.values:
-            context["message"] = request.values["message"]
         try:
             decision_process = self.caseDB.get_decision_process(session["case_id"])
             if decision_process:
-                context["process_menu"] = requests.get(self.get_setting("protocol") + "://" + decision_process + "/process_menu", params = {"case_id": session["case_id"]}).text
-            context_service = self.get_setting("context_service")
-            if context_service:
-                context["contextservice"] =  context_service + "/edit_context_dialogue?case_id=" + str(session["case_id"])
+                context["process_menu"] = get_service(self.get_setting("protocol") + "://" + decision_process, 
+                                                      "process_menu", case_id = session["case_id"])
         except:
             pass
-
         return render_template("main_menu.html", **context)
 
+
+    @endpoint("/decision_process_request", ["GET", "POST"])
+    def decision_process_request(self):
+        """
+        Endpoint which relays a request to the decision process associated with the currently active case.
+        It always passes the current decision case id as a parameter in the request.
+        """
+        case_id = session["case_id"]
+        decision_process = self.caseDB.get_decision_process(case_id)
+        if decision_process:
+            params = request.values.to_dict()
+            del params["endpoint"]
+            params["case_db"] = self.root_service_url
+            params["case_id"] = case_id
+            params["directories"] = json.dumps(self.service_directories)
+            params["knowledge_repository"] = self.get_setting("knowledge_repository")
+            response = requests.request(request.method, self.get_setting("protocol") + "://" + decision_process + "/" + request.values["endpoint"], 
+                                        params = params)
+            return self.main_menu_transition(main_dialogue = response.text)
+        else:
+            return "No decision process selected"
+        
+    
+    @endpoint("/context_model_request", ["GET", "POST"])
+    def context_model_request(self):
+        """
+        Endpoint which relays a request to the context model.
+        It always passes the current decision case database url and case id as a parameter in the request.
+        """
+        context_service = self.get_setting("context_service")
+        params = request.values.to_dict()
+        del params["endpoint"]
+        params["case_db"] = self.root_service_url
+        params["case_id"] = session["case_id"]
+        params["knowledge_repository"] = self.get_setting("knowledge_repository")
+        response = requests.request(request.method, context_service + "/" + request.values["endpoint"], 
+                                    params = params)
+        return self.main_menu_transition(main_dialogue = response.text)
+        
     
     @endpoint("/create_case_dialogue", ["GET"])
     def create_case_dialogue_transition(self):
@@ -379,7 +426,7 @@ class RootService(Microservice):
         services = []
         current_decision_process = self.caseDB.get_decision_process(session["case_id"])
         for d in directories:
-            services += json.loads(requests.get(self.get_setting("protocol") + "://" + d + "/get_services?type=decision_process").text)
+            services += json.loads(get_service(self.get_setting("protocol") + "://" + d, "get_services", type = "decision_process"))
         options = ["<OPTION value=\"%s\" %s> %s </A>" % (s[2], "selected" if s[2] == current_decision_process else "", s[1]) for s in services]
         
         dialogue = render_template("change_decision_process_dialogue.html", decision_processes = options)

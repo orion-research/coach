@@ -1,6 +1,6 @@
 <H2>Edit Context</H2>
 
-<FORM action="{{this_process | safe}}edit_context" method="post">
+<FORM action="/context_model_request?endpoint=edit_context" method="post">
 <B>Context</B>
 <br><i>General information concerning the context, to be further elaborated in the categories below.</i>
 <BR><textarea rows="5" cols="70" name="context_text">{{context_text}}</textarea>
@@ -23,8 +23,6 @@
 -->
 </SELECT>
 
-<INPUT type="hidden" name="root" value="{{root | safe}}"/>
-<INPUT type="hidden" name="case_id" value="{{case_id | safe}}"/>
 <BR>
 
 <INPUT type="submit" value="Save"/>

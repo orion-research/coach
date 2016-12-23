@@ -1,6 +1,6 @@
 <H2>Pugh analysis matrix</H2>
 
-<FORM action="{{ this_process | safe }}change_rating" method="post">
+<FORM action="/decision_process_request?endpoint=change_rating" method="post">
 <TABLE border="1">
 <TR>
 <TD>Criterium</TD>
@@ -41,7 +41,5 @@ Sum
 
 </TABLE>
 
-<INPUT type="hidden" name="root" value="{{root | safe}}"/>
-<INPUT type="hidden" name="case_id" value="{{case_id | safe}}"/>
 <INPUT type="submit" value="Save">
 </FORM>

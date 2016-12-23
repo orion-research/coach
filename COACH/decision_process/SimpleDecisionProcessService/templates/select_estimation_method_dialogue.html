@@ -1,12 +1,10 @@
 <H2>Select an estimation method</H2>
 
-<FORM action="{{this_process | safe}}select_estimation_method" method="post">
+<FORM action="/decision_process_request?endpoint=select_estimation_method" method="post">
 <SELECT name="method">
 {% for e in estimation_methods %}
 {{ e | safe }}
 {% endfor %}
 </SELECT>
-<INPUT type="hidden" name="root" value="{{root | safe}}"/>
-<INPUT type="hidden" name="case_id" value="{{case_id | safe}}"/>
 <INPUT type="submit" value="Select"/>
 </FORM>
