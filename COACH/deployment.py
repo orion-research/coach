@@ -130,11 +130,11 @@ application = {application}
         return None
     
     
-class RootService(Service):
+class InteractionService(Service):
     
     def __init__(self, name, description, path, database, directory_services, authentication, knowledge_repository_service, context_model_service, email):
         """
-        Creates a RootService object. In addition to the Service, it has the following parameter:
+        Creates an InteractionService object. In addition to the Service, it has the following parameter:
         - database: the url to the database used for storing cases.
         - directory_services: a list of DirectoryServices used by the root service.
         - authentication: a file path to where the user authentication data is stored.
@@ -154,12 +154,12 @@ class RootService(Service):
 
     def settings(self, configuration):
         """
-        Returns the settings for a RootService object in the given configuration.
+        Returns the settings for a InteractionService object in the given configuration.
         """
         return {"description": "Settings for " + self.name,
                 "name": self.description,
                 "port": configuration.service_port(self),
-                "database": self.database,
+                "database": configuration.service_url(self.database),
                 "service_directories": [configuration.service_url(ds) for ds in self.directory_services],
                 "logfile": "root.log",
                 "authentication_database": self.authentication,
@@ -171,9 +171,10 @@ class RootService(Service):
 
     def import_statement(self):
         """
-        Returns an empty string, since Root services do not need an import statement.
+        Returns an import statement for this service.
+        This is used both for generating wsgi-files and launch files.
         """
-        return ""
+        return "from COACH." + self.path + "." + self.name + " import " + self.name + "\n"
 
 
     def launch_statement(self, configuration):
@@ -185,9 +186,9 @@ class RootService(Service):
         result = """
     wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
     os.chdir(wdir)
-    coach.RootService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
-                      os.path.normpath("settings/root_secret_data.json"),
-                      working_directory = wdir).run()
+    InteractionService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
+                       os.path.normpath("settings/root_secret_data.json"),
+                       working_directory = wdir).run()
 """
         return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
@@ -195,13 +196,72 @@ class RootService(Service):
     def wsgi_application(self, configuration):
         """
         Returns the wsgi application call for this service.
-        The root service uses the application name coach.RootService, and has an extra argument point to the secret data.
+        The root service uses the application name coach.InteractionService, and has an extra argument point to the secret data.
         """
-        template = """coach.RootService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                                    os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
-                                                    working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        template = """coach.InteractionService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
+                                               os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
+                                               working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
+
+
+class CaseDatabase(Service):
+
+    def __init__(self, name, description, path, label):
+        """
+        Creates a CaseDatabase object. 
+        """
+        super().__init__(name, description, path)
+        self.label = label
+        
+
+    def settings(self, configuration):
+        """
+        Returns the settings for a database object in the given configuration.
+        """
+        return {"description": "Settings for " + self.name,
+                "name": self.description,
+                "port": configuration.service_port(self)
+                }
+
+
+    def import_statement(self):
+        """
+        Returns an import statement for this service.
+        This is used both for generating wsgi-files and launch files.
+        """
+        return "from COACH." + self.path + ".casedb import " + self.name + "\n"
+
+
+    def launch_statement(self, configuration):
+        """
+        Returns a Python statement that launches this service in a given configuration.
+        """
+
+        file_path = "/".join(self.path.split("."))
+        result = """
+    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
+    os.chdir(wdir)
+    CaseDatabase(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
+                 os.path.normpath("settings/root_secret_data.json"),
+                 "{label}",
+                 working_directory = wdir).run()
+"""
+        return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path, label = self.label)
+
+    
+    def wsgi_application(self, configuration):
+        """
+        Returns the wsgi application call for this service.
+        The case database service uses the application name coach.CaseDatabase, and has an extra argument point to the secret data and one for the node label.
+        """
+        template = """coach.CaseDatabase(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
+                                         os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
+                                         "{label}",
+                                         working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        return template.format(name = self.name, package_name = self.path.split(".")[-1], 
+                               file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name,
+                               label = self.label)
 
 
 class DirectoryService(Service):
@@ -679,7 +739,7 @@ class ApacheConfiguration(Configuration):
         # Apache .conf file for each configuration.
         content = "# " + self.generated_file_stamp(script_name)
         for (s, p) in self.services_with_ports.items():
-            if not isinstance(s, RootService):
+            if not isinstance(s, InteractionService):
                 content += "Listen " + str(p) + "\n"
                 
         for (s, p) in self.services_with_ports.items():

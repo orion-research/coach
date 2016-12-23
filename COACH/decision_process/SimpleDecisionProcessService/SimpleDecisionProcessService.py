@@ -57,6 +57,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
 
         if estimation_method:
             # Get the alternatives from case_db and build a list to be fitted into a dropdown menu
+            print("case_db = " + case_db)
             decision_alternatives = json.loads(get_service(case_db, "get_decision_alternatives", case_id = case_id))
             options = ["<OPTION value=\"%s\"> %s </A>" % (a[1], a[0]) for a in decision_alternatives]
         

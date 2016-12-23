@@ -4,15 +4,25 @@ Created on 20 maj 2016
 @author: Jakob Axelsson
 '''
 
+# Set python import path to include COACH top directory
+import os
+import sys
+sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
+
+from flask import Response
+
+# Coach framework
+from COACH.framework import coach
+from COACH.framework.coach import endpoint
+
 # Standard libraries
 import json
 
-
 # Database connection
-from neo4j.v1 import GraphDatabase, basic_auth, Node
+from neo4j.v1 import GraphDatabase, basic_auth
 
 
-class CaseDatabase:
+class CaseDatabase(coach.Microservice):
     
     """
     The case database provides the interface to the database for storing case information. 
@@ -23,14 +33,33 @@ class CaseDatabase:
     This is useful for being able to analyze decision processes. 
     """
 
-    def __init__(self, url, username, password, label):
+    def __init__(self, settings_file_name, secret_data_file_name, label, working_directory = None):
         """
         Initiates the database at the provided url using the provided credentials.
         label indicates a label attached to all nodes used by this database, to distinguish them from nodes created by 
         other databases in the same DBMS.
         """
-        self._db = GraphDatabase.driver("bolt://localhost", auth=basic_auth(username, password))
+        super().__init__(settings_file_name, working_directory = working_directory)
+
+        # Read secret data file
+        with open(os.path.join(self.working_directory, os.path.normpath(secret_data_file_name)), "r") as file:
+            fileData = file.read()
+        secret_data = json.loads(fileData)
+
+        self.root_service_url = self.get_setting("protocol") + "://" + self.get_setting("host") + ":" + str(self.get_setting("port"))
+
         self.label = label
+
+        # Initiate neo4j
+        try:
+            self._db = GraphDatabase.driver("bolt://localhost", 
+                                            auth=basic_auth(secret_data["neo4j_user_name"], 
+                                                            secret_data["neo4j_password"]))
+            self.ms.logger.info("Case database successfully connected")
+            print("Case database successfully connected")
+        except:
+            self.ms.logger.error("Fatal error: Case database cannot be accessed. Make sure that Neo4j is running!")
+            print("Fatal error: Case database cannot be accessed. Make sure that Neo4j is running!")
     
     
     def open_session(self):
@@ -66,31 +95,36 @@ class CaseDatabase:
             return result
 
 
+    @endpoint("/user_ids", ["GET"])
     def user_ids(self):
         """
         Queries the case database and returns an iterable of all user ids (the name the user uses to log in).
         """
         q = """MATCH (u:User:{label}) RETURN u.user_id AS user_id"""
-        return [result["user_id"] for result in self.query(q, locals())]
+        return Response(json.dumps([result["user_id"] for result in self.query(q, locals())]))
     
     
+    @endpoint("/user_cases", ["GET"])
     def user_cases(self, user_id):
         """
         user_cases queries the case database and returns a list of the cases connected to the user.
         Each case is represented by a pair indicating case id and case title.
         """
         q = """MATCH (case:Case:{label}) -[:Stakeholder]-> (user:{label} {{user_id: "{user_id}"}}) RETURN id(case) AS id, case.title AS title"""
-        return [(result["id"], result["title"]) for result in self.query(q, locals())]
+        return Response(json.dumps([(result["id"], result["title"]) for result in self.query(q, locals())]))
         
     
+    @endpoint("/create_user", ["POST"])
     def create_user(self, user_id):
         """
         Creates a new user in the database, if it is not already there. 
         """
         q = """MERGE (u:User:{label} {{user_id : "{user_id}"}})"""
         self.query(q, locals())
+        return Response("Ok")
         
 
+    @endpoint("/create_case", ["POST"])
     def create_case(self, title, description, initiator):
         """
         Creates a new case in the database, with a relation to the initiating user (referenced by user_id). 
@@ -110,27 +144,31 @@ class CaseDatabase:
         """
         self.query(q2, locals(), s)
         self.close_session(s)
-        return case_id        
+        return Response(str(case_id))        
         
     
+    @endpoint("/change_case_description", ["POST"])
     def change_case_description(self, case_id, title, description):
         """
         Changes the title and description fields of the case with case_id.
         """
         q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} SET case.title = "{title}", case.description = "{description}" """
         self.query(q, locals())
+        return Response("Ok")
            
-        
+    
+    @endpoint("/get_case_description", ["GET"])    
     def get_case_description(self, case_id):
         """
         Returns a tuple containing the case title and description for the case with case_id.
         """
         q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} RETURN case.title AS title, case.description AS description"""
         result = next(iter(self.query(q, locals())))
-        return (result["title"], result["description"])
+        return Response(json.dumps((result["title"], result["description"])))
         
 
-    def add_stakeholder(self, user_id, case_id, role = "contributor"):
+    @endpoint("/add_stakeholder", ["POST"])
+    def add_stakeholder(self, user_id, case_id, role):
         """
         Adds a user as a stakeholder with the provided role to the case. 
         If the user is already a stakeholder, nothing is changed. 
@@ -142,8 +180,10 @@ class CaseDatabase:
         ON CREATE SET r.role = "{role}"
         """
         self.query(q, locals())
+        return Response("Ok")
 
-    
+
+    @endpoint("/create_alternative", ["POST"])    
     def create_alternative(self, title, description, case_id):
         """
         Creates a decision alternative and links it to the case.
@@ -162,74 +202,86 @@ class CaseDatabase:
         """
         self.query(q2, locals(), s)
         self.close_session(s)
-        return case_id        
+        return Response(str(case_id))        
 
-    
+
+    @endpoint("/get_decision_process", ["GET"])    
     def get_decision_process(self, case_id):
         """
         Returns the decision process url of the case, or None if no decision process has been selected.
         """
         try:
             q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} RETURN case.decision_process AS process LIMIT 1"""
-            return next(iter(self.query(q, locals())))["process"]
+            return Response(json.dumps(next(iter(self.query(q, locals())))["process"]))
         except:
-            return None
+            return Response(str(None))
     
     
-    def change_decision_process(self, case_id, url):
+    @endpoint("/change_decision_process", ["POST"])
+    def change_decision_process(self, case_id, decision_process):
         """
         Changes the decision process url associated with a case.
         """
-        q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} SET case.decision_process = "{url}" """
+        q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} SET case.decision_process = "{decision_process}" """
         self.query(q, locals())
+        return Response("Ok")
 
     
+    @endpoint("/change_case_property", ["POST"])
     def change_case_property(self, case_id, name, value):
         """
         Changes the property name of the case_id node to become value.
         """
         q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} SET case.{name} = "{value}\""""
         self.query(q, locals())
-        
+        return Response("Ok")
+
     
+    @endpoint("/get_case_property", ["GET"])
     def get_case_property(self, case_id, name):
         """
         Gets the value of the property name of the case_id node, or None if it does not exist.
         """
         try:
             q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} RETURN case.{name} AS name"""
-            return next(iter(self.query(q, locals())))["name"]
+            return Response(next(iter(self.query(q, locals())))["name"])
         except:
-            return None
+            return Response(None)
         
     
+    @endpoint("/get_decision_alternatives", ["GET"])
     def get_decision_alternatives(self, case_id):
         """
         Gets the list of decision alternatives associated with the case_id node, returning both title and id.
         """
         q = """MATCH (case:Case:{label}) -[:Alternative]-> (alt:Alternative:{label}) WHERE id(case) = {case_id} RETURN alt.title AS title, id(alt) AS alt_id"""
-        return [(result["title"], result["alt_id"]) for result in self.query(q, locals())]
+        alternatives = [(result["title"], result["alt_id"]) for result in self.query(q, locals())]
+        return Response(json.dumps(alternatives))
     
     
+    @endpoint("/change_alternative_property", ["POST"])
     def change_alternative_property(self, alternative, name, value):
         """
         Changes the property name of the alternative node to become value.
         """
         q = """MATCH (alt:Alternative:{label}) WHERE id(alt) = {alternative} SET alt.{name} = "{value}" """
         self.query(q, locals())
-        
+        return Response("Ok")
+
     
+    @endpoint("/get_alternative_property", ["GET"])
     def get_alternative_property(self, alternative, name):
         """
         Gets the value of the property name of the alternative node, or None if it does not exist.
         """
         try:
             q = """MATCH (alt:Alternative:{label}) WHERE id(alt) = {alternative} RETURN alt.{name} AS name"""
-            return next(iter(self.query(q, locals())))["name"]
+            return Response(next(iter(self.query(q, locals())))["name"])
         except:
-            return None
+            return Response(None)
         
     
+    @endpoint("/export_case_data", ["GET"])
     def export_case_data(self, case_id):
         """
         Returns all data stored in the database concerning a specific case, with sufficient information to be able to
@@ -260,5 +312,5 @@ class CaseDatabase:
                                  for result in self.query(q, locals())]
         
         # Return graph as json
-        return json.dumps(graph, indent = 4)
+        return Response(json.dumps(graph, indent = 4))
     

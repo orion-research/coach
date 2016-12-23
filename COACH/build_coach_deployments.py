@@ -40,11 +40,14 @@ knowledge_repository = KnowledgeRepositoryService("KnowledgeRepositoryService",
                                                   "knowledge_repository", 
                                                   "http://127.0.0.1:7474/db/data/")
  
+# Case database
+database = CaseDatabase("CaseDatabase", "COACH case database service", "framework", "CaseDB")
+ 
 # Root service
-root = RootService("RootService", "COACH Root microservice for ORION project", "framework",
-                   "http://127.0.0.1:7474/db/data/", [directory], "settings/authentication.json",
-                   knowledge_repository, context_model,
-                   {"server": "send.one.com", "port": 587, "sender": "noreply@orion-research.se"})
+root = InteractionService("InteractionService", "COACH interaction microservice for ORION project", "framework",
+                          database, [directory], "settings/authentication.json",
+                          knowledge_repository, context_model,
+                          {"server": "send.one.com", "port": 587, "sender": "noreply@orion-research.se"})
 
 
 all_services = [services_listed_in_directory] + [root, directory, context_model, knowledge_repository]
@@ -57,7 +60,8 @@ services_with_ports = {directory : 5003,
                        simple : 5002,
                        pugh : 5007,
                        average_of_two : 5004,
-                       expert_opinion : 5001}
+                       expert_opinion : 5001,
+                       database: 5008}
 
 local_services_with_ports = services_with_ports.copy()
 local_services_with_ports[root] = 5000
