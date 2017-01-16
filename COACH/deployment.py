@@ -159,7 +159,7 @@ class InteractionService(Service):
         return {"description": "Settings for " + self.name,
                 "name": self.description,
                 "port": configuration.service_port(self),
-                "database": configuration.service_url(self.database),
+                "database": configuration.service_url(self.database, protocol = True),
                 "service_directories": [configuration.service_url(ds) for ds in self.directory_services],
                 "logfile": "root.log",
                 "authentication_database": self.authentication,
@@ -198,9 +198,9 @@ class InteractionService(Service):
         Returns the wsgi application call for this service.
         The root service uses the application name coach.InteractionService, and has an extra argument point to the secret data.
         """
-        template = """coach.InteractionService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                               os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
-                                               working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        template = """InteractionService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
+                                        os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
+                                        working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
