@@ -255,7 +255,7 @@ class CaseDatabase(Service):
         Returns the wsgi application call for this service.
         The case database service uses the application name coach.CaseDatabase, and has an extra argument point to the secret data and one for the node label.
         """
-        template = """coach.CaseDatabase(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
+        template = """CaseDatabase(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
                                          os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
                                          "{label}",
                                          working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""

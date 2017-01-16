@@ -23,7 +23,7 @@ if sys.version_info[0] < 3:
 
 from COACH.framework import coach
 
-application = coach.CaseDatabase(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
+application = CaseDatabase(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
                                          os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
                                          "CaseDB",
                                          working_directory = os.path.abspath("/var/www/COACH/COACH/framework")).ms

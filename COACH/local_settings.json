@@ -1,71 +1,71 @@
 {
-    "DirectoryService": {
-        "name": "Directory service for COACH",
-        "description": "Settings for DirectoryService",
-        "port": 5003,
-        "directory_file_name": "settings/local_directory.json"
+    "object": {
+        "protocol": "http",
+        "mode": "local",
+        "host": "127.0.0.1",
+        "description": "Common settings for all classes"
     },
-    "SimpleDecisionProcessService": {
-        "name": "A decision process service",
-        "logfile": "SimpleDecisionProcessService.log",
-        "description": "Settings for SimpleDecisionProcessService",
-        "port": 5002
+    "InteractionService": {
+        "name": "COACH interaction microservice for ORION project",
+        "logfile": "root.log",
+        "description": "Settings for InteractionService",
+        "authentication_database": "settings/authentication.json",
+        "context_service": "http://127.0.0.1:5006",
+        "knowledge_repository": "http://127.0.0.1:5005",
+        "service_directories": [
+            "127.0.0.1:5003"
+        ],
+        "email": {
+            "server": "send.one.com",
+            "sender": "noreply@orion-research.se",
+            "port": 587
+        },
+        "port": 5000,
+        "database": "http://127.0.0.1:5008"
     },
-    "ExpertOpinion": {
-        "name": "Expert opinion estimation method",
-        "description": "Settings for ExpertOpinion",
-        "port": 5001
+    "KnowledgeRepositoryService": {
+        "name": "Knowledge repository microservice for the ORION project",
+        "description": "Settings for KnowledgeRepositoryService",
+        "port": 5005,
+        "database": "http://127.0.0.1:7474/db/data/"
     },
     "CaseDatabase": {
         "name": "COACH case database service",
         "description": "Settings for CaseDatabase",
         "port": 5008
     },
+    "PughService": {
+        "name": "Pugh analysis",
+        "description": "Settings for PughService",
+        "port": 5007,
+        "logfile": "PughService.log"
+    },
     "ContextModelService": {
         "name": "A context model service for COACH",
-        "logfile": "ContextModel.log",
         "description": "Settings for ContextModelService",
-        "port": 5006
+        "port": 5006,
+        "logfile": "ContextModel.log"
     },
-    "KnowledgeRepositoryService": {
-        "name": "Knowledge repository microservice for the ORION project",
-        "database": "http://127.0.0.1:7474/db/data/",
-        "description": "Settings for KnowledgeRepositoryService",
-        "port": 5005
+    "SimpleDecisionProcessService": {
+        "name": "A decision process service",
+        "description": "Settings for SimpleDecisionProcessService",
+        "port": 5002,
+        "logfile": "SimpleDecisionProcessService.log"
     },
-    "object": {
-        "mode": "local",
-        "description": "Common settings for all classes",
-        "protocol": "http",
-        "host": "127.0.0.1"
+    "DirectoryService": {
+        "name": "Directory service for COACH",
+        "directory_file_name": "settings/local_directory.json",
+        "description": "Settings for DirectoryService",
+        "port": 5003
     },
     "AverageOfTwo": {
         "name": "Average of two estimation method",
         "description": "Settings for AverageOfTwo",
         "port": 5004
     },
-    "InteractionService": {
-        "name": "COACH interaction microservice for ORION project",
-        "service_directories": [
-            "127.0.0.1:5003"
-        ],
-        "email": {
-            "sender": "noreply@orion-research.se",
-            "server": "send.one.com",
-            "port": 587
-        },
-        "database": "http://127.0.0.1:5008",
-        "logfile": "root.log",
-        "knowledge_repository": "http://127.0.0.1:5005",
-        "description": "Settings for InteractionService",
-        "port": 5000,
-        "context_service": "http://127.0.0.1:5006",
-        "authentication_database": "settings/authentication.json"
-    },
-    "PughService": {
-        "name": "Pugh analysis",
-        "logfile": "PughService.log",
-        "description": "Settings for PughService",
-        "port": 5007
+    "ExpertOpinion": {
+        "name": "Expert opinion estimation method",
+        "description": "Settings for ExpertOpinion",
+        "port": 5001
     }
 }
