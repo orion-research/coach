@@ -288,9 +288,10 @@ class DirectoryService(Service):
     
     def import_statement(self):
         """
-        Returns an empty string, since directory services do not need an import statement.
+        Returns an import statement for this service.
+        This is used both for generating wsgi-files and launch files.
         """
-        return ""
+        return "from COACH." + self.path + ".DirectoryService import " + self.name + "\n"
 
 
     def launch_statement(self, configuration):
@@ -302,8 +303,8 @@ class DirectoryService(Service):
         result = """    
     wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
     os.chdir(wdir)
-    coach.DirectoryService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
-                           working_directory = os.path.join(topdir, "framework")).run()
+    DirectoryService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
+                    working_directory = os.path.join(topdir, "framework")).run()
 """
         return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
@@ -321,8 +322,8 @@ class DirectoryService(Service):
         Returns the wsgi application call for this service.
         The directory service uses the application coach.DirectoryService.
         """
-        template = """coach.DirectoryService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                                    working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        template = """DirectoryService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
+                                        working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
         return template.format(file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
 

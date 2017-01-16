@@ -9,6 +9,7 @@ from COACH.framework import coach
 from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.framework.InteractionService import InteractionService
 from COACH.context_model import ContextModelService
+from COACH.framework.DirectoryService import DirectoryService
 from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
 from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 from COACH.decision_process.PughService import PughService
@@ -53,8 +54,8 @@ if __name__ == '__main__':
     
     wdir = os.path.join(topdir, os.path.normpath("framework"))
     os.chdir(wdir)
-    coach.DirectoryService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
-                           working_directory = os.path.join(topdir, "framework")).run()
+    DirectoryService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
+                    working_directory = os.path.join(topdir, "framework")).run()
     
     wdir = os.path.join(topdir, os.path.normpath("decision_process/SimpleDecisionProcessService"))
     os.chdir(wdir)

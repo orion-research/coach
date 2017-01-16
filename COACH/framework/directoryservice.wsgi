@@ -14,6 +14,7 @@ with open(activate_this) as file_:
 sys.path.append("/var/www/COACH/COACH/framework")
 sys.path.append("/var/www/COACH")
 
+from COACH.framework.DirectoryService import DirectoryService
 
 
 if sys.version_info[0] < 3:
@@ -22,5 +23,5 @@ if sys.version_info[0] < 3:
 
 from COACH.framework import coach
 
-application = coach.DirectoryService(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
-                                                    working_directory = os.path.abspath("/var/www/COACH/COACH/framework")).ms
+application = DirectoryService(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
+                                        working_directory = os.path.abspath("/var/www/COACH/COACH/framework")).ms
