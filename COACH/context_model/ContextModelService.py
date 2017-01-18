@@ -18,7 +18,7 @@ from COACH.framework.coach import endpoint, get_service, post_service
 
 # Web server framework
 from flask.templating import render_template
-
+from flask import request
 
 
 class ContextModelService(coach.Microservice):
@@ -44,17 +44,7 @@ class ContextModelService(coach.Microservice):
 
 
     @endpoint("/edit_context", ["POST"])
-    def edit_context(self, case_db, case_id, 
-                     context_general_text,
-                     context_organization_text,
-                     context_product_text,
-                     context_stakeholders_text,
-                     context_methodandtechnology_text,
-                     context_marketandbusiness_text):
-
-    # Alternative:
-    # def edit_context(self, case_db, case_id, context_general_text, context_organization_text, **kwargs):
-
+    def edit_context(self, case_db, case_id):
         """
         This method is called using POST when the user presses the save button in the edit_context_dialogue_transition.
         It gets several form parameters: 
@@ -63,15 +53,13 @@ class ContextModelService(coach.Microservice):
         It writes the new context information to the database, and then returns a status message to be shown in the main dialogue window.
         """
         # Write the new context information to the database.
-        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_general", value = context_general_text)
-        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_organization", value = context_organization_text)
-        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_product", value = context_product_text)
-        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_stakeholders", value = context_stakeholders_text)
-        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_methodandtechnology", value = context_methodandtechnology_text)
-        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_marketandbusiness", value = context_marketandbusiness_text)
+        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_general", value = request.values["context_general"])
+        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_organization", value = request.values["context_organization"])
+        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_product", value = request.values["context_product"])
+        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_stakeholders", value = request.values["context_stakeholders"])
+        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_methodandtechnology", value = request.values["context_methodandtechnology"])
+        post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_marketandbusiness", value = request.values["context_marketandbusiness"])
         
-        # Alternative:
-        # post_service(case_db, "change_case_property", case_id = str(case_id), name = "context_product", value = kwargs['context_product_text'])
         
     
         return "Context information saved."

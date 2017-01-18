@@ -36,3 +36,12 @@ ul {
 	text-decoration: none;
 	color: black;
 }
+
+#heading h1{
+    padding: 5px;
+}
+
+#main_dialogue {
+    float:left;
+    padding: 5px;
+}
