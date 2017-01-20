@@ -260,6 +260,22 @@ class Microservice:
         return result
     
     
+    @endpoint("/get_api", ["GET", "POST"])
+    def get_api(self):
+        """
+        Returns the API of the Microservice as json data.
+        """
+        result = {}
+        for (_, m) in inspect.getmembers(self):
+            if hasattr(m, "url_path") and m.url_path != "/":
+                record = {}
+                record["methods"] = m.http_methods
+                record["description"] = m.__doc__
+                record["params"] = [p.name for (_, p) in inspect.signature(m).parameters.items()]
+                result[m.url_path[1:]] = record
+        return json.dumps(result)
+    
+    
 class DecisionProcessService(Microservice):
     
     """
