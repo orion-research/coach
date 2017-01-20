@@ -17,7 +17,7 @@ from COACH.framework.coach import Microservice, endpoint
 
 class AuthenticationService(Microservice):
     """
-    The Authentication class provides storage for the information about users (user id, name, password hash, etc.)
+    The AuthenticationService class provides storage for the information about users (user id, name, password hash, etc.)
     This information is stored in a json file, containing a dictionary with user name as key and the other information as a value dictionary. 
     Also, it provides functionality for generating and handling tokens. 
     """
@@ -42,16 +42,29 @@ class AuthenticationService(Microservice):
         self.authentication_service_url = self.get_setting("protocol") + "://" + self.get_setting("host") + ":" + str(self.get_setting("port"))
         
         try:
-            # Read users from the file name
-            with open(self.users_filename, "r") as file:
-                data = file.read()
-                self.users = json.loads(data)
+            self.load_data()
         except:
             # File of services does not exist, so create it an empty dictionary and save it to the file
             self.users = dict()
-            data = json.dumps(self.users, indent = 4)
-            with open(self.users_filename, "w") as file:
-                file.write(data)
+            self.save_data()
+
+
+    def save_data(self):
+        """
+        Saves the current content of the user database to file.
+        """
+        data = json.dumps(self.users, indent = 4)
+        with open(os.path.join(self.working_directory, self.users_filename), "w") as file:
+            file.write(data)
+        
+
+    def load_data(self):
+        """
+        Loads the currently saved content in the user database file.
+        """
+        with open(os.path.join(self.working_directory, self.users_filename), "r") as file:
+            data = file.read()
+            self.users = json.loads(data)
 
 
     def get_random_token(self, length):
@@ -105,9 +118,8 @@ class AuthenticationService(Microservice):
         token = self.get_random_token(20)
         self.users[userid] = {"password_hash": self.password_hash(password), "email": email, "name": name, 
                               "confirmation_token": token}
-        with open(self.users_filename, "w") as file:
-            json.dump(self.users, file)
-
+        self.save_data()
+        
         message_body = "To validate your COACH user identity, please follow this link:\n\n{0}/confirm_account?user_id={1}&token={2}"
         print(message_body)
         self.send_email(email, "COACH account validation", message_body.format(self.authentication_service_url, userid, token))
@@ -131,8 +143,7 @@ class AuthenticationService(Microservice):
                 if self.users[user_id]["confirmation_token"] == token:
                     # Token matches, so clear it and return True
                     self.users[user_id].pop("confirmation_token")        
-                    with open(self.users_filename, "w") as file:
-                        json.dump(self.users, file)
+                    self.save_data()
                     return ok_message
                 else:
                     return nok_message
