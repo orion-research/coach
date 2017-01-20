@@ -132,16 +132,14 @@ application = {application}
     
 class InteractionService(Service):
     
-    def __init__(self, name, description, path, database, directory_services, authentication, knowledge_repository_service, context_model_service, email):
+    def __init__(self, name, description, path, database, directory_services, authentication, knowledge_repository_service, context_model_service):
         """
         Creates an InteractionService object. In addition to the Service, it has the following parameter:
         - database: the url to the database used for storing cases.
         - directory_services: a list of DirectoryServices used by the root service.
-        - authentication: a file path to where the user authentication data is stored.
+        - authentication: an AuthenticationService.
         - knowledge_repository_service: a KnowledgeRepositoryService used by the root service.
         - context_model_service: a ContextModelService used by the root service.
-        - email: a dictionary of three fields, namely "server" (a string with the url to the email server); 
-            "port" (an int); and "sender" (a string with an email address).
         """
         super().__init__(name, description, path)
         self.database = database
@@ -149,7 +147,6 @@ class InteractionService(Service):
         self.authentication = authentication
         self.knowledge_repository_service = knowledge_repository_service
         self.context_model_service = context_model_service
-        self.email = email
 
 
     def settings(self, configuration):
@@ -162,10 +159,9 @@ class InteractionService(Service):
                 "database": configuration.service_url(self.database, protocol = True),
                 "service_directories": [configuration.service_url(ds) for ds in self.directory_services],
                 "logfile": "root.log",
-                "authentication_database": self.authentication,
+                "authentication_service": configuration.service_url(self.authentication, protocol = True),
                 "knowledge_repository": configuration.service_url(self.knowledge_repository_service, protocol = True),
-                "context_service": configuration.service_url(self.context_model_service, protocol = True),
-                "email": self.email
+                "context_service": configuration.service_url(self.context_model_service, protocol = True)
                 }
 
 
@@ -201,6 +197,69 @@ class InteractionService(Service):
         template = """InteractionService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
                                         os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
                                         working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        return template.format(name = self.name, package_name = self.path.split(".")[-1], 
+                               file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
+
+
+class AuthenticationService(Service):
+    
+    def __init__(self, name, description, path, authentication, email):
+        """
+        Creates an AuthenticationService object. In addition to the Service, it has the following parameter:
+        - authentication: a file path to where the user authentication data is stored.
+        - email: a dictionary of three fields, namely "server" (a string with the url to the email server); 
+            "port" (an int); and "sender" (a string with an email address).
+        """
+        super().__init__(name, description, path)
+        self.authentication = authentication
+        self.email = email
+
+
+    def settings(self, configuration):
+        """
+        Returns the settings for a AuthenticationService object in the given configuration.
+        """
+        return {"description": "Settings for " + self.name,
+                "name": self.description,
+                "port": configuration.service_port(self),
+                "logfile": "root.log",
+                "authentication_database": self.authentication,
+                "email": self.email
+                }
+
+
+    def import_statement(self):
+        """
+        Returns an import statement for this service.
+        This is used both for generating wsgi-files and launch files.
+        """
+        return "from COACH." + self.path + "." + self.name + " import " + self.name + "\n"
+
+
+    def launch_statement(self, configuration):
+        """
+        Returns a Python statement that launches this service in a given configuration.
+        """
+
+        file_path = "/".join(self.path.split("."))
+        result = """
+    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
+    os.chdir(wdir)
+    AuthenticationService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
+                            os.path.normpath("settings/root_secret_data.json"),
+                            working_directory = wdir).run()
+"""
+        return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
+
+    
+    def wsgi_application(self, configuration):
+        """
+        Returns the wsgi application call for this service.
+        The root service uses the application name coach.InteractionService, and has an extra argument point to the secret data.
+        """
+        template = """AuthenticationService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
+                                            os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
+                                            working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 

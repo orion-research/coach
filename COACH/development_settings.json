@@ -1,71 +1,78 @@
 {
-    "ContextModelService": {
-        "name": "A context model service for COACH",
-        "port": 5006,
-        "description": "Settings for ContextModelService",
-        "logfile": "ContextModel.log"
-    },
-    "AverageOfTwo": {
-        "name": "Average of two estimation method",
-        "port": 5004,
-        "description": "Settings for AverageOfTwo"
-    },
-    "SimpleDecisionProcessService": {
-        "name": "A decision process service",
-        "port": 5002,
-        "description": "Settings for SimpleDecisionProcessService",
-        "logfile": "SimpleDecisionProcessService.log"
-    },
-    "object": {
-        "host": "orion.sics.se",
-        "mode": "development",
-        "protocol": "https",
-        "description": "Common settings for all classes"
-    },
-    "CaseDatabase": {
-        "name": "COACH case database service",
-        "port": 5008,
-        "description": "Settings for CaseDatabase"
-    },
-    "KnowledgeRepositoryService": {
-        "database": "http://127.0.0.1:7474/db/data/",
-        "name": "Knowledge repository microservice for the ORION project",
-        "port": 5005,
-        "description": "Settings for KnowledgeRepositoryService"
-    },
-    "PughService": {
-        "name": "Pugh analysis",
-        "port": 5007,
-        "description": "Settings for PughService",
-        "logfile": "PughService.log"
-    },
-    "DirectoryService": {
-        "name": "Directory service for COACH",
-        "port": 5003,
-        "description": "Settings for DirectoryService",
-        "directory_file_name": "settings/development_directory.json"
-    },
-    "InteractionService": {
-        "context_service": "https://orion.sics.se:5006",
+    "AuthenticationService": {
+        "logfile": "root.log",
+        "description": "Settings for AuthenticationService",
+        "name": "Authentication service for COACH",
         "email": {
             "server": "send.one.com",
             "sender": "noreply@orion-research.se",
             "port": 587
         },
+        "port": 5009,
+        "authentication_database": "settings/authentication.json"
+    },
+    "ExpertOpinion": {
+        "description": "Settings for ExpertOpinion",
+        "name": "Expert opinion estimation method",
+        "port": 5001
+    },
+    "SimpleDecisionProcessService": {
+        "logfile": "SimpleDecisionProcessService.log",
+        "description": "Settings for SimpleDecisionProcessService",
+        "name": "A decision process service",
+        "port": 5002
+    },
+    "KnowledgeRepositoryService": {
+        "database": "http://127.0.0.1:7474/db/data/",
+        "description": "Settings for KnowledgeRepositoryService",
+        "name": "Knowledge repository microservice for the ORION project",
+        "port": 5005
+    },
+    "AverageOfTwo": {
+        "description": "Settings for AverageOfTwo",
+        "name": "Average of two estimation method",
+        "port": 5004
+    },
+    "DirectoryService": {
+        "description": "Settings for DirectoryService",
+        "name": "Directory service for COACH",
+        "directory_file_name": "settings/development_directory.json",
+        "port": 5003
+    },
+    "PughService": {
+        "logfile": "PughService.log",
+        "description": "Settings for PughService",
+        "name": "Pugh analysis",
+        "port": 5007
+    },
+    "InteractionService": {
+        "logfile": "root.log",
+        "database": "https://orion.sics.se:5008",
+        "description": "Settings for InteractionService",
         "name": "COACH interaction microservice for ORION project",
         "port": 443,
-        "database": "https://orion.sics.se:5008",
-        "authentication_database": "settings/authentication.json",
+        "knowledge_repository": "https://orion.sics.se:5005",
+        "context_service": "https://orion.sics.se:5006",
         "service_directories": [
             "orion.sics.se:5003"
         ],
-        "knowledge_repository": "https://orion.sics.se:5005",
-        "description": "Settings for InteractionService",
-        "logfile": "root.log"
+        "authentication_service": "https://orion.sics.se:5009"
     },
-    "ExpertOpinion": {
-        "name": "Expert opinion estimation method",
-        "port": 5001,
-        "description": "Settings for ExpertOpinion"
+    "CaseDatabase": {
+        "description": "Settings for CaseDatabase",
+        "name": "COACH case database service",
+        "port": 5008
+    },
+    "object": {
+        "mode": "development",
+        "host": "orion.sics.se",
+        "description": "Common settings for all classes",
+        "protocol": "https"
+    },
+    "ContextModelService": {
+        "logfile": "ContextModel.log",
+        "description": "Settings for ContextModelService",
+        "name": "A context model service for COACH",
+        "port": 5006
     }
 }

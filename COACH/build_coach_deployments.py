@@ -11,7 +11,6 @@ from COACH.deployment import *
 
 # Services to be deployed
 
-
 # Decision process services
 simple = DecisionProcessService("SimpleDecisionProcessService", "A decision process service",
                                 "decision_process.SimpleDecisionProcessService")
@@ -25,6 +24,11 @@ expert_opinion = EstimationMethodService("ExpertOpinion", "Expert opinion estima
 
 services_listed_in_directory = [simple, pugh, average_of_two, expert_opinion]
 
+
+# Authentication service
+authentication = AuthenticationService("AuthenticationService", "Authentication service for COACH", "framework",
+                                       "settings/authentication.json", 
+                                       {"server": "send.one.com", "port": 587, "sender": "noreply@orion-research.se"})
 
 # Directory services
 directory = DirectoryService("DirectoryService", "Directory service for COACH", "framework",
@@ -45,9 +49,8 @@ database = CaseDatabase("CaseDatabase", "COACH case database service", "framewor
  
 # Root service
 root = InteractionService("InteractionService", "COACH interaction microservice for ORION project", "framework",
-                          database, [directory], "settings/authentication.json",
-                          knowledge_repository, context_model,
-                          {"server": "send.one.com", "port": 587, "sender": "noreply@orion-research.se"})
+                          database, [directory], authentication,
+                          knowledge_repository, context_model)
 
 
 all_services = [services_listed_in_directory] + [root, directory, context_model, knowledge_repository]
@@ -61,7 +64,8 @@ services_with_ports = {directory : 5003,
                        pugh : 5007,
                        average_of_two : 5004,
                        expert_opinion : 5001,
-                       database: 5008}
+                       database: 5008, 
+                       authentication : 5009}
 
 local_services_with_ports = services_with_ports.copy()
 local_services_with_ports[root] = 5000

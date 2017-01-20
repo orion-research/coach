@@ -13,7 +13,6 @@ import os
 import subprocess
 
 # Coach modules
-from COACH.framework.authentication import Authentication
 from COACH.framework import coach
 from COACH.framework.coach import endpoint, get_service, post_service
 
@@ -55,11 +54,8 @@ class InteractionService(coach.Microservice):
         # Setup key for GitHub webhook
         self.github_key = secret_data["github_key"]
 
-        # Initialize the user database
-        self.get_setting("email")["password"] = secret_data["email_password"]
-        self.root_service_url = self.get_setting("protocol") + "://" + self.get_setting("host") + ":" + str(self.get_setting("port"))
-        self.authentication = Authentication(os.path.join(self.working_directory, self.get_setting("authentication_database")),
-                                             self.get_setting("email"), self.root_service_url, secret_data["password_hash_salt"])
+        # Store authentication service connection
+        self.authentication_service = self.get_setting("authentication_service")
 
         # Store case database connection
         self.case_db = self.get_setting("database")
@@ -187,8 +183,8 @@ class InteractionService(coach.Microservice):
     def add_stakeholder_dialogue_transition(self):
         # Create links to the decision processes
         # Get all users who exist both in the authentication list and in the case DB
-        user_ids = [u for u in json.loads(get_service(self.case_db, "user_ids")) if self.authentication.user_exists(u)]
-        users = [(u, self.authentication.get_user_name(u)) for u in user_ids]
+        user_ids = [u for u in json.loads(get_service(self.case_db, "user_ids")) if json.loads(get_service(self.authentication_service, "user_exists", userid = u))]
+        users = [(u, json.loads(get_service(self.authentication_service, "get_user_name", userid = u))) for u in user_ids]
         links = ["<A HREF=\"/add_stakeholder?user_id=%s\"> %s </A>" % pair for pair in users]
         
         dialogue = render_template("add_stakeholder_dialogue.html", stakeholders = links)
@@ -216,10 +212,10 @@ class InteractionService(coach.Microservice):
         if user_id == "" or password == "":
             # If user_id or password is missing, show the dialogue again with an error message
             return render_template("initial_dialogue.html", error = "FieldMissing")
-        elif not self.authentication.user_exists(user_id):
+        elif not json.loads(get_service(self.authentication_service, "user_exists", userid = user_id)):
             # If user_id does not exist, show the dialogue again with an error message
             return render_template("initial_dialogue.html", error = "NoSuchUser")
-        elif not self.authentication.check_user_password(user_id, password):
+        elif not json.loads(post_service(self.authentication_service, "check_user_password", userid = user_id, password = password)):
             # If the wrong password was entered, show the dialogue again with an error message
             return render_template("initial_dialogue.html", error = "WrongPassword")
         else:
@@ -238,7 +234,7 @@ class InteractionService(coach.Microservice):
         As a transition action, it creates the new user in the database.
         """
         # TODO: Show the correct values pre-filled when the dialogue is reopened. 
-        if self.authentication.user_exists(user_id):
+        if json.loads(get_service(self.authentication_service, "user_exists", userid = user_id)):
             # If the user already exists, go back to the create user dialogue, with a message
             return render_template("create_user_dialogue.html", error = "UserExists")
         elif password1 != password2:
@@ -246,25 +242,13 @@ class InteractionService(coach.Microservice):
         else:
             # Otherwise, create the user in the database, and return to the initial dialogue.
             try:
-                self.authentication.create_user(user_id, password1, email, name)
+                json.loads(post_service(self.authentication_service, "create_user", userid = user_id, password = password1, email = email, name = name))
             except Exception as e:
                 self.ms.logger.error("Failed to create user")
                 self.ms.logger.error("Exception: " + str(e))
             return render_template("initial_dialogue.html")
 
 
-    @endpoint("/confirm_account", ["POST"])
-    def confirm_account(self, user_id, token):
-        """
-        Endpoint used by a user to confirm access to the email provided when setting up the account.
-        It takes two parameters, namely user id and a token. 
-        """
-        if self.authentication.confirm_account(user_id, token):
-            return "Account of " + user_id + " has been confirmed! You may now log in."
-        else:
-            return "Error: The token provided for validating account of " + user_id + " was not valid."
-    
-        
     @endpoint("/create_case", ["POST"])
     def create_case(self, title, description):
         """
