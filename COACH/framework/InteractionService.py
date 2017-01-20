@@ -14,7 +14,6 @@ import subprocess
 
 # Coach modules
 from COACH.framework.authentication import Authentication
-from COACH.framework.casedb import CaseDatabase
 from COACH.framework import coach
 from COACH.framework.coach import endpoint, get_service, post_service
 
@@ -156,7 +155,8 @@ class InteractionService(coach.Microservice):
     
     @endpoint("/create_case_dialogue", ["GET"])
     def create_case_dialogue_transition(self):
-        return render_template("create_case_dialogue.html")
+        dialogue = render_template("create_case_dialogue.html")
+        return self.main_menu_transition(main_dialogue = dialogue)
 
     
     @endpoint("/open_case_dialogue", ["GET"])
@@ -195,15 +195,17 @@ class InteractionService(coach.Microservice):
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
-    @endpoint("/create_alternative_dialogue", ["GET"])
-    def create_alternative_dialogue_transition(self):
-        return render_template("create_alternative_dialogue.html")
+    @endpoint("/add_alternative_dialogue", ["GET"])
+    def add_alternative_dialogue_transition(self):
+        dialogue = render_template("add_alternative_dialogue.html")
+        return self.main_menu_transition(main_dialogue = dialogue)
 
     
     @endpoint("/edit_case_description_dialogue", ["GET"])    
     def edit_case_description_dialogue_transition(self):
         result = json.loads(get_service(self.case_db, "get_case_description", case_id = session["case_id"]))
-        return render_template("edit_case_description_dialogue.html", title = result[0], description = result[1])
+        dialogue = render_template("edit_case_description_dialogue.html", title = result[0], description = result[1])
+        return self.main_menu_transition(main_dialogue = dialogue)
 
     
     @endpoint("/login_user", ["POST"])
@@ -318,13 +320,13 @@ class InteractionService(coach.Microservice):
         return self.main_menu_transition(main_dialogue = "Stakeholder added!")
 
 
-    @endpoint("/create_alternative", ["POST"])
-    def create_alternative(self, title, description):
+    @endpoint("/add_alternative", ["POST"])
+    def add_alternative(self, title, description):
         """
         Adds a new decision alternative and adds a relation from the case to the alternative.
         """
-        post_service(self.case_db, "create_alternative", title = title, description = description, case_id = session["case_id"])
-        return self.main_menu_transition(main_dialogue = "New alternative created!")
+        post_service(self.case_db, "add_alternative", title = title, description = description, case_id = session["case_id"])
+        return self.main_menu_transition(main_dialogue = "New alternative added!")
 
 
     @endpoint("/export_case_to_knowledge_repository", ["GET"])

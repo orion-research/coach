@@ -6,6 +6,7 @@ import sys
 sys.path.append(os.path.join(os.curdir, os.pardir))
 
 from COACH.framework import coach
+from COACH.knowledge_repository import KnowledgeRepositoryService
 from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.framework.InteractionService import InteractionService
 from COACH.context_model import ContextModelService
@@ -14,7 +15,6 @@ from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionPr
 from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 from COACH.decision_process.PughService import PughService
 from COACH.framework.casedb import CaseDatabase
-from COACH.knowledge_repository import KnowledgeRepositoryService
 
 if __name__ == '__main__':
     try:
@@ -34,6 +34,12 @@ if __name__ == '__main__':
         os.chdir(wdir)
         
         # Start all the services
+    
+    wdir = os.path.join(topdir, "framework")
+    os.chdir(wdir)
+    KnowledgeRepositoryService.KnowledgeRepositoryService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
+                                                    os.path.normpath("settings/root_secret_data.json"),
+                                                    working_directory = wdir).run()
     
     wdir = os.path.join(topdir, os.path.normpath("estimation_method/AverageOfTwo"))
     os.chdir(wdir)
@@ -77,9 +83,3 @@ if __name__ == '__main__':
                  os.path.normpath("settings/root_secret_data.json"),
                  "CaseDB",
                  working_directory = wdir).run()
-    
-    wdir = os.path.join(topdir, "framework")
-    os.chdir(wdir)
-    KnowledgeRepositoryService.KnowledgeRepositoryService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
-                                                    os.path.normpath("settings/root_secret_data.json"),
-                                                    working_directory = wdir).run()

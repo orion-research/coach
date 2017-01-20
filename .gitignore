@@ -26,3 +26,6 @@ COACH/framework/settings/authentication.json
 
 # File for storing passwords etc.
 COACH/framework/settings/root_secret_data.json
+
+# Symbolic link files
+settings.json

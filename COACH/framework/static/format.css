@@ -13,6 +13,7 @@ ul {
 
 #menu {
 	width: 250px;
+	height: 100vh;
 	float: left;
 	padding: 5px;
 	background-color: #ffd213;
