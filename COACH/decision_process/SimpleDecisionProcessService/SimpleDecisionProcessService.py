@@ -37,7 +37,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         # Fetch the available services from the directories available in the case_db.
         services = []
         for d in json.loads(directories):
-            services += json.loads(get_service(self.get_setting("protocol") + "://" + d, "get_services?type=estimation_method"))
+            services += json.loads(get_service(d, "get_services?type=estimation_method"))
 
         # Create the alternatives for a dropdown menu
         # TODO: It should show the current estimation method as preselected.
@@ -62,8 +62,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
             options = ["<OPTION value=\"%s\"> %s </A>" % (a[1], a[0]) for a in decision_alternatives]
         
             # Get the estimation method's dialogue
-            estimation_dialogue = get_service(self.get_setting("protocol") + "://" + estimation_method, "dialogue",
-                                              knowledge_repository = knowledge_repository)
+            estimation_dialogue = get_service(estimation_method, "dialogue", knowledge_repository = knowledge_repository)
         
             return render_template("perform_ranking_dialogue.html", options = options, estimation_dialogue = estimation_dialogue, 
                                    estimation_method = estimation_method)
@@ -115,7 +114,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         params = {"knowledge_repository" : knowledge_repository}
         for p in set(request.values.keys()) - {"case_db", "case_id", "estimation_method", "alternative", "directories", "endpoint"}:
             params[p] = request.values[p]
-        value = get_service(self.get_setting("protocol") + "://" + estimation_method, "evaluate", **params)
+        value = get_service(estimation_method, "evaluate", **params)
     
         # Write estimate to the database
         # TODO: For now, just set it as an attribute of the alternative node. This needs to be improved!

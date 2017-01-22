@@ -58,10 +58,10 @@ class InteractionService(coach.Microservice):
         self.authentication_service_proxy = self.create_proxy(self.get_setting("authentication_service"))
 
         # Store case database connection
-        self.case_db = self.get_setting("database")
+        self.case_db_proxy = self.create_proxy(self.get_setting("database"))
 
         # Store point to service directories
-        self.service_directories = self.get_setting("service_directories")
+        self.service_directory_proxies = [self.create_proxy(sd) for sd in self.get_setting("service_directories")]
                         
     
     def get_version(self):
@@ -101,12 +101,11 @@ class InteractionService(coach.Microservice):
         """
         context = kwargs
         try:
-            decision_process = json.loads(get_service(self.case_db, "get_decision_process", case_id = session["case_id"]))
+            decision_process = self.case_db_proxy.get_decision_process(case_id = session["case_id"])
             if decision_process:
-                context["process_menu"] = get_service(self.get_setting("protocol") + "://" + decision_process, 
-                                                      "process_menu", case_id = session["case_id"])
-        except:
-            pass
+                context["process_menu"] = get_service(decision_process, "process_menu", case_id = session["case_id"])
+        except Exception as e:
+            print("Error in main_menu_transition, with decision_process = " + str(decision_process) + ": " + str(e))
         return render_template("main_menu.html", **context)
 
 
@@ -117,16 +116,15 @@ class InteractionService(coach.Microservice):
         It always passes the current decision case id as a parameter in the request.
         """
         case_id = session["case_id"]
-        decision_process = json.loads(get_service(self.case_db, "get_decision_process", case_id = session["case_id"]))
+        decision_process = self.case_db_proxy.get_decision_process(case_id = session["case_id"])
         if decision_process:
             params = request.values.to_dict()
             del params["endpoint"]
-            params["case_db"] = self.case_db
+            params["case_db"] = self.get_setting("database")
             params["case_id"] = case_id
-            params["directories"] = json.dumps(self.service_directories)
+            params["directories"] = json.dumps(self.get_setting("service_directories"))
             params["knowledge_repository"] = self.get_setting("knowledge_repository")
-            response = requests.request(request.method, self.get_setting("protocol") + "://" + decision_process + "/" + request.values["endpoint"], 
-                                        params = params)
+            response = requests.request(request.method, decision_process + "/" + request.values["endpoint"], params = params)
             return self.main_menu_transition(main_dialogue = response.text)
         else:
             return "No decision process selected"
@@ -141,7 +139,7 @@ class InteractionService(coach.Microservice):
         context_service = self.get_setting("context_service")
         params = request.values.to_dict()
         del params["endpoint"]
-        params["case_db"] = self.case_db
+        params["case_db"] = self.get_setting("database")
         params["case_id"] = session["case_id"]
         params["knowledge_repository"] = self.get_setting("knowledge_repository")
         response = requests.request(request.method, context_service + "/" + request.values["endpoint"], 
@@ -158,7 +156,7 @@ class InteractionService(coach.Microservice):
     @endpoint("/open_case_dialogue", ["GET"])
     def open_case_dialogue_transition(self):
         # Create links to the user's cases
-        user_cases = json.loads(get_service(self.case_db, "user_cases", user_id = session["user_id"]))
+        user_cases = self.case_db_proxy.user_cases(user_id = session["user_id"])
         links = ["<A HREF=\"/open_case?case_id=%s\">%s</A>" % tuple(pair) for pair in user_cases]
 
         dialogue = render_template("open_case_dialogue.html", user_cases = links)
@@ -167,12 +165,11 @@ class InteractionService(coach.Microservice):
     
     @endpoint("/change_decision_process_dialogue", ["GET"])
     def change_decision_process_dialogue_transition(self):
-        directories = self.get_setting("service_directories")
         services = []
-        current_decision_process = json.loads(get_service(self.case_db, "get_decision_process", case_id = session["case_id"]))
+        current_decision_process = self.case_db_proxy.get_decision_process(case_id = session["case_id"])
 
-        for d in directories:
-            services += json.loads(get_service(self.get_setting("protocol") + "://" + d, "get_services", type = "decision_process"))
+        for d in self.service_directory_proxies:
+            services += d.get_services(type = "decision_process")
         options = ["<OPTION value=\"%s\" %s> %s </A>" % (s[2], "selected" if s[2] == current_decision_process else "", s[1]) for s in services]
         
         dialogue = render_template("change_decision_process_dialogue.html", decision_processes = options)
@@ -183,7 +180,7 @@ class InteractionService(coach.Microservice):
     def add_stakeholder_dialogue_transition(self):
         # Create links to the decision processes
         # Get all users who exist both in the authentication list and in the case DB
-        user_ids = [u for u in json.loads(get_service(self.case_db, "user_ids")) 
+        user_ids = [u for u in self.case_db_proxy.user_ids() 
                     if self.authentication_service_proxy.user_exists(userid = u)]
         users = [(u, self.authentication_service_proxy.get_user_name(userid = u)) for u in user_ids]
         links = ["<A HREF=\"/add_stakeholder?user_id=%s\"> %s </A>" % pair for pair in users]
@@ -200,7 +197,7 @@ class InteractionService(coach.Microservice):
     
     @endpoint("/edit_case_description_dialogue", ["GET"])    
     def edit_case_description_dialogue_transition(self):
-        result = json.loads(get_service(self.case_db, "get_case_description", case_id = session["case_id"]))
+        result = self.case_db_proxy.get_case_description(case_id = session["case_id"])
         dialogue = render_template("edit_case_description_dialogue.html", title = result[0], description = result[1])
         return self.main_menu_transition(main_dialogue = dialogue)
 
@@ -223,7 +220,7 @@ class InteractionService(coach.Microservice):
             # Login successful, save some data in the session object, and go to main menu
             session["user_id"] = user_id
             # Add the user to the case db if it is not already there
-            post_service(self.case_db, "create_user", user_id = user_id)
+            self.case_db_proxy.create_user(user_id = user_id)
             return self.main_menu_transition()
 
 
@@ -256,7 +253,7 @@ class InteractionService(coach.Microservice):
         Endpoint representing the transition from the create case dialogue to the main menu.
         As a transition action, it creates the new case in the database, and connects the current user to it.
         """
-        session["case_id"] = int(post_service(self.case_db, "create_case", title = title, description = description, initiator = session["user_id"]))
+        session["case_id"] = self.case_db_proxy.create_case(title = title, description = description, initiator = session["user_id"])
         return self.main_menu_transition()
 
 
@@ -285,14 +282,14 @@ class InteractionService(coach.Microservice):
 
     @endpoint("/change_case_description", ["POST"])
     def change_case_description(self, title, description):
-        post_service(self.case_db, "change_case_description", case_id = session["case_id"], title = title, description = description)
+        self.case_db_proxy.change_case_description(case_id = session["case_id"], title = title, description = description)
         return self.main_menu_transition(main_dialogue = "Case description changed!")
 
 
     @endpoint("/change_decision_process", ["POST"])
     def change_decision_process(self, url):
-        post_service(self.case_db, "change_decision_process", case_id = session["case_id"], decision_process = url)
-        menu = requests.get(self.get_setting("protocol") + "://" + url + "/process_menu", params = {"case_id": session["case_id"]}).text
+        self.case_db_proxy.change_decision_process(case_id = session["case_id"], decision_process = url)
+        menu = requests.get(url + "/process_menu", params = {"case_id": session["case_id"]}).text
         return self.main_menu_transition(main_dialogue = "Decision process changed!", process_menu = menu)
 
 
@@ -301,7 +298,7 @@ class InteractionService(coach.Microservice):
         """
         Adds a Stakeholder relationship between the current case and the user given as argument, with the role contributor.
         """
-        post_service(self.case_db, "add_stakeholder", user_id = user_id, case_id = session["case_id"], role = "contributor")
+        self.case_db_proxy.add_stakeholder(user_id = user_id, case_id = session["case_id"], role = "contributor")
         return self.main_menu_transition(main_dialogue = "Stakeholder added!")
 
 
@@ -310,7 +307,7 @@ class InteractionService(coach.Microservice):
         """
         Adds a new decision alternative and adds a relation from the case to the alternative.
         """
-        post_service(self.case_db, "add_alternative", title = title, description = description, case_id = session["case_id"])
+        self.case_db_proxy.add_alternative(title = title, description = description, case_id = session["case_id"])
         return self.main_menu_transition(main_dialogue = "New alternative added!")
 
 
@@ -319,9 +316,9 @@ class InteractionService(coach.Microservice):
         """
         Exports the current case to the knowledge repository.
         """
-        description = get_service(self.case_db, "export_case_data", case_id = session["case_id"])
-        requests.post(self.get_setting("knowledge_repository") + "/add_case", data = {"description": description})
-        return self.main_menu_transition(main_dialogue = "The following case data was exported:\n\n" + description)
+        description = self.case_db_proxy.export_case_data(case_id = session["case_id"])
+        requests.post(self.get_setting("knowledge_repository") + "/add_case", data = {"description": json.dumps(description)})
+        return self.main_menu_transition(main_dialogue = "Exported case to knowledge repository!")
         
 
     @endpoint("/get_service_directories", ["GET"])
@@ -329,7 +326,7 @@ class InteractionService(coach.Microservice):
         """
         Returns the list of service directories registered with this service as a json file.
         """
-        return Response(json.dumps(self.service_directories))
+        return Response(json.dumps(self.get_setting("service_directories")))
 
     
     @endpoint("/github_update", ["GET", "POST"])

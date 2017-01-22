@@ -156,12 +156,12 @@ class InteractionService(Service):
         return {"description": "Settings for " + self.name,
                 "name": self.description,
                 "port": configuration.service_port(self),
-                "database": configuration.service_url(self.database, protocol = True),
+                "database": configuration.service_url(self.database),
                 "service_directories": [configuration.service_url(ds) for ds in self.directory_services],
                 "logfile": "root.log",
-                "authentication_service": configuration.service_url(self.authentication, protocol = True),
-                "knowledge_repository": configuration.service_url(self.knowledge_repository_service, protocol = True),
-                "context_service": configuration.service_url(self.context_model_service, protocol = True)
+                "authentication_service": configuration.service_url(self.authentication),
+                "knowledge_repository": configuration.service_url(self.knowledge_repository_service),
+                "context_service": configuration.service_url(self.context_model_service)
                 }
 
 
@@ -652,14 +652,11 @@ class Configuration(object):
         return self.services_with_ports[service]
     
     
-    def service_url(self, service, protocol = False):
+    def service_url(self, service):
         """
         Returns the url of a certain service on this configuration.
         """
-        if protocol:
-            return self.protocol + "://" + self.base_url + ":" + str(self.service_port(service))
-        else:
-            return self.base_url + ":" + str(self.service_port(service))
+        return self.protocol + "://" + self.base_url + ":" + str(self.service_port(service))
 
 
     def generate_file(self, script_name, file_name, content):

@@ -2,21 +2,21 @@
     [
         "decision_process",
         "A decision process service",
-        "orion.sics.se:5002"
+        "https://orion.sics.se:5002"
     ],
     [
         "decision_process",
         "Pugh analysis",
-        "orion.sics.se:5007"
+        "https://orion.sics.se:5007"
     ],
     [
         "estimation_method",
         "Average of two estimation method",
-        "orion.sics.se:5004"
+        "https://orion.sics.se:5004"
     ],
     [
         "estimation_method",
         "Expert opinion estimation method",
-        "orion.sics.se:5001"
+        "https://orion.sics.se:5001"
     ]
 ]

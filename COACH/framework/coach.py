@@ -97,7 +97,6 @@ class Microservice:
     
     """
     Microservice is the base class of all microservices. It contains the functionality for setting up a service that can act as a stand-alone web server.
-    It expects subclasses to implement the createEndpoints() function, which defines the service API.
     """
     
     def __init__(self, settings_file_name, handling_class = None, working_directory = None):
@@ -105,7 +104,8 @@ class Microservice:
         Initialize the microservice.
         """
         
-        self.proxies = []
+        # Create cache for proxies
+        self.proxies = {}
         
         if working_directory:
             self.working_directory = working_directory
@@ -281,13 +281,16 @@ class Microservice:
     def create_proxy(self, url, method_preference = ["POST", "GET"], json_result = True, cache = True):
         """
         Returns a Proxy object representing the given url, and with method preferences as provided.
-        If cache is True, the proxy is also stored in a list within the Microservice. This makes it
+        If cache is True, the proxy is also stored in a dictionary within the Microservice. This makes it
         possible to later query the Microservice for its proxies, to get a view of the architecture.
+        An attempt to create an already existing proxy will just return the existing one.
         """
-        proxy = Proxy(url, method_preference, json_result = json_result)
         if cache:
-            self.proxies += [proxy]
-        return proxy
+            if url not in self.proxies:
+                self.proxies[url] = Proxy(url, method_preference, json_result = json_result)
+            return self.proxies[url]
+        else:
+            return Proxy(url, method_preference, json_result = json_result)
 
 
 class Proxy():

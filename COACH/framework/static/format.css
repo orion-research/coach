@@ -45,4 +45,5 @@ ul {
 #main_dialogue {
     float:left;
     padding: 5px;
+    height: 100vh;
 }

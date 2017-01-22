@@ -121,7 +121,7 @@ class CaseDatabase(coach.Microservice):
         """
         q = """MERGE (u:User:{label} {{user_id : "{user_id}"}})"""
         self.query(q, locals())
-        return Response("Ok")
+        return Response(json.dumps("Ok"))
         
 
     @endpoint("/create_case", ["POST"])
@@ -154,7 +154,7 @@ class CaseDatabase(coach.Microservice):
         """
         q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} SET case.title = "{title}", case.description = "{description}" """
         self.query(q, locals())
-        return Response("Ok")
+        return Response(json.dumps("Ok"))
            
     
     @endpoint("/get_case_description", ["GET"])    
@@ -180,13 +180,13 @@ class CaseDatabase(coach.Microservice):
         ON CREATE SET r.role = "{role}"
         """
         self.query(q, locals())
-        return Response("Ok")
+        return Response(json.dumps("Ok"))
 
 
-    @endpoint("/create_alternative", ["POST"])    
-    def create_alternative(self, title, description, case_id):
+    @endpoint("/add_alternative", ["POST"])    
+    def add_alternative(self, title, description, case_id):
         """
-        Creates a decision alternative and links it to the case.
+        Adds a decision alternative and links it to the case.
         """
 
         s = self.open_session()
@@ -214,7 +214,7 @@ class CaseDatabase(coach.Microservice):
             q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} RETURN case.decision_process AS process LIMIT 1"""
             return Response(json.dumps(next(iter(self.query(q, locals())))["process"]))
         except:
-            return Response(str(None))
+            return Response(json.dumps(None))
     
     
     @endpoint("/change_decision_process", ["POST"])
@@ -224,7 +224,7 @@ class CaseDatabase(coach.Microservice):
         """
         q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} SET case.decision_process = "{decision_process}" """
         self.query(q, locals())
-        return Response("Ok")
+        return Response(json.dumps("Ok"))
 
     
     @endpoint("/change_case_property", ["POST"])
@@ -234,7 +234,7 @@ class CaseDatabase(coach.Microservice):
         """
         q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} SET case.{name} = "{value}\""""
         self.query(q, locals())
-        return Response("Ok")
+        return Response(json.dumps("Ok"))
 
     
     @endpoint("/get_case_property", ["GET"])
@@ -246,7 +246,7 @@ class CaseDatabase(coach.Microservice):
             q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} RETURN case.{name} AS name"""
             return Response(next(iter(self.query(q, locals())))["name"])
         except:
-            return Response(None)
+            return Response(json.dumps(None))
         
     
     @endpoint("/get_decision_alternatives", ["GET"])
@@ -266,7 +266,7 @@ class CaseDatabase(coach.Microservice):
         """
         q = """MATCH (alt:Alternative:{label}) WHERE id(alt) = {alternative} SET alt.{name} = "{value}" """
         self.query(q, locals())
-        return Response("Ok")
+        return Response(json.dumps("Ok"))
 
     
     @endpoint("/get_alternative_property", ["GET"])
@@ -278,7 +278,7 @@ class CaseDatabase(coach.Microservice):
             q = """MATCH (alt:Alternative:{label}) WHERE id(alt) = {alternative} RETURN alt.{name} AS name"""
             return Response(next(iter(self.query(q, locals())))["name"])
         except:
-            return Response(None)
+            return Response(json.dumps(None))
         
     
     @endpoint("/export_case_data", ["GET"])
