@@ -278,13 +278,13 @@ class Microservice:
         return json.dumps(result)
     
     
-    def create_proxy(self, url, method_preference = ["POST", "GET"], cache = True):
+    def create_proxy(self, url, method_preference = ["POST", "GET"], json_result = True, cache = True):
         """
         Returns a Proxy object representing the given url, and with method preferences as provided.
         If cache is True, the proxy is also stored in a list within the Microservice. This makes it
         possible to later query the Microservice for its proxies, to get a view of the architecture.
         """
-        proxy = Proxy(url, method_preference)
+        proxy = Proxy(url, method_preference, json_result = json_result)
         if cache:
             self.proxies += [proxy]
         return proxy
@@ -297,18 +297,19 @@ class Proxy():
     instance of the object. It is recommended that Proxy objects are created through the create_proxy method in Microservice.
     """
     
-    def __init__(self, url, method_preference):
+    def __init__(self, url, method_preference, json_result):
         """
         Creates the proxy object. The url argument is the service which it acts as a proxy for. The method preferences is used in case
         a service endpoint accepts several methods, in which case the first applicable in the list is used.
         """
         self.url = url
         self.method_preference = method_preference
+        self.json_result = json_result
         
         # The api of the service is fetched when the first endpoint call is made, to allow for asynchronous initiations of services.
         self.api = None
         
-        # TODO: Call the get_api service of the url here, and instantiate methods to represent each endpoint in its API.
+
     def __getattr__(self, name):
         """
         __getattr__ is overridden to intercept any method call, and translate it to a corresponding service http request.
@@ -325,11 +326,14 @@ class Proxy():
                 # Determine what http method to use, taking the first of the preferred method that the service supports.
                 http_method = next(m for m in self.method_preference if m in self.api[name]["methods"])
                 
-                # Make the call
+                # Make the endpoint request
                 result = requests.request(http_method, self.url + "/" + name, data = kwargs)
                 
-                # Decode json and return        
-                return result.json()
+                # Return result, decoded as json if desired, and otherwise as text      
+                if self.json_result:
+                    return result.json()
+                else:
+                    return result.text
             else:
                 raise AttributeError("Proxy has determined that service " + self.url + " does not provide endpoint for " + name)
 
