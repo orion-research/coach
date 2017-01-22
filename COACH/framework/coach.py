@@ -105,6 +105,8 @@ class Microservice:
         Initialize the microservice.
         """
         
+        self.proxies = []
+        
         if working_directory:
             self.working_directory = working_directory
         else:
@@ -274,6 +276,64 @@ class Microservice:
                 record["params"] = [p.name for (_, p) in inspect.signature(m).parameters.items()]
                 result[m.url_path[1:]] = record
         return json.dumps(result)
+    
+    
+    def create_proxy(self, url, method_preference = ["POST", "GET"], cache = True):
+        """
+        Returns a Proxy object representing the given url, and with method preferences as provided.
+        If cache is True, the proxy is also stored in a list within the Microservice. This makes it
+        possible to later query the Microservice for its proxies, to get a view of the architecture.
+        """
+        proxy = Proxy(url, method_preference)
+        if cache:
+            self.proxies += [proxy]
+        return proxy
+
+
+class Proxy():
+    
+    """
+    Creates a proxy for a microservice specified by a URL. This makes it possible to make service calls as if they were made to a local
+    instance of the object. It is recommended that Proxy objects are created through the create_proxy method in Microservice.
+    """
+    
+    def __init__(self, url, method_preference):
+        """
+        Creates the proxy object. The url argument is the service which it acts as a proxy for. The method preferences is used in case
+        a service endpoint accepts several methods, in which case the first applicable in the list is used.
+        """
+        self.url = url
+        self.method_preference = method_preference
+        
+        # The api of the service is fetched when the first endpoint call is made, to allow for asynchronous initiations of services.
+        self.api = None
+        
+        # TODO: Call the get_api service of the url here, and instantiate methods to represent each endpoint in its API.
+    def __getattr__(self, name):
+        """
+        __getattr__ is overridden to intercept any method call, and translate it to a corresponding service http request.
+        Note that __getattr__ is only called by Python when an attribute was not found the usual way, so looking up
+        explicitly defined attributes is not intercepted.
+        """
+        def service_call(*args, **kwargs):
+            # On first service request, get the api of the service.
+            if not self.api:
+                self.api = requests.get(self.url + "/get_api").json()
+
+            # Check if the endpoint exists, otherwise raise error
+            if name in self.api:
+                # Determine what http method to use, taking the first of the preferred method that the service supports.
+                http_method = next(m for m in self.method_preference if m in self.api[name]["methods"])
+                
+                # Make the call
+                result = requests.request(http_method, self.url + "/" + name, data = kwargs)
+                
+                # Decode json and return        
+                return result.json()
+            else:
+                raise AttributeError("Proxy has determined that service " + self.url + " does not provide endpoint for " + name)
+
+        return service_call
     
     
 class DecisionProcessService(Microservice):
