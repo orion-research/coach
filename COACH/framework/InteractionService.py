@@ -100,6 +100,7 @@ class InteractionService(coach.Microservice):
         If the case in the database has a decision method selected, its process method is fetched and included in the context.
         """
         context = kwargs
+        decision_process = ""
         try:
             decision_process = self.case_db_proxy.get_decision_process(case_id = session["case_id"])
             if decision_process:
