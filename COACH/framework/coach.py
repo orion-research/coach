@@ -223,12 +223,12 @@ class Microservice:
             """
             args = [request.values[p.name] for (_, p) in inspect.signature(m).parameters.items()]
             if self.trace: 
-                print(self.trace_indent * "    " + m.__name__ + "(" + ", ".join(args) + ")")
+                print("### " + self.trace_indent * "    " + m.__name__ + "(" + ", ".join(args) + ")")
                 self.trace_indent += 1
             result = m(*args)
             if self.trace: 
                 self.trace_indent -= 1
-                print(self.trace_indent * "    " + "result from " + m.__name__ + ": " + (str(result).split("\n", 1)[0]))
+                print("### " + self.trace_indent * "    " + "result from " + m.__name__ + ": " + (str(result).split("\n", 1)[0]))
             return result
         
         return wrapping
@@ -331,6 +331,9 @@ class Proxy():
                 
                 # Make the endpoint request
                 result = requests.request(http_method, self.url + "/" + name, data = kwargs)
+                
+                # If there was an error in the response, raise an exception
+                result.raise_for_status()
                 
                 # Return result, decoded as json if desired, and otherwise as text      
                 if self.json_result:

@@ -17,6 +17,7 @@ from COACH.framework.coach import endpoint
 
 # Standard libraries
 import json
+from string import Template
 
 # Database connection
 from neo4j.v1 import GraphDatabase, basic_auth
@@ -79,20 +80,25 @@ class CaseDatabase(coach.Microservice):
     def query(self, q, context = {}, session = None):
         """
         Function encapsulating the query interface to the database.
-        q is the query string, and context is an optional dictionary containing variables to be substituted into q.
+        q is the query string, and context is an optional dictionary containing parameters to be substituted into q.
         If a session is provided, the query is executed in that session. Otherwise, a session is created, used
         for the query, and then closed again.
         """
-        # Add the label to the context, so that it can be used in queries
-        context["label"] = self.label
-        if session:
-            return session.run(q.format(**context))
-        else:
-            # If no session was provided, create one for this query and close it when done
-            s = self.open_session()
-            result = s.run(q.format(**context))
-            self.close_session(s)
-            return result
+        try:
+            # Add the label to the context, so that it can be used in queries
+            context["label"] = self.label
+            # Build query string by substituting template parameters with their context values
+            q = Template(q).substitute(**context)
+            if session:
+                return session.run(q, context)
+            else:
+                # If no session was provided, create one for this query and close it when done
+                s = self.open_session()
+                result = s.run(q, context)
+                self.close_session(s)
+                return result
+        except Exception as e:
+            print("Error in Case Database query: " + str(e))
 
 
     @endpoint("/user_ids", ["GET"])
@@ -100,8 +106,8 @@ class CaseDatabase(coach.Microservice):
         """
         Queries the case database and returns an iterable of all user ids (the name the user uses to log in).
         """
-        q = """MATCH (u:User:{label}) RETURN u.user_id AS user_id"""
-        return Response(json.dumps([result["user_id"] for result in self.query(q, locals())]))
+        q = """MATCH (u:User:$label) RETURN u.user_id AS user_id"""
+        return Response(json.dumps([result["user_id"] for result in self.query(q)]))
     
     
     @endpoint("/user_cases", ["GET"])
@@ -110,8 +116,11 @@ class CaseDatabase(coach.Microservice):
         user_cases queries the case database and returns a list of the cases connected to the user.
         Each case is represented by a pair indicating case id and case title.
         """
-        q = """MATCH (case:Case:{label}) -[:Stakeholder]-> (user:{label} {{user_id: "{user_id}"}}) RETURN id(case) AS id, case.title AS title"""
-        return Response(json.dumps([(result["id"], result["title"]) for result in self.query(q, locals())]))
+        q = """\
+        MATCH (case:Case:$label) -[:Stakeholder]-> (user:$label {user_id: {user_id}}) 
+        RETURN id(case) AS id, case.title AS title"""
+        params = { "user_id": user_id }
+        return Response(json.dumps([(result["id"], result["title"]) for result in self.query(q, params)]))
         
     
     @endpoint("/create_user", ["POST"])
@@ -119,8 +128,9 @@ class CaseDatabase(coach.Microservice):
         """
         Creates a new user in the database, if it is not already there. 
         """
-        q = """MERGE (u:User:{label} {{user_id : "{user_id}"}})"""
-        self.query(q, locals())
+        q = """MERGE (u:User:$label {user_id : {user_id}})"""
+        params = { "user_id": user_id }
+        self.query(q, params)
         return Response(json.dumps("Ok"))
         
 
@@ -133,18 +143,20 @@ class CaseDatabase(coach.Microservice):
 
         s = self.open_session()
         # First create the new case node, and get it's id
-        q1 = """CREATE (c:Case:{label} {{title: "{title}", description: "{description}"}}) RETURN id(c) AS case_id"""
-        case_id = next(iter(self.query(q1, locals(), s)))["case_id"]
+        q1 = """CREATE (c:Case:$label {title: {title}, description: {description}}) RETURN id(c) AS case_id"""
+        params1 = { "title": title, "description": description }
+        case_id = int(self.query(q1, params1, s).single()["case_id"])
         
         # Then create the relationship
         q2 = """\
-        MATCH (c:Case:{label}), (u:User:{label})
-        WHERE id(c) = {case_id} AND u.user_id = "{initiator}"
-        CREATE (c) -[:Stakeholder {{role: "initiator"}}]-> (u)
+        MATCH (c:Case:$label), (u:User:$label)
+        WHERE id(c) = {case_id} AND u.user_id = {initiator}
+        CREATE (c) -[:Stakeholder {role: "initiator"}]-> (u)
         """
-        self.query(q2, locals(), s)
+        params2 = { "case_id": case_id, "initiator": initiator }
+        self.query(q2, params2, s)
         self.close_session(s)
-        return Response(str(case_id))        
+        return Response(json.dumps(case_id))        
         
     
     @endpoint("/change_case_description", ["POST"])
@@ -152,8 +164,9 @@ class CaseDatabase(coach.Microservice):
         """
         Changes the title and description fields of the case with case_id.
         """
-        q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} SET case.title = "{title}", case.description = "{description}" """
-        self.query(q, locals())
+        q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} SET case.title = {title}, case.description = {description}"""
+        params = { "case_id": int(case_id), "title": title, "description": description}
+        self.query(q, params)
         return Response(json.dumps("Ok"))
            
     
@@ -162,8 +175,9 @@ class CaseDatabase(coach.Microservice):
         """
         Returns a tuple containing the case title and description for the case with case_id.
         """
-        q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} RETURN case.title AS title, case.description AS description"""
-        result = next(iter(self.query(q, locals())))
+        q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} RETURN case.title AS title, case.description AS description"""
+        params = { "case_id": int(case_id) }
+        result = self.query(q, params).single()
         return Response(json.dumps((result["title"], result["description"])))
         
 
@@ -174,12 +188,13 @@ class CaseDatabase(coach.Microservice):
         If the user is already a stakeholder, nothing is changed. 
         """
         q = """\
-        MATCH (c:Case:{label}), (u:User:{label})
-        WHERE id(c) = {case_id} AND u.user_id = "{user_id}"
+        MATCH (c:Case:$label), (u:User:$label)
+        WHERE id(c) = {case_id} AND u.user_id = {user_id}
         MERGE (c) -[r:Stakeholder]-> (u)
-        ON CREATE SET r.role = "{role}"
+        ON CREATE SET r.role = {role}
         """
-        self.query(q, locals())
+        params = { "user_id": user_id, "case_id": int(case_id), "role": role}
+        self.query(q, params)
         return Response(json.dumps("Ok"))
 
 
@@ -191,16 +206,18 @@ class CaseDatabase(coach.Microservice):
 
         s = self.open_session()
         # First create the new alternative, and get it's id
-        q1 = """CREATE (a:Alternative:{label} {{title: "{title}", description: "{description}"}}) RETURN id(a) AS alt_id"""
-        new_alternative = next(iter(self.query(q1, locals(), s)))["alt_id"]
+        q1 = """CREATE (a:Alternative:$label {title: {title}, description: {description}}) RETURN id(a) AS alt_id"""
+        params1 = { "title": title, "description": description, "case_id": int(case_id) }
+        new_alternative = int(self.query(q1, params1, s).single()["alt_id"])
         
         # Then create the relationship to the case
         q2 = """\
-        MATCH (c:Case:{label}), (a:Alternative:{label})
+        MATCH (c:Case:$label), (a:Alternative:$label)
         WHERE id(c) = {case_id} AND id(a) = {new_alternative}
         CREATE (c) -[:Alternative]-> (a)
         """
-        self.query(q2, locals(), s)
+        params2 = { "new_alternative": new_alternative, "case_id": int(case_id)}
+        self.query(q2, params2, s)
         self.close_session(s)
         return Response(str(case_id))        
 
@@ -211,8 +228,9 @@ class CaseDatabase(coach.Microservice):
         Returns the decision process url of the case, or None if no decision process has been selected.
         """
         try:
-            q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} RETURN case.decision_process AS process LIMIT 1"""
-            return Response(json.dumps(next(iter(self.query(q, locals())))["process"]))
+            q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} RETURN case.decision_process AS process LIMIT 1"""
+            params = { "case_id": int(case_id)}
+            return Response(json.dumps(self.query(q, params).single()["process"]))
         except:
             return Response(json.dumps(None))
     
@@ -222,8 +240,9 @@ class CaseDatabase(coach.Microservice):
         """
         Changes the decision process url associated with a case.
         """
-        q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} SET case.decision_process = "{decision_process}" """
-        self.query(q, locals())
+        q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} SET case.decision_process = {decision_process}"""
+        params = { "case_id": int(case_id), "decision_process": decision_process}
+        self.query(q, params)
         return Response(json.dumps("Ok"))
 
     
@@ -232,8 +251,10 @@ class CaseDatabase(coach.Microservice):
         """
         Changes the property name of the case_id node to become value.
         """
-        q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} SET case.{name} = "{value}\""""
-        self.query(q, locals())
+
+        q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} SET case.$name = {value}"""
+        params = { "case_id": int(case_id), "value": value, "name": name}
+        self.query(q, params)
         return Response(json.dumps("Ok"))
 
     
@@ -243,8 +264,10 @@ class CaseDatabase(coach.Microservice):
         Gets the value of the property name of the case_id node, or None if it does not exist.
         """
         try:
-            q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} RETURN case.{name} AS name"""
-            return Response(next(iter(self.query(q, locals())))["name"])
+            q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} RETURN case.$name AS name"""
+            params = { "case_id": int(case_id), "name": name }
+            query_result = self.query(q, params).single()["name"]
+            return Response(json.dumps(query_result))
         except:
             return Response(json.dumps(None))
         
@@ -254,8 +277,12 @@ class CaseDatabase(coach.Microservice):
         """
         Gets the list of decision alternatives associated with the case_id node, returning both title and id.
         """
-        q = """MATCH (case:Case:{label}) -[:Alternative]-> (alt:Alternative:{label}) WHERE id(case) = {case_id} RETURN alt.title AS title, id(alt) AS alt_id"""
-        alternatives = [(result["title"], result["alt_id"]) for result in self.query(q, locals())]
+        q = """\
+        MATCH (case:Case:$label) -[:Alternative]-> (alt:Alternative:$label) 
+        WHERE id(case) = {case_id} 
+        RETURN alt.title AS title, id(alt) AS alt_id"""
+        params = { "case_id": int(case_id) }
+        alternatives = [(result["title"], result["alt_id"]) for result in self.query(q, params)]
         return Response(json.dumps(alternatives))
     
     
@@ -264,8 +291,10 @@ class CaseDatabase(coach.Microservice):
         """
         Changes the property name of the alternative node to become value.
         """
-        q = """MATCH (alt:Alternative:{label}) WHERE id(alt) = {alternative} SET alt.{name} = "{value}" """
-        self.query(q, locals())
+
+        q = """MATCH (alt:Alternative:$label) WHERE id(alt) = {alternative} SET alt.$name = {value}"""
+        params = { "alternative": int(alternative), "value": value, "name": name }
+        self.query(q, params)
         return Response(json.dumps("Ok"))
 
     
@@ -275,8 +304,10 @@ class CaseDatabase(coach.Microservice):
         Gets the value of the property name of the alternative node, or None if it does not exist.
         """
         try:
-            q = """MATCH (alt:Alternative:{label}) WHERE id(alt) = {alternative} RETURN alt.{name} AS name"""
-            return Response(next(iter(self.query(q, locals())))["name"])
+            q = """MATCH (alt:Alternative:$label) WHERE id(alt) = {alternative} RETURN alt.$name AS name"""
+            params = { "alternative": int(alternative), "name": name }
+            query_result = self.query(q, params).single()["name"]
+            return Response(json.dumps(query_result))
         except:
             return Response(json.dumps(None))
         
@@ -293,23 +324,24 @@ class CaseDatabase(coach.Microservice):
         graph = dict()
 
         # Get case node
-        q = """MATCH (case:Case:{label}) WHERE id(case) = {case_id} RETURN case"""
-        case_node = self.query(q, locals()).single()["case"]
+        q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} RETURN case"""
+        params = { "case_id": int(case_id)}
+        case_node = self.query(q, params).single()["case"]
         graph["case"] = {"id" : case_node.id, "properties": case_node.properties}
         
         # Get stakeholders and their roles
-        q = """MATCH (case:Case:{label}) -[role:Stakeholder]-> (user:{label})
+        q = """MATCH (case:Case:$label) -[role:Stakeholder]-> (user:$label)
                WHERE id(case) = {case_id}
                RETURN user, role"""
         graph["stakeholders"] = [{"id": result["user"].id, "properties": result["user"].properties, "role": result["role"].properties["role"]}
-                                 for result in self.query(q, locals())]
+                                 for result in self.query(q, params)]
 
         # Get alternatives
-        q = """MATCH (case:Case:{label}) -[:Alternative]-> (alt:Alternative:{label}) 
+        q = """MATCH (case:Case:$label) -[:Alternative]-> (alt:Alternative:$label) 
                WHERE id(case) = {case_id} 
                RETURN alt"""
         graph["alternatives"] = [{"id": result["alt"].id, "properties": result["alt"].properties}
-                                 for result in self.query(q, locals())]
+                                 for result in self.query(q, params)]
         
         # Return graph as json
         return Response(json.dumps(graph, indent = 4))

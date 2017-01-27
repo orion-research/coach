@@ -14,7 +14,7 @@ import subprocess
 
 # Coach modules
 from COACH.framework import coach
-from COACH.framework.coach import endpoint, get_service, post_service
+from COACH.framework.coach import endpoint, get_service
 
 # Web server framework
 from flask import Response, request, session, abort
@@ -319,6 +319,7 @@ class InteractionService(coach.Microservice):
         """
         description = self.case_db_proxy.export_case_data(case_id = session["case_id"])
         requests.post(self.get_setting("knowledge_repository") + "/add_case", data = {"description": json.dumps(description)})
+        print(description)
         return self.main_menu_transition(main_dialogue = "Exported case to knowledge repository!")
         
 

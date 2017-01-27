@@ -12,7 +12,7 @@ sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 # Coach framework
 from COACH.framework import coach
-from COACH.framework.coach import endpoint, get_service, post_service
+from COACH.framework.coach import endpoint, get_service
 
 # Standard libraries
 import json
@@ -36,8 +36,8 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         """
         # Fetch the available services from the directories available in the case_db.
         services = []
-        for d in json.loads(directories):
-            services += json.loads(get_service(d, "get_services?type=estimation_method"))
+        for d in [self.create_proxy(sd) for sd in json.loads(directories)]:
+            services += d.get_services(type="estimation_method")
 
         # Create the alternatives for a dropdown menu
         # TODO: It should show the current estimation method as preselected.
@@ -53,12 +53,13 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         """
         Endpoint which lets the user rank each of the alternatives using the selected estimation method dialogue.
         """
-        estimation_method = get_service(case_db, "get_case_property", case_id = case_id, name = "estimation_method")
+        case_db_proxy = self.create_proxy(case_db)
+
+        estimation_method = case_db_proxy.get_case_property(case_id = case_id, name = "estimation_method")
 
         if estimation_method:
             # Get the alternatives from case_db and build a list to be fitted into a dropdown menu
-            print("case_db = " + case_db)
-            decision_alternatives = json.loads(get_service(case_db, "get_decision_alternatives", case_id = case_id))
+            decision_alternatives = case_db_proxy.get_decision_alternatives(case_id = case_id)
             options = ["<OPTION value=\"%s\"> %s </A>" % (a[1], a[0]) for a in decision_alternatives]
         
             # Get the estimation method's dialogue
@@ -76,10 +77,12 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         Endpoint which shows the alternatives in rank order. Unranked alternatives are at the bottom.
         """
         # Get the alternatives for the case.
-        decision_alternatives = json.loads(get_service(case_db, "get_decision_alternatives", case_id = case_id))
+        case_db_proxy = self.create_proxy(case_db)
+
+        decision_alternatives = case_db_proxy.get_decision_alternatives(case_id = case_id)
         
         # Get the estimate for each alternative.
-        estimates = [(a[0], get_service(case_db, "get_alternative_property", alternative = a[1], name = "estimate")) for a in decision_alternatives]
+        estimates = [(a[0], case_db_proxy.get_alternative_property(alternative = a[1], name = "estimate")) for a in decision_alternatives]
 
         # Sort the ranked alternatives.
         ranked_alternatives = sorted([(a, e) for (a, e) in estimates if e], key = lambda p: float(p[1]), reverse = True)
@@ -99,7 +102,9 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         It changes the selection in the case database, and then returns a status message to be shown in the main dialogue window.
         """
         # Write the selection to the database.
-        post_service(case_db, "change_case_property", case_id = str(case_id), name = "estimation_method", value = method)
+        case_db_proxy = self.create_proxy(case_db)
+
+        case_db_proxy.change_case_property(case_id = case_id, name = "estimation_method", value = method)
         return "Estimation method changed to " + method
     
     
@@ -118,7 +123,9 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
     
         # Write estimate to the database
         # TODO: For now, just set it as an attribute of the alternative node. This needs to be improved!
-        post_service(case_db, "change_alternative_property", alternative = str(alternative), name = "estimate", value = value)
+        case_db_proxy = self.create_proxy(case_db)
+
+        case_db_proxy.change_alternative_property(alternative = str(alternative), name = "estimate", value = value)
         return "Estimate of has been changed to " + value
     
     
