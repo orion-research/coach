@@ -106,6 +106,7 @@ class InteractionService(coach.Microservice):
             if decision_process:
                 context["process_menu"] = get_service(decision_process, "process_menu", case_id = session["case_id"])
         except Exception as e:
+            # TODO: You end up here if no case has been selected, which isn't really an error!!
             print("Error in main_menu_transition, with decision_process = " + str(decision_process) + ": " + str(e))
         return render_template("main_menu.html", **context)
 
@@ -275,6 +276,7 @@ class InteractionService(coach.Microservice):
         Endpoint representing the transition to the logged out state, which is the same as the initial state.
         The user and case being worked on is deleted from the session.
         """
+        self.authentication_service_proxy.logout_user(userid = session.pop("user_id"), user_token = session.pop("user_token"))
         session.pop("user_id", None)
         session.pop("user_token", None)
         session.pop("case_id", None)

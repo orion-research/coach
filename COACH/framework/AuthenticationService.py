@@ -75,6 +75,13 @@ class AuthenticationService(Microservice):
                         for _ in range(0, length)])
 
 
+    def confirm_user_token(self, userid, user_token):
+        """
+        Returns True if the user's user token matches the provided.
+        """
+        return userid in self.users and self.users[userid]["user_token"] == user_token
+
+
     def send_email(self, recipient, title, body):
         """
         Sends an email to the designated recipient, with title and body.
@@ -126,6 +133,20 @@ class AuthenticationService(Microservice):
         return json.dumps(None)
     
 
+    @endpoint("/logout_user", ["POST"])
+    def logout_user(self, userid, user_token):
+        """
+        Revokes the user token associated with the current user, and return "Ok".
+        If the userid's user token does not match the provided, None is returned.
+        """
+        if self.confirm_user_token(userid, user_token):
+            self.users[userid].pop("user_token")
+            self.save_data()
+            return json.dumps("Ok")
+        else:
+            return json.dumps(None)
+        
+        
     @endpoint("/confirm_account", ["GET", "POST"])
     def confirm_account(self, user_id, token):
         """
@@ -190,7 +211,7 @@ class AuthenticationService(Microservice):
         Returns a new delegate token, which is also stored in the user database.
         If the userid's user token does not match the provided, None is returned.
         """
-        if userid in self.users and self.users[userid]["user_token"] == user_token:
+        if self.confirm_user_token(userid, user_token):
             delegate_token = self.get_random_token(20)
             self.users[userid]["delegate_token"] = delegate_token
             self.save_data()
@@ -205,7 +226,7 @@ class AuthenticationService(Microservice):
         Revokes the delegate token associated with the current user, and return "Ok".
         If the userid's user token does not match the provided, None is returned.
         """
-        if userid in self.users and self.users[userid]["user_token"] == user_token:
+        if self.confirm_user_token(userid, user_token):
             self.users[userid].pop("delegate_token")
             self.save_data()
             return json.dumps("Ok")
@@ -218,7 +239,7 @@ class AuthenticationService(Microservice):
         """
         Returns True if the current user token of userid matches the provided.
         """
-        if userid in self.users and "user_token" in self.users[userid]:
+        if self.confirm_user_token(userid, user_token):
             return json.dumps(self.users[userid]["user_token"] == user_token)
         else:
             return json.dumps(False)
