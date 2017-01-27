@@ -214,15 +214,19 @@ class InteractionService(coach.Microservice):
         elif not self.authentication_service_proxy.user_exists(userid = user_id):
             # If user_id does not exist, show the dialogue again with an error message
             return render_template("initial_dialogue.html", error = "NoSuchUser")
-        elif not self.authentication_service_proxy.check_user_password(userid = user_id, password = password):
-            # If the wrong password was entered, show the dialogue again with an error message
-            return render_template("initial_dialogue.html", error = "WrongPassword")
         else:
-            # Login successful, save some data in the session object, and go to main menu
-            session["user_id"] = user_id
-            # Add the user to the case db if it is not already there
-            self.case_db_proxy.create_user(user_id = user_id)
-            return self.main_menu_transition()
+            # User exists, check if the password is correct (in which case a user token string is received
+            user_token = self.authentication_service_proxy.check_user_password(userid = user_id, password = password)
+            if user_token:
+                # Login successful, save some data in the session object, and go to main menu
+                session["user_id"] = user_id
+                session["user_token"] = user_token
+                # Add the user to the case db if it is not already there
+                self.case_db_proxy.create_user(user_id = user_id)
+                return self.main_menu_transition()
+            else:
+                # If the wrong password was entered, show the dialogue again with an error message
+                return render_template("initial_dialogue.html", error = "WrongPassword")
 
 
     @endpoint("/create_user", ["POST"])
@@ -272,6 +276,7 @@ class InteractionService(coach.Microservice):
         The user and case being worked on is deleted from the session.
         """
         session.pop("user_id", None)
+        session.pop("user_token", None)
         session.pop("case_id", None)
         return render_template("initial_dialogue.html")
 

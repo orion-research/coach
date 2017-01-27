@@ -215,6 +215,12 @@ class Microservice:
 
     def endpoint_wrapper(self, m):
         
+        def highlight_text(s):
+            """
+            Prefix text with ###.
+            """
+            return "### " + s 
+        
         def wrapping():
             """
             The endpoint wrapping fetches the request values supplied for each of the method's parameter names
@@ -223,12 +229,12 @@ class Microservice:
             """
             args = [request.values[p.name] for (_, p) in inspect.signature(m).parameters.items()]
             if self.trace: 
-                print("### " + self.trace_indent * "    " + m.__name__ + "(" + ", ".join(args) + ")")
+                print(highlight_text(self.trace_indent * "    " + m.__name__ + "(" + ", ".join(args) + ")"))
                 self.trace_indent += 1
             result = m(*args)
             if self.trace: 
                 self.trace_indent -= 1
-                print("### " + self.trace_indent * "    " + "result from " + m.__name__ + ": " + (str(result).split("\n", 1)[0]))
+                print(highlight_text(self.trace_indent * "    " + "result from " + m.__name__ + ": " + (str(result).split("\n", 1)[0])))
             return result
         
         return wrapping

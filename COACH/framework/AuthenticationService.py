@@ -88,7 +88,7 @@ class AuthenticationService(Microservice):
         server.starttls()
         server.login(sender, self.email_settings["password"])
         server.sendmail(sender, recipient, message)
-        server.close
+        server.quit()
 
             
     def password_hash(self, password):
@@ -156,12 +156,16 @@ class AuthenticationService(Microservice):
     @endpoint("/check_user_password", ["POST"])
     def check_user_password(self, userid, password):
         """
-        Returns True if the hash of the given password matches the one stored in the database, and otherwise False.
+        Returns a random token if the hash of the given password matches the one stored in the database, 
+        and otherwise returns None. The token is also stored in the user database.
         """
-        if userid in self.users:
-            return json.dumps(self.users[userid]["password_hash"] == self.password_hash(password))
+        if userid in self.users and self.users[userid]["password_hash"] == self.password_hash(password):
+            user_token = self.get_random_token(20)
+            self.users[userid]["user_token"] = user_token
+            self.save_data()
+            return json.dumps(user_token)
         else:
-            return json.dumps(False) 
+            return json.dumps(None) 
     
     
     @endpoint("/get_user_email", ["GET", "POST"])
@@ -180,3 +184,52 @@ class AuthenticationService(Microservice):
         return json.dumps(self.users[userid]["name"])
 
 
+    @endpoint("/get_delegate_token", ["POST"])
+    def get_delegate_token(self, userid, user_token):
+        """
+        Returns a new delegate token, which is also stored in the user database.
+        If the userid's user token does not match the provided, None is returned.
+        """
+        if userid in self.users and self.users[userid]["user_token"] == user_token:
+            delegate_token = self.get_random_token(20)
+            self.users[userid]["delegate_token"] = delegate_token
+            self.save_data()
+            return json.dumps(delegate_token)
+        else:
+            return json.dumps(None)
+        
+        
+    @endpoint("/revoke_delegate_token", ["POST"])
+    def revoke_delegate_token(self, userid, user_token):
+        """
+        Revokes the delegate token associated with the current user, and return "Ok".
+        If the userid's user token does not match the provided, None is returned.
+        """
+        if userid in self.users and self.users[userid]["user_token"] == user_token:
+            self.users[userid].pop("delegate_token")
+            self.save_data()
+            return json.dumps("Ok")
+        else:
+            return json.dumps(None)
+        
+        
+    @endpoint("/check_user_token", ["POST"])
+    def check_user_token(self, userid, user_token):
+        """
+        Returns True if the current user token of userid matches the provided.
+        """
+        if userid in self.users and "user_token" in self.users[userid]:
+            return json.dumps(self.users[userid]["user_token"] == user_token)
+        else:
+            return json.dumps(False)
+    
+    
+    @endpoint("/check_delegate_token", ["POST"])
+    def check_delegate_token(self, userid, delegate_token):
+        """
+        Returns True if the current delegate token of userid matches the provided.
+        """
+        if userid in self.users and "delegate_token" in self.users[userid]:
+            return json.dumps(self.users[userid]["delegate_token"] == delegate_token)
+        else:
+            return json.dumps(False)
