@@ -45,7 +45,7 @@ knowledge_repository = KnowledgeRepositoryService("KnowledgeRepositoryService",
                                                   "http://127.0.0.1:7474/db/data/")
  
 # Case database
-database = CaseDatabase("CaseDatabase", "COACH case database service", "framework", "CaseDB")
+database = CaseDatabase("CaseDatabase", "COACH case database service", "framework", "CaseDB", authentication)
  
 # Root service
 root = InteractionService("InteractionService", "COACH interaction microservice for ORION project", "framework",

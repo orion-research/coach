@@ -4,40 +4,6 @@ Created on 16 mars 2016
 @author: Jakob Axelsson
 
 The module coach contains the framework for developing components for COACH in Python.
-
-
-TODO:
-Security:
-- How to handle authentication and database read/write access from other services?
-- Is it possible to restrict access for a client to only query on a limited set of the database? If so, this could be a way of letting 
-services use general querys. Otherwise, the root must provide an API for a limited set of requests.
-- The general principle for the external services is that they get access to one node in the database.
-To that node they may add attributes, and they may create subnodes linked from it.
-All this should happen through an API in the root service. The database itself should not be visible on the Internet.
-- In the root settings, it should be possible set a regexp for what email addresses are allowed, to limit user creation.
-- It is necessary to have some kind of token to ensure that access is valid after logging it. Could it be saved in the session object?
-http://stackoverflow.com/questions/32510290/how-do-you-implement-token-authentication-in-flask.
-For each user, a token with expiration is generated, and the token is also stored in the session object.
-Whenever an endpoint requiring authentication is called, it checks if the session token is still valid.
-If so, it gets a new token, and the timer is reset. If the token is no longer valid, the user is logged out.
-This can all be put into one method self.authenticate(), which is called at the beginning of each endpoint.
-
-User interface:
-- Change the menu for case management. There should be one item for stakeholders, where current stakeholders can be listed and new ones added.
-Also, one for alternatives, where existing ones can be shown, edited or deleted, and new ones added.
-- It should be possible to change passwords!
-
-Design:
-- Make proper schemas for the case database. Estimate and EstimationMethod should be their own nodes. Maybe also property?
-- Should the role of a user be part of the relation between user and decision case? Each user can have different role in different cases.
-- Put the framework in this module, and create separate modules for each concrete method/process
-
-Services:
-- Develop decision processes for AHP and Pugh.
-
-Development:
-- Add logging. All transitions should be logged, and should include data from the session object. Errors should also be logged,
-and possibly be alerted through email when in production. See http://flask.pocoo.org/docs/0.10/errorhandling/.
 """
 
 # Standard libraries
@@ -249,7 +215,7 @@ class Microservice:
         result = "<HTML>\n<H1>Endpoints of the microservice " + type(self).__name__ + "</H1>\n"
         result += "<P>NOTE: references to services should include the protocol and a trailing / (e.g. http://127.0.0.1:5002/)</P>"
         for (_, m) in inspect.getmembers(self):
-            if hasattr(m, "url_path"):
+            if hasattr(m, "url_path") and isinstance(m.url_path, str):
                 result += "<FORM action=\"" + m.url_path + "\""
                 result += " method=\"" + m.http_methods[0] + "\">\n"
                 result += "<FIELDSET>\n"
@@ -275,7 +241,9 @@ class Microservice:
         """
         result = {}
         for (_, m) in inspect.getmembers(self):
-            if hasattr(m, "url_path") and m.url_path != "/":
+            # To test if an attribute is part of the api, it must have the attribute url_path bound to a string.
+            # All proxy objects will return that it has url_path bound to a function, which is why it also has to be checked for being a string.
+            if hasattr(m, "url_path") and isinstance(m.url_path, str) and m.url_path != "/":
                 record = {}
                 record["methods"] = m.http_methods
                 record["description"] = m.__doc__

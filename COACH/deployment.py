@@ -266,12 +266,13 @@ class AuthenticationService(Service):
 
 class CaseDatabase(Service):
 
-    def __init__(self, name, description, path, label):
+    def __init__(self, name, description, path, label, authentication):
         """
         Creates a CaseDatabase object. 
         """
         super().__init__(name, description, path)
         self.label = label
+        self.authentication = authentication
         
 
     def settings(self, configuration):
@@ -280,7 +281,8 @@ class CaseDatabase(Service):
         """
         return {"description": "Settings for " + self.name,
                 "name": self.description,
-                "port": configuration.service_port(self)
+                "port": configuration.service_port(self),
+                "authentication_service": configuration.service_url(self.authentication)
                 }
 
 

@@ -49,17 +49,17 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
 
 
     @endpoint("/perform_ranking_dialogue", ["GET"])
-    def perform_ranking_dialogue_transition(self, case_db, case_id, knowledge_repository):
+    def perform_ranking_dialogue_transition(self, user_id, delegate_token, case_db, case_id, knowledge_repository):
         """
         Endpoint which lets the user rank each of the alternatives using the selected estimation method dialogue.
         """
         case_db_proxy = self.create_proxy(case_db)
 
-        estimation_method = case_db_proxy.get_case_property(case_id = case_id, name = "estimation_method")
+        estimation_method = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "estimation_method")
 
         if estimation_method:
             # Get the alternatives from case_db and build a list to be fitted into a dropdown menu
-            decision_alternatives = case_db_proxy.get_decision_alternatives(case_id = case_id)
+            decision_alternatives = case_db_proxy.get_decision_alternatives(user_id = user_id, token = delegate_token, case_id = case_id)
             options = ["<OPTION value=\"%s\"> %s </A>" % (a[1], a[0]) for a in decision_alternatives]
         
             # Get the estimation method's dialogue
@@ -72,17 +72,18 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         
 
     @endpoint("/show_ranking_dialogue", ["GET"])
-    def show_ranking_dialogue_transition(self, case_db, case_id):
+    def show_ranking_dialogue_transition(self, user_id, delegate_token, case_db, case_id):
         """
         Endpoint which shows the alternatives in rank order. Unranked alternatives are at the bottom.
         """
         # Get the alternatives for the case.
         case_db_proxy = self.create_proxy(case_db)
 
-        decision_alternatives = case_db_proxy.get_decision_alternatives(case_id = case_id)
+        decision_alternatives = case_db_proxy.get_decision_alternatives(user_id = user_id, token = delegate_token, case_id = case_id)
         
         # Get the estimate for each alternative.
-        estimates = [(a[0], case_db_proxy.get_alternative_property(alternative = a[1], name = "estimate")) for a in decision_alternatives]
+        estimates = [(a[0], case_db_proxy.get_alternative_property(user_id = user_id, token = delegate_token, case_id = case_id,
+                                                                   alternative = a[1], name = "estimate")) for a in decision_alternatives]
 
         # Sort the ranked alternatives.
         ranked_alternatives = sorted([(a, e) for (a, e) in estimates if e], key = lambda p: float(p[1]), reverse = True)
@@ -95,7 +96,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
 
 
     @endpoint("/select_estimation_method", ["POST"])
-    def select_estimation_method(self, case_db, method, case_id):
+    def select_estimation_method(self, user_id, delegate_token, case_db, method, case_id):
         """
         This method is called using POST when the user presses the select button in the select_estimation_method_dialogue.
         It gets to form parameters: case_db, which is the url of the case database server, and method, which is the url of the selected estimation method.
@@ -104,12 +105,12 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         # Write the selection to the database.
         case_db_proxy = self.create_proxy(case_db)
 
-        case_db_proxy.change_case_property(case_id = case_id, name = "estimation_method", value = method)
+        case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "estimation_method", value = method)
         return "Estimation method changed to " + method
     
     
     @endpoint("/perform_ranking", ["POST"])
-    def perform_ranking(self, case_db, alternative, estimation_method, knowledge_repository):
+    def perform_ranking(self, user_id, delegate_token, case_id, case_db, alternative, estimation_method, knowledge_repository):
         """
         This method is called using POST when the user presses the button in the estimation method dialogue as part of the ranking dialogue.
         It calculates the estimate and writes it to the database and then returns a status message showing the updated estimate value in the main dialogue window.
@@ -120,12 +121,12 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         for p in set(request.values.keys()) - {"case_db", "case_id", "estimation_method", "alternative", "directories", "endpoint"}:
             params[p] = request.values[p]
         value = get_service(estimation_method, "evaluate", **params)
-    
+            
         # Write estimate to the database
         # TODO: For now, just set it as an attribute of the alternative node. This needs to be improved!
         case_db_proxy = self.create_proxy(case_db)
-
-        case_db_proxy.change_alternative_property(alternative = str(alternative), name = "estimate", value = value)
+        case_db_proxy.change_alternative_property(user_id = user_id, token = delegate_token, case_id = case_id,
+                                                  alternative = str(alternative), name = "estimate", value = value)
         return "Estimate of has been changed to " + value
     
     

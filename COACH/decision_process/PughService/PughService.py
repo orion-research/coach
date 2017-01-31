@@ -39,48 +39,48 @@ class PughService(coach.DecisionProcessService):
         return json.loads(string)
     
     
-    def get_criteria(self, case_db, case_id):
+    def get_criteria(self, user_id, delegate_token, case_db, case_id):
         """
         Queries the case_db service for the criteria associated with a certain case_id.
         It returns a dictionary, with criteria name as keys and weights as values.
         """
         case_db_proxy = self.create_proxy(case_db)
-        criteria_string = case_db_proxy.get_case_property(case_id = case_id, name = "criteria")
+        criteria_string = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "criteria")
         if criteria_string:
             return self.string_to_dictionary(criteria_string)
         else:
             return dict()
 
 
-    def set_criteria(self, case_db, case_id, criteria):
+    def set_criteria(self, user_id, delegate_token, case_db, case_id, criteria):
         """
         Sets the criteria associated with a certain case_id in the case_db service.
         Criteria is a dictionary, which is stored as a string.
         """
         case_db_proxy = self.create_proxy(case_db)
-        case_db_proxy.change_case_property(case_id = case_id, name = "criteria", value = self.dictionary_to_string(criteria))
+        case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "criteria", value = self.dictionary_to_string(criteria))
         
 
-    def get_alternative_ranking(self, case_db, alternative_id):
+    def get_alternative_ranking(self, user_id, delegate_token, case_db, case_id, alternative_id):
         """
         Queries the case_db service for the ranking associated with a certain alternative_id.
         It returns a dictionary, with criteria name as keys and ranking for the alternative as values. 
         """
         case_db_proxy = self.create_proxy(case_db)
-        alternative_ranking_string = case_db_proxy.get_alternative_property(alternative = alternative_id, name = "ranking")
+        alternative_ranking_string = case_db_proxy.get_alternative_property(user_id = user_id, token = delegate_token, case_id = case_id, alternative = alternative_id, name = "ranking")
         if alternative_ranking_string:
             return self.string_to_dictionary(alternative_ranking_string)
         else:
             return dict()
         
 
-    def set_alternative_ranking(self, case_db, alternative_id, ranking):
+    def set_alternative_ranking(self, user_id, delegate_token, case_db, case_id, alternative_id, ranking):
         """
         Sets the ranking associated with a certain alternative_id in the case_db service.
         Ranking is a dictionary, which is stored as a string.
         """
         case_db_proxy = self.create_proxy(case_db)
-        case_db_proxy.change_alternative_property(alternative = alternative_id, name = "ranking", 
+        case_db_proxy.change_alternative_property(user_id = user_id, token = delegate_token, case_id = case_id, alternative = alternative_id, name = "ranking", 
                                                   value = self.dictionary_to_string(ranking))
         
 
@@ -92,13 +92,13 @@ class PughService(coach.DecisionProcessService):
 
 
     @endpoint("/select_baseline_dialogue", ["GET"])
-    def select_baseline_dialogue_transition(self, case_db, case_id):
+    def select_baseline_dialogue_transition(self, user_id, delegate_token, case_db, case_id):
         """
         Endpoint which lets the user select the baseline alternative.
         """
         # Get the decision alternatives from case_db and build a list to be fitted into a dropdown menu
         case_db_proxy = self.create_proxy(case_db)
-        decision_alternatives = case_db_proxy.get_decision_alternatives(case_id = case_id)
+        decision_alternatives = case_db_proxy.get_decision_alternatives(user_id = user_id, token = delegate_token, case_id = case_id)
         options = ["<OPTION value=\"%s\"> %s </A>" % (a[1], a[0]) for a in decision_alternatives]
 
         # Render the dialogue
@@ -106,7 +106,7 @@ class PughService(coach.DecisionProcessService):
         
     
     @endpoint("/select_baseline", ["POST"])
-    def select_baseline(self, case_db, baseline, case_id):
+    def select_baseline(self, user_id, delegate_token, case_db, baseline, case_id):
         """
         This method is called using POST when the user presses the select button in the select_baseline_dialogue.
         It gets two form parameters: case_db, which is the url of the case database server, and baseline, which is the id of the selected alternative.
@@ -114,8 +114,8 @@ class PughService(coach.DecisionProcessService):
         """
         # Write the selection to the database, and show a message
         case_db_proxy = self.create_proxy(case_db)
-        case_db_proxy.change_case_property(case_id = case_id, name = "baseline", value = baseline)
-        return self.matrix_dialogue_transition(case_db, case_id)    
+        case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "baseline", value = baseline)
+        return self.matrix_dialogue_transition(user_id, delegate_token, case_db, case_id)    
     
     
     @endpoint("/add_criterium_dialogue", ["GET"])
@@ -127,7 +127,7 @@ class PughService(coach.DecisionProcessService):
     
     
     @endpoint("/add_criterium", ["POST"])
-    def add_criterium(self, case_db, case_id, criterium, weight):
+    def add_criterium(self, user_id, delegate_token, case_db, case_id, criterium, weight):
         """
         This method is called using POST when the user presses the select button in the add_criterium_dialogue.
         It gets three form parameters: case_db, which is the url of the case database server, and criterium, which is the name of the new criterium,
@@ -135,27 +135,27 @@ class PughService(coach.DecisionProcessService):
         assigned to the criteria attribute of the case node. 
         """
         # Get the current set of criteria from the case database, add the new one to the set, and write it back to the database.
-        criteria = self.get_criteria(case_db, case_id)
+        criteria = self.get_criteria(user_id, delegate_token, case_db, case_id)
         criteria[criterium] = weight
-        self.set_criteria(case_db, case_id, criteria)
+        self.set_criteria(user_id, delegate_token, case_db, case_id, criteria)
             
         # Go to the matrix dialogue state
-        return self.matrix_dialogue_transition(case_db, case_id)    
+        return self.matrix_dialogue_transition(user_id, delegate_token, case_db, case_id)    
     
     
     @endpoint("/change_criterium_dialogue", ["GET"])
-    def change_criterium_dialogue_transition(self, case_db, case_id):
+    def change_criterium_dialogue_transition(self, user_id, delegate_token, case_db, case_id):
         """
         Endpoint which shows the dialogue for changing criteria.
         """
-        criteria = self.get_criteria(case_db, case_id).keys()
+        criteria = self.get_criteria(user_id, delegate_token, case_db, case_id).keys()
         options = ["<OPTION value=\"%s\"> %s </A>" % (c, c) for c in criteria]
         
         return render_template("change_criterium_dialogue.html", criteria = options)
     
     
     @endpoint("/change_criterium", ["POST"])
-    def change_criterium(self, case_db, case_id, criterium, new_name, new_weight, action):
+    def change_criterium(self, user_id, delegate_token, case_db, case_id, criterium, new_name, new_weight, action):
         """
         This method is called using POST when the user presses either the change criterium or delete criterium buttons in the 
         change_criterium_dialogue. The form parameters are case_db and case_id, the current name of the criterium to change, 
@@ -164,7 +164,7 @@ class PughService(coach.DecisionProcessService):
         alternative. 
         """
         # Change or delete the criterium name in the list of criteria in the case node
-        criteria = self.get_criteria(case_db, case_id)
+        criteria = self.get_criteria(user_id, delegate_token, case_db, case_id)
         if action == "Delete criterium":
             del criteria[criterium]
         else:
@@ -179,45 +179,45 @@ class PughService(coach.DecisionProcessService):
                 # Only name has changed
                 criteria[new_name] = criteria[criterium]
                 del criteria[criterium]
-        self.set_criteria(case_db, case_id, criteria)
+        self.set_criteria(user_id, delegate_token, case_db, case_id, criteria)
         
         # Change or delete the criterium name and weight in the rankings in each alternative node
         case_db_proxy = self.create_proxy(case_db)
-        decision_alternatives = case_db_proxy.get_decision_alternatives(case_id = case_id)
+        decision_alternatives = case_db_proxy.get_decision_alternatives(user_id = user_id, token = delegate_token, case_id = case_id)
         alternative_ids = [a[1] for a in decision_alternatives]
 
         for a in alternative_ids:
-            alternative_ranking = self.get_alternative_ranking(case_db, a)
+            alternative_ranking = self.get_alternative_ranking(user_id, delegate_token, case_db, case_id, a)
             if criterium in alternative_ranking:
                 if new_name and action == "Change criterium":
                     alternative_ranking[new_name] = alternative_ranking[criterium]
                     del alternative_ranking[criterium]
                 elif action == "Delete criterium":
                     del alternative_ranking[criterium]
-                self.set_alternative_ranking(case_db, a, alternative_ranking)
+                self.set_alternative_ranking(user_id, delegate_token, case_db, case_id, a, alternative_ranking)
         
         return "Changed criterium!"
     
     
     @endpoint("/matrix_dialogue", ["GET"])
-    def matrix_dialogue_transition(self, case_db, case_id):
+    def matrix_dialogue_transition(self, user_id, delegate_token, case_db, case_id):
         """
         Endpoint which shows the Pugh matrix dialogue.
         """
         # Get alternatives from the database
         case_db_proxy = self.create_proxy(case_db)
-        decision_alternatives = case_db_proxy.get_decision_alternatives(case_id = case_id)
+        decision_alternatives = case_db_proxy.get_decision_alternatives(user_id = user_id, token = delegate_token, case_id = case_id)
         alternatives = [a[0] for a in decision_alternatives]
         alternative_ids = [a[1] for a in decision_alternatives]
         
         # Get criteria from the database
-        weights = self.get_criteria(case_db, case_id)
+        weights = self.get_criteria(user_id, delegate_token, case_db, case_id)
         criteria = weights.keys()
         
         # Get rankings from the database
         ranking = dict()
         for a in alternative_ids:
-            ranking[a] = self.get_alternative_ranking(case_db, a)
+            ranking[a] = self.get_alternative_ranking(user_id, delegate_token, case_db, case_id, a)
         
         # Set default value to zero for missing rankings
         for a in alternative_ids:
@@ -234,7 +234,7 @@ class PughService(coach.DecisionProcessService):
     
     
     @endpoint("/change_rating", ["POST"])
-    def change_rating(self, case_db, case_id):
+    def change_rating(self, user_id, delegate_token, case_db, case_id):
         """
         This method is called using POST when the user presses the save button in the Pugh matrix dialogue. It updates the values
         of the ranking of each alternative according to the current values in the dialogue.
@@ -242,19 +242,19 @@ class PughService(coach.DecisionProcessService):
         # Get alternatives from the database
         case_db_proxy = self.create_proxy(case_db)
 
-        decision_alternatives = case_db_proxy.get_decision_alternatives(case_id = case_id)
+        decision_alternatives = case_db_proxy.get_decision_alternatives(user_id = user_id, token = delegate_token, case_id = case_id)
         alternative_ids = [a[1] for a in decision_alternatives]
         
         # Get criteria from the database
-        criteria = self.get_criteria(case_db, case_id).keys()
+        criteria = self.get_criteria(user_id, delegate_token, case_db, case_id).keys()
 
         # For each alternative, build a map from criteria to value and write it to the database
         for a in alternative_ids:
             ranking = { c : request.values[str(a) + ":" + c] for c in criteria }
-            self.set_alternative_ranking(case_db, a, ranking)
+            self.set_alternative_ranking(user_id, delegate_token, case_db, case_id, a, ranking)
 
         # Show the updated matrix        
-        return self.matrix_dialogue_transition(case_db, case_id)    
+        return self.matrix_dialogue_transition(user_id, delegate_token, case_db, case_id)    
         
 
 if __name__ == '__main__':
