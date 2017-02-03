@@ -7,7 +7,7 @@ The module coach contains the framework for developing components for COACH in P
 """
 
 # Standard libraries
-from inspect import getmro
+import inspect
 import json
 import logging
 import os
@@ -15,12 +15,7 @@ import threading
 
 # Web server framework
 from flask import Flask, Response, request
-from flask.views import View
-
 import requests
-
-
-import inspect
 
 
 # Auxiliary functions
@@ -65,7 +60,7 @@ class Microservice:
     Microservice is the base class of all microservices. It contains the functionality for setting up a service that can act as a stand-alone web server.
     """
     
-    def __init__(self, settings_file_name, handling_class = None, working_directory = None):
+    def __init__(self, settings_file_name, working_directory = None):
         """
         Initialize the microservice.
         """
@@ -78,8 +73,10 @@ class Microservice:
         else:
             self.working_directory = os.getcwd()
         
-        self.handling_class = handling_class
-
+        print("working_directory = "  + working_directory)
+        class_path = os.path.dirname(inspect.getabsfile(self.__class__))
+        print("class_path = " + class_path)
+        
         # Read settings from settings_file_name
         self.load_settings(settings_file_name)
 
@@ -123,10 +120,7 @@ class Microservice:
         If the MicroService has a handling class, this class's name is used first.
         """
         # Get the list of parent classes in method resolution order.
-        if self.handling_class:
-            parents = [self.handling_class.__name__] + [cls.__name__ for cls in getmro(self.__class__)]
-        else:
-            parents = [cls.__name__ for cls in getmro(self.__class__)]
+        parents = [cls.__name__ for cls in inspect.getmro(self.__class__)]
         # Look for the key in each parent's dictionary, and return the first found.
         for p in parents:
             try:
@@ -339,68 +333,28 @@ class DecisionProcessService(Microservice):
 class EstimationMethodService(Microservice):
     
     """
-    Generic class for wrapping estimation methods into a web service. Normally, a contributer of an estimation method would not need to change this class,
-    but only provide the handling EstimationMethod class.
+    Base clase for estimation method services. Subclasses should add the endpoints /info and /evaluate, and may redefine also the /dialogue endpoints.
+    If the method has parameters, the subclasses should also redefine the method parameter_names.
     """
     
-    def create_endpoints(self):
-        # Initialize the default API
-        super(EstimationMethodService, self).create_endpoints()
+    def __init__(self, settings_file_name, working_directory = None):
+        super().__init__(settings_file_name, working_directory = working_directory)
 
-        # Add endpoint for estimation service specific methods
-        self.ms.add_url_rule("/info", view_func = self.handling_class.as_view("info"))
-        self.ms.add_url_rule("/dialogue", view_func = self.handling_class.as_view("dialogue"))
-        self.ms.add_url_rule("/evaluate", view_func = self.handling_class.as_view("evaluate"))
-        
 
-class Method(View):
-
-    """
-    Base class for all methods, implementing the dispatch mechanism for service endpoints.
-    All concrete subclasses should implement the following method:
-    /info - implemented by the info method
-    """
-
-    def dispatch_request(self):
+    def parameter_names(self):
         """
-        Dispatches each endpoint request to a separate function in the handling class.
+        Returns the parameter names for this estimation method. Subclasses should redefine this method.
         """
-        # Call the method of the object that corresponds to the endpoint name
-        result = getattr(self, request.endpoint)(self.get_params())
+        return []
+    
 
-        # Create a response, and add some standard header information
-        response = Response(result)
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        return response
-
-
-class EstimationMethod(Method):
-    
-    """
-    This is the base class for EstimationMethods.
-    Concrete instances should implement the following methods:
-    /dialogue?param1=val1&...&paramN=valN - implemented by the dialogue method
-    /evaluate?param1=val1&...&paramN=valN - implemented by the evaluate method
-    """
-    
-    def get_params(self):
-        """
-        Returns a dictionary with value provided in the HTTP request for each of the
-        parameters defined in the parameterNames() method defines in a subclass.
-        """
-        params = {}
-        for n in self.parameter_names():
-            params[n] = request.args.get(n, "")
-        return params
-    
-    
-    def dialogue(self, params):
+    @endpoint("/dialogue", ["GET", "POST"])
+    def dialogue(self):
         """
         Returns a HTML snippet with one text box for each parameter, which can be inserted into a web page.
         """
         
         entries = ""
-        for n in self.get_params():
+        for n in self.parameter_names():
             entries = entries + n + ": <INPUT TYPE=\"text\" name=\"" + n + "\"><BR>"
-        return entries
+        return Response(entries)

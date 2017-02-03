@@ -12,7 +12,7 @@ sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 # Coach framework
 from COACH.framework import coach
-from COACH.framework.coach import endpoint, get_service
+from COACH.framework.coach import endpoint
 
 # Standard libraries
 import json
@@ -63,7 +63,8 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
             options = ["<OPTION value=\"%s\"> %s </A>" % (a[1], a[0]) for a in decision_alternatives]
         
             # Get the estimation method's dialogue
-            estimation_dialogue = get_service(estimation_method, "dialogue", knowledge_repository = knowledge_repository)
+            estimation_method_proxy = self.create_proxy(estimation_method, json_result = False)
+            estimation_dialogue = estimation_method_proxy.dialogue(knowledge_repository = knowledge_repository)
         
             return render_template("perform_ranking_dialogue.html", options = options, estimation_dialogue = estimation_dialogue, 
                                    estimation_method = estimation_method)
@@ -120,14 +121,16 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         params = {"knowledge_repository" : knowledge_repository}
         for p in set(request.values.keys()) - {"case_db", "case_id", "estimation_method", "alternative", "directories", "endpoint"}:
             params[p] = request.values[p]
-        value = get_service(estimation_method, "evaluate", **params)
+        
+        estimation_method_proxy = self.create_proxy(estimation_method)
+        value = estimation_method_proxy.evaluate(**params)
             
         # Write estimate to the database
         # TODO: For now, just set it as an attribute of the alternative node. This needs to be improved!
         case_db_proxy = self.create_proxy(case_db)
         case_db_proxy.change_alternative_property(user_id = user_id, token = delegate_token, case_id = case_id,
                                                   alternative = str(alternative), name = "estimate", value = value)
-        return "Estimate of has been changed to " + value
+        return "Estimate of has been changed to " + str(value)
     
     
 if __name__ == '__main__':

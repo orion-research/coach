@@ -23,6 +23,5 @@ if sys.version_info[0] < 3:
 
 from COACH.framework import coach
 
-application = coach.EstimationMethodService(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
-                                                    handling_class = AverageOfTwo.AverageOfTwo,
+application = AverageOfTwo.AverageOfTwo(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
                                                     working_directory = "/var/www/COACH/COACH/estimation_method/AverageOfTwo").ms

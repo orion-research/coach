@@ -37,12 +37,12 @@ class DirectoryService(coach.Microservice):
     See also paper on SECO quality assurance, and select techniques from there.
     """
     
-    def __init__(self, settings_file_name, handling_class = None, working_directory = None):
+    def __init__(self, settings_file_name, working_directory = None):
         """
         Initializes the microservice, and then reads the data file of registered services from a json file,
         or creates a json file if none exists.
         """
-        super().__init__(settings_file_name, handling_class, working_directory)
+        super().__init__(settings_file_name, working_directory)
         
         self.file_name = self.get_setting("directory_file_name")
         try:

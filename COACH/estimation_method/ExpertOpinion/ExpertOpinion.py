@@ -7,27 +7,33 @@ import os
 import sys
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
+import json
 
-from COACH.framework import coach
+from flask import Response
+
+from COACH.framework.coach import endpoint, EstimationMethodService
 
 
-class ExpertOpinion(coach.EstimationMethod):
+class ExpertOpinion(EstimationMethodService):
     """
     This is a simple example of an estimation method.
     It takes one parameter, and just returns it.
     """
     
-    def info(self, params):
-        return "This is an estimation method which takes one parameters (X), and returns it."
-    
-    
     def parameter_names(self):
         return ["x"]
     
     
-    def evaluate(self, params):
-        return str(float(params["x"]))
+    @endpoint("/info", ["GET", "POST"])
+    def info(self):
+        return Response("This is an estimation method which takes one parameters (X), and returns it.")
+    
+    
+    @endpoint("/evaluate", ["GET", "POST"])
+    def evaluate(self, x):
+        result = float(x)
+        return Response(json.dumps(result))
 
 
 if __name__ == '__main__':
-    coach.EstimationMethodService(sys.argv[1], ExpertOpinion).run()
+    ExpertOpinion(sys.argv[1]).run()

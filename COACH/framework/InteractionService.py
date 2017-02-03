@@ -32,7 +32,7 @@ class InteractionService(coach.Microservice):
     users to a decision case, and selecting the decision process. Every installation of COACH has exactly one instance of this class.
     """
     
-    def __init__(self, settings_file_name, secret_data_file_name, handling_class = None, working_directory = None):
+    def __init__(self, settings_file_name, secret_data_file_name, working_directory = None):
         """
         Initialize the RootService object. The secret_args argument should be a list of three strings:
         1. The database user name.
@@ -41,7 +41,7 @@ class InteractionService(coach.Microservice):
         These are kept outside the settings file to ensure that they do not spread when files are shared in a repository.
         """
         
-        super().__init__(settings_file_name, handling_class = handling_class, working_directory = working_directory)
+        super().__init__(settings_file_name, working_directory = working_directory)
 
         # Read secret data file
         with open(os.path.join(self.working_directory, os.path.normpath(secret_data_file_name)), "r") as file:

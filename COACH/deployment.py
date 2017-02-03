@@ -571,9 +571,7 @@ class EstimationMethodService(Service):
         result = """    
     wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
     os.chdir(wdir)
-    coach.EstimationMethodService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
-                              handling_class = {name}.{name},
-                              working_directory = wdir).run()
+    {name}.{name}(os.path.join(topdir, os.path.normpath("{settings_file_name}")), working_directory = wdir).run()
 """
         return result.format(name = self.name, file_path = file_path, settings_file_name = configuration.settings_file_name)
 
@@ -588,41 +586,32 @@ import os
 import sys
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
+from flask import Response
 
-from COACH.framework import coach
+# Coach framework
+from COACH.framework.coach import endpoint, EstimationMethodService
 
-
-class {name}(coach.EstimationMethod):
-    
-    def info(self, params):
-        return "This is an undefined estimation method."
-    
+class {name}(EstimationMethodService):
     
     def parameter_names(self):
+        # If the estimation method has no parameters, this method can be removed.
         return []
     
     
+    @endpoint("/info", ["GET", "PUT"])
+    def info(self):
+        return Response("This is a template for estimation methods. It currently takes no parameters, and always returns 0.")
+    
+    
+    @endpoint("/evaluate", ["GET", "PUT"])
     def evaluate(self, params):
-        return str(0.0)
+        return Response(str(0))
 
 
 if __name__ == '__main__':
-    coach.EstimationMethodService(sys.argv[1], {name}).run()
+    {name}(sys.argv[1]).run()
 """
         return template.format(name = self.name)
-
-
-    def wsgi_application(self, configuration):
-        """
-        Returns the wsgi application call for this service.
-        For an estimation method, the application is apways coach.EstimationMethodService, which takes an extra argument 
-        indicating the handling class.
-        """
-        template = """coach.EstimationMethodService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                                    handling_class = {package_name}.{name},
-                                                    working_directory = "/var/www/COACH/COACH/{file_path}").ms"""
-        return template.format(name = self.name, package_name = self.path.split(".")[-1], 
-                               file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
     
 class Configuration(object):
