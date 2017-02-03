@@ -36,53 +36,30 @@ if __name__ == '__main__':
         
         # Start all the services
     
-    wdir = os.path.join(topdir, os.path.normpath("estimation_method/AverageOfTwo"))
-    os.chdir(wdir)
-    AverageOfTwo.AverageOfTwo(os.path.join(topdir, os.path.normpath("local_settings.json")), working_directory = wdir).run()
+    AverageOfTwo.AverageOfTwo(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
     
-    wdir = os.path.join(topdir, os.path.normpath("context_model"))
-    os.chdir(wdir)
-    ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
-                                                              working_directory = wdir).run()
+    ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
 
-    wdir = os.path.join(topdir, os.path.normpath("framework"))
-    os.chdir(wdir)
     InteractionService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
-                       os.path.normpath("settings/root_secret_data.json"),
-                       working_directory = wdir).run()
+                       os.path.normpath("settings/root_secret_data.json")).run()
     
-    wdir = os.path.join(topdir, os.path.normpath("decision_process/SimpleDecisionProcessService"))
-    os.chdir(wdir)
-    SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.join(topdir, os.path.normpath("local_settings.json")), working_directory = wdir).run()
+    SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
     
-    wdir = os.path.join(topdir, os.path.normpath("estimation_method/ExpertOpinion"))
-    os.chdir(wdir)
-    ExpertOpinion.ExpertOpinion(os.path.join(topdir, os.path.normpath("local_settings.json")), working_directory = wdir).run()
+    ExpertOpinion.ExpertOpinion(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
     
-    wdir = os.path.join(topdir, os.path.normpath("decision_process/PughService"))
-    os.chdir(wdir)
-    PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json")), working_directory = wdir).run()
+    PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
     
     wdir = os.path.join(topdir, "framework")
     os.chdir(wdir)
     KnowledgeRepositoryService.KnowledgeRepositoryService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
                                                     os.path.normpath("settings/root_secret_data.json"),
                                                     working_directory = wdir).run()
-    
-    wdir = os.path.join(topdir, os.path.normpath("framework"))
-    os.chdir(wdir)
-    DirectoryService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
-                    working_directory = os.path.join(topdir, "framework")).run()
 
-    wdir = os.path.join(topdir, os.path.normpath("framework"))
-    os.chdir(wdir)
+    DirectoryService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+
     AuthenticationService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
-                            os.path.normpath("settings/root_secret_data.json"),
-                            working_directory = wdir).run()
+                            os.path.normpath("settings/root_secret_data.json")).run()
 
-    wdir = os.path.join(topdir, os.path.normpath("framework"))
-    os.chdir(wdir)
     CaseDatabase(os.path.join(topdir, os.path.normpath("local_settings.json")), 
                  os.path.normpath("settings/root_secret_data.json"),
-                 "CaseDB",
-                 working_directory = wdir).run()
+                 "CaseDB").run()

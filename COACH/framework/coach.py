@@ -53,14 +53,17 @@ class Microservice:
         # Create cache for proxies
         self.proxies = {}
         
+#        if working_directory:
+#            self.working_directory = working_directory
+#        else:
+#            self.working_directory = os.getcwd()
+        
+        # Set the working directory to where the concrete class of which the microservice is an instance resides
         if working_directory:
             self.working_directory = working_directory
         else:
-            self.working_directory = os.getcwd()
-        
-        print("working_directory = "  + working_directory)
-        class_path = os.path.dirname(inspect.getabsfile(self.__class__))
-        print("class_path = " + class_path)
+            self.working_directory = os.path.dirname(inspect.getabsfile(self.__class__))
+        os.chdir(self.working_directory)
         
         # Read settings from settings_file_name
         self.load_settings(settings_file_name)
@@ -71,7 +74,7 @@ class Microservice:
 
         # Create the microservice
         self.ms = Flask(self.name)
-        self.ms.root_path = working_directory
+        self.ms.root_path = self.working_directory
         
         # If a log file name is provided, enable logging to that file
         if "logfile" in self.settings:
