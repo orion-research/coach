@@ -14,7 +14,7 @@ import subprocess
 
 # Coach modules
 from COACH.framework import coach
-from COACH.framework.coach import endpoint, get_service
+from COACH.framework.coach import endpoint
 
 # Web server framework
 from flask import Response, request, session, abort
@@ -101,14 +101,15 @@ class InteractionService(coach.Microservice):
         """
         context = kwargs
         decision_process = ""
-        try:
-            decision_process = self.case_db_proxy.get_decision_process(user_id = session["user_id"], user_token = session["user_token"],
-                                                                       case_id = session["case_id"])
-            if decision_process:
-                context["process_menu"] = get_service(decision_process, "process_menu", case_id = session["case_id"])
-        except Exception as e:
-            # TODO: You end up here if no case has been selected, which isn't really an error!!
-            print("Error in main_menu_transition, with decision_process = " + str(decision_process) + ": " + str(e))
+        if "case_id" in session:
+            try:
+                decision_process = self.case_db_proxy.get_decision_process(user_id = session["user_id"], user_token = session["user_token"],
+                                                                           case_id = session["case_id"])
+                if decision_process:
+                    decision_process_proxy = self.create_proxy(decision_process, json_result = False)
+                    context["process_menu"] = decision_process_proxy.process_menu(case_id = session["case_id"])
+            except Exception as e:
+                print("Error in main_menu_transition, with decision_process = " + str(decision_process) + ": " + str(e))
         return render_template("main_menu.html", **context)
 
 

@@ -39,21 +39,6 @@ def endpoint(url_path, http_methods):
     return decorator
 
 
-def get_service(url, endpoint, **kwargs):
-    """
-    get_service is a convenience function for calling a microservice using the http method get.
-    The result of the service is returned as text. 
-    """
-    return requests.get(url + "/"  + endpoint, params = kwargs).text
-
-
-def post_service(url, endpoint, **kwargs):
-    """
-    post_service is a convenience function for calling a microservice using the http method post.
-    """
-    return requests.post(url + "/"  + endpoint, data = kwargs).text
-
-
 class Microservice:
     
     """
