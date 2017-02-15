@@ -11,12 +11,12 @@ import inspect
 import json
 import logging
 import os
+import sys
 import threading
 
 # Web server framework
 from flask import Flask, Response, request
 import requests
-
 
 # Auxiliary functions
         
@@ -62,7 +62,16 @@ class Microservice:
         if working_directory:
             self.working_directory = working_directory
         else:
-            self.working_directory = os.path.dirname(inspect.getabsfile(self.__class__))
+#            print("Module of class = " + self.__module__)
+#            print("File of coach.py = " + __file__)
+#            print("sys.path[0] = " + sys.path[0])
+            self.working_directory = os.path.join(sys.path[0], "/".join(self.__module__.split(".")[1:-1]))
+#            self.working_directory = os.path.join(os.path.dirname(os.path.abspath(COACH.__file__)), "/".join(self.__module__.split(".")[1:-1]))
+#            self.working_directory = os.path.dirname(inspect.getabsfile(self.__class__))
+#            self.working_directory = os.path.dirname(os.path.abspath(inspect.stack()[0][1]))
+#            self.working_directory = os.path.dirname(os.path.abspath(inspect.getframeinfo(inspect.currentframe()).filename))
+#            self.working_directory = os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda:0)))
+#            print("Current directory = " + self.working_directory)
         os.chdir(self.working_directory)
         
         # Read settings from settings_file_name

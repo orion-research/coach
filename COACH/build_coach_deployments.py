@@ -47,7 +47,15 @@ knowledge_repository = KnowledgeRepositoryService("KnowledgeRepositoryService",
 # Case database
 database = CaseDatabase("CaseDatabase", "COACH case database service", "framework", "CaseDB", authentication)
  
-# Root service
+# Knowledge inference service
+knowledge_inference = KnowledgeInferenceService("KnowledgeInferenceService",
+                                                "Knowledge inference microservice for the ORION project",
+                                                "framework",
+                                                database,
+                                                knowledge_repository) 
+
+ 
+# Interaction service
 root = InteractionService("InteractionService", "COACH interaction microservice for ORION project", "framework",
                           database, [directory], authentication,
                           knowledge_repository, context_model)
@@ -65,7 +73,8 @@ services_with_ports = {directory : 5003,
                        average_of_two : 5004,
                        expert_opinion : 5001,
                        database: 5008, 
-                       authentication : 5009}
+                       authentication : 5009,
+                       knowledge_inference : 5010 }
 
 local_services_with_ports = services_with_ports.copy()
 local_services_with_ports[root] = 5000

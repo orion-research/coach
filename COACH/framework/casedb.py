@@ -34,7 +34,7 @@ class CaseDatabase(coach.Microservice):
     This is useful for being able to analyze decision processes. 
     """
 
-    def __init__(self, settings_file_name, secret_data_file_name, label, working_directory = None):
+    def __init__(self, settings_file_name, secret_data_file_name, working_directory = None):
         """
         Initiates the database at the provided url using the provided credentials.
         label indicates a label attached to all nodes used by this database, to distinguish them from nodes created by 
@@ -49,7 +49,7 @@ class CaseDatabase(coach.Microservice):
 
         self.root_service_url = self.get_setting("protocol") + "://" + self.get_setting("host") + ":" + str(self.get_setting("port"))
 
-        self.label = label
+        self.label = self.get_setting("label")
         
         # Store authentication service connection
         self.authentication_service_proxy = self.create_proxy(self.get_setting("authentication_service"))

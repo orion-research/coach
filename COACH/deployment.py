@@ -180,11 +180,8 @@ class InteractionService(Service):
 
         file_path = "/".join(self.path.split("."))
         result = """
-    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
-    os.chdir(wdir)
     InteractionService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
-                       os.path.normpath("settings/root_secret_data.json"),
-                       working_directory = wdir).run()
+                       os.path.normpath("settings/root_secret_data.json")).run()
 """
         return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
@@ -243,11 +240,8 @@ class AuthenticationService(Service):
 
         file_path = "/".join(self.path.split("."))
         result = """
-    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
-    os.chdir(wdir)
     AuthenticationService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
-                            os.path.normpath("settings/root_secret_data.json"),
-                            working_directory = wdir).run()
+                            os.path.normpath("settings/root_secret_data.json")).run()
 """
         return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
@@ -282,6 +276,7 @@ class CaseDatabase(Service):
         return {"description": "Settings for " + self.name,
                 "name": self.description,
                 "port": configuration.service_port(self),
+                "label": self.label,
                 "authentication_service": configuration.service_url(self.authentication)
                 }
 
@@ -301,14 +296,10 @@ class CaseDatabase(Service):
 
         file_path = "/".join(self.path.split("."))
         result = """
-    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
-    os.chdir(wdir)
     CaseDatabase(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
-                 os.path.normpath("settings/root_secret_data.json"),
-                 "{label}",
-                 working_directory = wdir).run()
+                 os.path.normpath("settings/root_secret_data.json")).run()
 """
-        return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path, label = self.label)
+        return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
     
     def wsgi_application(self, configuration):
@@ -317,12 +308,10 @@ class CaseDatabase(Service):
         The case database service uses the application name coach.CaseDatabase, and has an extra argument point to the secret data and one for the node label.
         """
         template = """CaseDatabase(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                         os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
-                                         "{label}",
+                                         os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json")
                                          working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
-                               file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name,
-                               label = self.label)
+                               file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
 
 class DirectoryService(Service):
@@ -362,10 +351,7 @@ class DirectoryService(Service):
 
         file_path = "/".join(self.path.split("."))
         result = """    
-    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
-    os.chdir(wdir)
-    DirectoryService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
-                    working_directory = os.path.join(topdir, "framework")).run()
+    DirectoryService(os.path.join(topdir, os.path.normpath("{settings_file_name}"))).run()
 """
         return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
@@ -407,10 +393,7 @@ class ContextModelService(Service):
         """
 
         result = """    
-    wdir = os.path.join(topdir, os.path.normpath("context_model"))
-    os.chdir(wdir)
-    ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
-                                                              working_directory = wdir).run()
+    ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("{settings_file_name}"))).run()
 """
         return result.format(settings_file_name = configuration.settings_file_name)
 
@@ -500,9 +483,7 @@ class DecisionProcessService(Service):
         
         file_path = "/".join(self.path.split("."))
         result = """    
-    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
-    os.chdir(wdir)
-    {name}.{name}(os.path.join(topdir, os.path.normpath("{settings_file_name}")), working_directory = wdir).run()
+    {name}.{name}(os.path.join(topdir, os.path.normpath("{settings_file_name}"))).run()
 """
         return result.format(name = self.name, file_path = file_path, settings_file_name = configuration.settings_file_name)
 
@@ -569,9 +550,7 @@ class EstimationMethodService(Service):
         
         file_path = "/".join(self.path.split("."))
         result = """    
-    wdir = os.path.join(topdir, os.path.normpath("{file_path}"))
-    os.chdir(wdir)
-    {name}.{name}(os.path.join(topdir, os.path.normpath("{settings_file_name}")), working_directory = wdir).run()
+    {name}.{name}(os.path.join(topdir, os.path.normpath("{settings_file_name}"))).run()
 """
         return result.format(name = self.name, file_path = file_path, settings_file_name = configuration.settings_file_name)
 
@@ -612,6 +591,52 @@ if __name__ == '__main__':
     {name}(sys.argv[1]).run()
 """
         return template.format(name = self.name)
+
+    
+class KnowledgeInferenceService(Service):
+
+    def __init__(self, name, description, path, database, knowledge_repository):
+        """
+        Creates a KnowledgeRepositoryService object. In addition to the Service, it has the following parameter:
+        - database: a url to the database where knowledge is stored.
+        """
+        super().__init__(name, description, path)
+        self.database = database
+        self.knowledge_repository = knowledge_repository
+
+
+    def settings(self, configuration):
+        """
+        Returns the settings for a KnowledgeInferenceService object in the given configuration.
+        """
+        return {"description": "Settings for " + self.name,
+                "name": self.description,
+                "port": configuration.service_port(self),
+                "database": configuration.service_url(self.database),
+                "knowledge_repository": configuration.service_url(self.knowledge_repository)
+                }
+
+    
+    def launch_statement(self, configuration):
+        """
+        Returns a Python statement that launches this service in a given configuration.
+        """
+        
+        file_path = "/".join(self.path.split("."))
+        result = """    
+    {name}.{name}(os.path.join(topdir, os.path.normpath("{settings_file_name}"))).run()
+"""
+        return result.format(name = self.name, file_path = file_path, settings_file_name = configuration.settings_file_name)
+
+    
+    def wsgi_application(self, configuration):
+        """
+        Returns the wsgi application call for this service.
+        """
+        template = """KnowledgeInferenceService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
+                                                working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        return template.format(name = self.name, package_name = self.path.split(".")[-1], 
+                               file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
     
 class Configuration(object):
