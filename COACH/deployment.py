@@ -762,23 +762,12 @@ from COACH.framework import coach
 
         launch_local += """
 if __name__ == '__main__':
-    try:
-        # This will work if running script from command line (Windows or Linux)
-        # For some reason, it does not work if starting from within Eclipse
-        topdir = os.path.abspath(os.curdir)
-        
-        # Start root service and directory service from the framework module
-        wdir = os.path.join(topdir, "framework")
-        os.chdir(wdir)
-    except:
-        # Workaround for starting in Eclipse
-        topdir = os.path.join(os.path.abspath(os.curdir), "COACH")
-
-        # Start root service and directory service from the framework module
-        wdir = os.path.join(topdir, "framework")
-        os.chdir(wdir)
-        
-        # Start all the services
+    # Start root service and directory service from the framework module
+    topdir = os.path.dirname(os.path.abspath(__file__))
+    wdir = os.path.join(topdir, "framework")
+    os.chdir(wdir)
+    
+    # Start all the services
 """
 
         for s in self.services_with_ports.keys():
