@@ -308,7 +308,7 @@ class CaseDatabase(Service):
         The case database service uses the application name coach.CaseDatabase, and has an extra argument point to the secret data and one for the node label.
         """
         template = """CaseDatabase(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                         os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json")
+                                         os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
                                          working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)

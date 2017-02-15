@@ -6,20 +6,19 @@ import sys
 sys.path.append(os.path.join(os.curdir, os.pardir))
 
 from COACH.framework import coach
+from COACH.context_model import ContextModelService
+from COACH.framework import KnowledgeInferenceService
+from COACH.estimation_method.AverageOfTwo import AverageOfTwo
+from COACH.framework.casedb import CaseDatabase
+from COACH.framework.DirectoryService import DirectoryService
+from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
 from COACH.knowledge_repository import KnowledgeRepositoryService
 from COACH.framework.AuthenticationService import AuthenticationService
-from COACH.estimation_method.AverageOfTwo import AverageOfTwo
-from COACH.framework import KnowledgeInferenceService
-from COACH.estimation_method.ExpertOpinion import ExpertOpinion
-from COACH.framework.InteractionService import InteractionService
-from COACH.framework.casedb import CaseDatabase
-from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
-from COACH.context_model import ContextModelService
 from COACH.decision_process.PughService import PughService
-from COACH.framework.DirectoryService import DirectoryService
+from COACH.framework.InteractionService import InteractionService
+from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 
 if __name__ == '__main__':
-    """
     try:
         # This will work if running script from command line (Windows or Linux)
         # For some reason, it does not work if starting from within Eclipse
@@ -37,11 +36,22 @@ if __name__ == '__main__':
         os.chdir(wdir)
         
         # Start all the services
-    """
-    topdir = os.path.dirname(os.path.abspath(__file__))
+    
+    ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+    
+    KnowledgeInferenceService.KnowledgeInferenceService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+    
+    AverageOfTwo.AverageOfTwo(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+
+    CaseDatabase(os.path.join(topdir, os.path.normpath("local_settings.json")), 
+                 os.path.normpath("settings/root_secret_data.json")).run()
+    
+    DirectoryService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+    
+    SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+    
     wdir = os.path.join(topdir, "framework")
-    print("wdir = " + wdir)
-#    os.chdir(wdir)
+    os.chdir(wdir)
     KnowledgeRepositoryService.KnowledgeRepositoryService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
                                                     os.path.normpath("settings/root_secret_data.json"),
                                                     working_directory = wdir).run()
@@ -49,22 +59,9 @@ if __name__ == '__main__':
     AuthenticationService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
                             os.path.normpath("settings/root_secret_data.json")).run()
     
-    AverageOfTwo.AverageOfTwo(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
-    
-    KnowledgeInferenceService.KnowledgeInferenceService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
-    
-    ExpertOpinion.ExpertOpinion(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+    PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
 
     InteractionService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
                        os.path.normpath("settings/root_secret_data.json")).run()
-
-    CaseDatabase(os.path.join(topdir, os.path.normpath("local_settings.json")), 
-                 os.path.normpath("settings/root_secret_data.json")).run()
     
-    SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
-    
-    ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
-    
-    PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
-    
-    DirectoryService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+    ExpertOpinion.ExpertOpinion(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
