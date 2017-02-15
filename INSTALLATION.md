@@ -30,6 +30,8 @@ Having installed Python 3.x (whatever the latest version is), and the pip packag
 	$ pip install flask
 	$ pip install requests
 	$ pip install neo4j-driver==1.0.0
+	$ pip install rdflib
+	$ pip install rdflib-jsonld
 
 (In some installations, you have to use pip3 instead of pip in the above commands.)
 
@@ -144,7 +146,9 @@ Having installed Python 3.x (whatever the latest version is), and the pip packag
 	$ source developmentenv/bin/activate
 	$ sudo pip install flask
 	$ sudo pip install requests
-	$ pip install neo4j-driver==1.0.0
+	$ sudo pip install neo4j-driver==1.0.0
+	$ sudo pip install rdflib
+	$ sudo pip install rdflib-jsonld
 
 
 ## COACH source code
