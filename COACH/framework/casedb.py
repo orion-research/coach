@@ -22,6 +22,9 @@ from string import Template
 # Database connection
 from neo4j.v1 import GraphDatabase, basic_auth
 
+# Semantic web framework
+import rdflib
+
 
 class CaseDatabase(coach.Microservice):
     
@@ -387,17 +390,75 @@ class CaseDatabase(coach.Microservice):
         else:
             return Response("Invalid user or delegate token")
         
+        
+    @endpoint("/get_ontology", ["GET", "POST"])
+    def get_ontology(self, format):
+        """
+        Returns the base OWL ontology used by this case database. The base ontology may be extended by services.
+        The format parameter indicates which serialization format should be used.
+        """
+        # Create the name spaces
+        owl = rdflib.OWL
+        rdf = rdflib.RDF
+        rdfs = rdflib.RDFS
+        xsd = rdflib.XSD
+        orion = rdflib.Namespace("https://github.com/orion-research/coach/tree/master/COACH/ontology#")  # The name space for the ontology used
+        
+        # Create the graph and bind the name spaces    
+        ontology = rdflib.ConjunctiveGraph()
+        ontology.bind("orion", orion)
+                
+        triples = [
+            # Define the attribute types id, title
+            (orion.id, rdf.type, owl.DatatypeProperty),
+            (orion.id, rdfs.range, xsd.positiveInteger),
+            
+            (orion.title, rdf.type, owl.DatatypeProperty),
+            (orion.title, rdfs.range, xsd.string),
+                
+            # Define Case class and attributes id, title, ... (more to be added)
+            (orion.Case, rdf.type, owl.Class),
+            (orion.id, rdfs.domain, orion.Case),
+            (orion.title, rdfs.domain, orion.Case),
+            
+            # Define User class and attributes id, user_id
+            (orion.User, rdf.type, owl.Class),
+            (orion.id, rdfs.domain, orion.User),
+
+            (orion.user_id, rdf.type, owl.DatatypeProperty),
+            (orion.user_id, rdfs.domain, orion.User),
+            (orion.user_id, rdfs.range, xsd.string),
+                             
+            # Define Alternative class and attributes id, title, ... (more to be added)
+            (orion.Alternative, rdf.type, owl.Class),       
+            (orion.id, rdfs.domain, orion.Alternative),
+            
+            # Define Stakeholder_in class and attribute role
+            (orion.Stakeholder_in, rdf.type, owl.Class),       
+            (orion.role, rdf.type, owl.DatatypeProperty),
+            (orion.role, rdfs.domain, orion.Stakeholder_in),
+            (orion.role, rdfs.range, xsd.string)
+        ]
+        for t in triples:
+            ontology.add(t)
+        
+        # Serialize the ontology graph
+        return Response(json.dumps(ontology.serialize(format = format).decode("utf-8")))
+     
     
     @endpoint("/export_case_data", ["GET"])
-    def export_case_data(self, user_id, user_token, case_id):
+    def export_case_data(self, user_id, user_token, case_id, format):
         """
         Returns all data stored in the database concerning a specific case, with sufficient information to be able to
-        restore an equivalent version of it.
+        restore an equivalent version of it. The format parameter indicates how the result should be returned.
+        Here, "json" indicates a json-format which the knowledge repository for case data can import.
+        All other format strings are passed on to a function in rdflib for creating RDF triples.
         
         TODO: It should be possible to set the level of detail on what gets exported.
         """
 
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            # Build the graph as a dictionary based tree
             graph = dict()
     
             # Get case node
@@ -419,8 +480,54 @@ class CaseDatabase(coach.Microservice):
                    RETURN alt"""
             graph["alternatives"] = [{"id": result["alt"].id, "properties": result["alt"].properties}
                                      for result in self.query(q, params)]
-            
-            # Return graph as json
-            return Response(json.dumps(graph, indent = 4))
+
+            # Serialize the graph on an appropriate format
+            if format == "json":
+                # Serialize graph as json
+                return Response(json.dumps(graph, indent = 4))
+            else:
+                # Serialize case data as RDF triples by transforming graph to an rdflib graph, and then serialize it using the formats provided in the rdflib.
+
+                # Create the name spaces
+                ns = rdflib.Namespace(self.host + "/#")  # The name space for this data source
+                orion = rdflib.Namespace("https://github.com/orion-research/coach/tree/master/COACH/ontology#")  # The name space for the ontology used
+                rdf = rdflib.RDF
+
+                # Create the graph and bind the name spaces    
+                rdfgraph = rdflib.ConjunctiveGraph()
+                rdfgraph.bind("ns", ns)
+                rdfgraph.bind("orion", orion)
+                
+                # Add the case node and its properties
+                case_node = ns.case + str(graph["case"]["id"])
+                rdfgraph.add((case_node, rdf.type, orion.Case))
+                rdfgraph.add((case_node, orion.id, rdflib.Literal(graph["case"]["id"])))
+                for (p, v) in graph["case"]["properties"].items():
+                    rdfgraph.add((case_node, orion[p], rdflib.Literal(v)))
+                
+                # Add the stakeholders and their relationships, which is represented by a blank "stakeholder_in" node.
+                for s in graph["stakeholders"]:
+                    user_node = ns.user + str(s["id"])
+                    rdfgraph.add((user_node, rdf.type, orion.User))
+                    rdfgraph.add((user_node, orion.id, rdflib.Literal(s["id"])))
+                    rdfgraph.add((user_node, orion.user_id, rdflib.Literal(s["properties"]["user_id"])))
+
+                    rel_node = rdflib.BNode()
+                    rdfgraph.add((rel_node, rdf.type, orion.Stakeholder_in))
+                    rdfgraph.add((rel_node, rdf.type, orion.is_stakeholder))
+                    rdfgraph.add((rel_node, orion.role, rdflib.Literal(s["role"])))
+                    rdfgraph.add((rel_node, orion.case, case_node))
+                    rdfgraph.add((rel_node, orion.user, user_node))
+                    
+                # Add the alternatives and their relationships
+                for a in graph["alternatives"]:
+                    alt_node = ns.alternative + str(a["id"])
+                    rdfgraph.add((alt_node, rdf.type, orion.alternative))
+                    rdfgraph.add((alt_node, orion.id, rdflib.Literal(a["id"])))
+                    for (p, v) in a["properties"].items():
+                        rdfgraph.add((alt_node, orion[p], rdflib.Literal(v)))
+                    rdfgraph.add((case_node, orion.alternative, alt_node))
+
+                return Response(rdfgraph.serialize(format = format))
         else:
             return Response("Invalid user token")    

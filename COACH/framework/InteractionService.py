@@ -347,7 +347,7 @@ class InteractionService(coach.Microservice):
         Exports the current case to the knowledge repository.
         """
         description = self.case_db_proxy.export_case_data(user_id = session["user_id"], user_token = session["user_token"],
-                                                          case_id = session["case_id"])
+                                                          case_id = session["case_id"], format = "json")
         requests.post(self.get_setting("knowledge_repository") + "/add_case", data = {"description": json.dumps(description)})
         print(description)
         return self.main_menu_transition(main_dialogue = "Exported case to knowledge repository!")
@@ -360,6 +360,14 @@ class InteractionService(coach.Microservice):
         """
         return Response(json.dumps(self.get_setting("service_directories")))
 
+
+    @endpoint("/get_ontology", ["GET", "POST"])
+    def get_ontology(self, format):
+        """
+        Returns the base OWL ontology used by the core services in the service specified by the format parameter.
+        """
+        return Response(self.case_db_proxy.get_ontology(format = format))
+    
     
     @endpoint("/github_update", ["GET", "POST"])
     def github_update(self):
