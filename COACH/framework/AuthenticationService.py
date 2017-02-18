@@ -22,7 +22,7 @@ class AuthenticationService(Microservice):
     Also, it provides functionality for generating and handling tokens. 
     """
 
-    def __init__(self, settings_file_name, secret_data_file_name, working_directory = None):
+    def __init__(self, settings_file_name = None, working_directory = None):
         """
         Initializes the user database from file, if the file exists, or otherwise creates an empty file.
         """
@@ -30,6 +30,7 @@ class AuthenticationService(Microservice):
         super().__init__(settings_file_name, working_directory = working_directory)
 
         # Read secret data file
+        secret_data_file_name = self.get_setting("secret_data_file_name")
         with open(os.path.join(self.working_directory, os.path.normpath(secret_data_file_name)), "r") as file:
             fileData = file.read()
         secret_data = json.loads(fileData)

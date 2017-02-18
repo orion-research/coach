@@ -6,7 +6,6 @@ import sys
 sys.path.append(os.path.join(os.curdir, os.pardir))
 
 from COACH.framework import coach
-from COACH.context_model import ContextModelService
 from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
 from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.framework.DirectoryService import DirectoryService
@@ -16,6 +15,7 @@ from COACH.decision_process.PughService import PughService
 from COACH.framework import KnowledgeInferenceService
 from COACH.framework.InteractionService import InteractionService
 from COACH.framework.casedb import CaseDatabase
+from COACH.context_model import ContextModelService
 from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 
 if __name__ == '__main__':
@@ -25,8 +25,6 @@ if __name__ == '__main__':
     os.chdir(wdir)
     
     # Start all the services
-    
-    ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
     
     SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
     
@@ -40,8 +38,7 @@ if __name__ == '__main__':
                                                     os.path.normpath("settings/root_secret_data.json"),
                                                     working_directory = wdir).run()
 
-    AuthenticationService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
-                            os.path.normpath("settings/root_secret_data.json")).run()
+    AuthenticationService().run()
     
     PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
     
@@ -50,5 +47,7 @@ if __name__ == '__main__':
     InteractionService().run()
 
     CaseDatabase().run()
+    
+    ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
     
     ExpertOpinion.ExpertOpinion(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()

@@ -219,7 +219,8 @@ class AuthenticationService(Service):
                 "port": configuration.service_port(self),
                 "logfile": "root.log",
                 "authentication_database": self.authentication,
-                "email": self.email
+                "email": self.email,
+                "secret_data_file_name": "settings/root_secret_data.json"
                 }
 
 
@@ -238,8 +239,7 @@ class AuthenticationService(Service):
 
         file_path = "/".join(self.path.split("."))
         result = """
-    AuthenticationService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
-                            os.path.normpath("settings/root_secret_data.json")).run()
+    AuthenticationService().run()
 """
         return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
@@ -249,9 +249,7 @@ class AuthenticationService(Service):
         Returns the wsgi application call for this service.
         The root service uses the application name coach.InteractionService, and has an extra argument point to the secret data.
         """
-        template = """AuthenticationService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                            os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
-                                            working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        template = """AuthenticationService().ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
