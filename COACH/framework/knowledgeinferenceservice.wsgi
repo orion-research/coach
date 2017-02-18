@@ -14,7 +14,7 @@ with open(activate_this) as file_:
 sys.path.append("/var/www/COACH/COACH/framework")
 sys.path.append("/var/www/COACH")
 
-from COACH.framework import KnowledgeInferenceService
+from COACH.framework.KnowledgeInferenceService import KnowledgeInferenceService
 
 
 if sys.version_info[0] < 3:

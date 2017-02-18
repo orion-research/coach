@@ -18,5 +18,15 @@
         "estimation_method",
         "Expert opinion estimation method",
         "http://127.0.0.1:5001"
+    ],
+    [
+        "knowledge_repository",
+        "COACH case database service",
+        "http://127.0.0.1:5008"
+    ],
+    [
+        "knowledge_repository",
+        "Knowledge repository microservice for the ORION project",
+        "http://127.0.0.1:5005"
     ]
 ]

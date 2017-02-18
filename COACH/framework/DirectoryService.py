@@ -59,7 +59,7 @@ class DirectoryService(coach.Microservice):
                 
     
     @endpoint("/get_services", ["GET"])
-    def get_services(self):
+    def get_services(self, service_type):
         """
         Returns a list of available services of the given type, in json format.
         To allow the user to manually edit the file, it is first read from file into self.services.
@@ -69,7 +69,6 @@ class DirectoryService(coach.Microservice):
             data = file.read()
             self.services = json.loads(data)
 
-        service_type = request.values["type"]
         if service_type:
             return json.dumps([s for s in self.services if s[0] == service_type])
         else:

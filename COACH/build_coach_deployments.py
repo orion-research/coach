@@ -22,17 +22,10 @@ average_of_two = EstimationMethodService("AverageOfTwo", "Average of two estimat
 expert_opinion = EstimationMethodService("ExpertOpinion", "Expert opinion estimation method",
                                          "estimation_method.ExpertOpinion")
 
-services_listed_in_directory = [simple, pugh, average_of_two, expert_opinion]
-
-
 # Authentication service
 authentication = AuthenticationService("AuthenticationService", "Authentication service for COACH", "framework",
                                        "settings/authentication.json", 
                                        {"server": "send.one.com", "port": 587, "sender": "noreply@orion-research.se"})
-
-# Directory services
-directory = DirectoryService("DirectoryService", "Directory service for COACH", "framework",
-                             services_listed_in_directory) 
 
 # Context model services
 context_model = ContextModelService("ContextModelService", "A context model service for COACH",
@@ -54,14 +47,20 @@ knowledge_inference = KnowledgeInferenceService("KnowledgeInferenceService",
                                                 database,
                                                 knowledge_repository) 
 
- 
+
+# Directory services
+services_listed_in_directory = [simple, pugh, average_of_two, expert_opinion, database, knowledge_repository]
+
+directory = DirectoryService("DirectoryService", "Directory service for COACH", "framework",
+                             services_listed_in_directory) 
+
 # Interaction service
 root = InteractionService("InteractionService", "COACH interaction microservice for ORION project", "framework",
                           database, [directory], authentication,
                           knowledge_repository, context_model)
 
 
-all_services = [services_listed_in_directory] + [root, directory, context_model, knowledge_repository]
+all_services = [services_listed_in_directory] + [root, directory, context_model]
 
 # Configurations on which the services will be deployed
 

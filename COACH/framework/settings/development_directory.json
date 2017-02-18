@@ -18,5 +18,15 @@
         "estimation_method",
         "Expert opinion estimation method",
         "https://orion.sics.se:5001"
+    ],
+    [
+        "knowledge_repository",
+        "COACH case database service",
+        "https://orion.sics.se:5008"
+    ],
+    [
+        "knowledge_repository",
+        "Knowledge repository microservice for the ORION project",
+        "https://orion.sics.se:5005"
     ]
 ]

@@ -265,6 +265,13 @@ class CaseDatabase(Service):
         self.authentication = authentication
         
 
+    def directory_entry(self, configuration):
+        """
+        Returns a list representing a directory entry that indicates how this service is deployed on the given configuration.
+        """
+        return ["knowledge_repository", self.description, configuration.service_url(self)] 
+
+
     def settings(self, configuration):
         """
         Returns the settings for a database object in the given configuration.
@@ -410,6 +417,13 @@ class KnowledgeRepositoryService(Service):
         self.database = database
 
 
+    def directory_entry(self, configuration):
+        """
+        Returns a list representing a directory entry that indicates how this service is deployed on the given configuration.
+        """
+        return ["knowledge_repository", self.description, configuration.service_url(self)] 
+
+
     def settings(self, configuration):
         """
         Returns the settings for a KnowledgeRepositoryService object in the given configuration.
@@ -506,7 +520,7 @@ class {name}(coach.DecisionProcessService):
         return "Automatically generated process menu for {name}"
         
 if __name__ == '__main__':
-        {name}(sys.argv[1]).run()
+        {name}().run()
 """
         return template.format(name = self.name)
 
@@ -575,7 +589,7 @@ class {name}(EstimationMethodService):
 
 
 if __name__ == '__main__':
-    {name}(sys.argv[1]).run()
+    {name}().run()
 """
         return template.format(name = self.name)
 
@@ -604,6 +618,14 @@ class KnowledgeInferenceService(Service):
                 }
 
     
+    def import_statement(self):
+        """
+        Returns an import statement for this service.
+        This is used both for generating wsgi-files and launch files.
+        """
+        return "from COACH." + self.path + "." + self.name + " import " + self.name + "\n"
+
+
     def launch_statement(self, configuration):
         """
         Returns a Python statement that launches this service in a given configuration.
@@ -611,7 +633,7 @@ class KnowledgeInferenceService(Service):
         
         file_path = "/".join(self.path.split("."))
         result = """    
-    {name}.{name}().run()
+    KnowledgeInferenceService().run()
 """
         return result.format(name = self.name, file_path = file_path, settings_file_name = configuration.settings_file_name)
 

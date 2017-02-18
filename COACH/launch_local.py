@@ -6,39 +6,39 @@ import sys
 sys.path.append(os.path.join(os.curdir, os.pardir))
 
 from COACH.framework import coach
-from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
-from COACH.estimation_method.AverageOfTwo import AverageOfTwo
-from COACH.framework.DirectoryService import DirectoryService
-from COACH.knowledge_repository import KnowledgeRepositoryService
-from COACH.framework.AuthenticationService import AuthenticationService
-from COACH.decision_process.PughService import PughService
 from COACH.framework.casedb import CaseDatabase
-from COACH.framework import KnowledgeInferenceService
+from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.context_model import ContextModelService
 from COACH.framework.InteractionService import InteractionService
+from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
+from COACH.framework.AuthenticationService import AuthenticationService
+from COACH.decision_process.PughService import PughService
+from COACH.framework.KnowledgeInferenceService import KnowledgeInferenceService
+from COACH.knowledge_repository import KnowledgeRepositoryService
+from COACH.framework.DirectoryService import DirectoryService
 from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 
 if __name__ == '__main__':
     # Start all the services
-    
-    SimpleDecisionProcessService.SimpleDecisionProcessService().run()
-    
-    AverageOfTwo.AverageOfTwo().run()
-    
-    DirectoryService().run()
-    
-    KnowledgeRepositoryService.KnowledgeRepositoryService().run()
-
-    AuthenticationService().run()
-    
-    PughService.PughService().run()
 
     CaseDatabase().run()
     
-    KnowledgeInferenceService.KnowledgeInferenceService().run()
+    AverageOfTwo.AverageOfTwo().run()
     
     ContextModelService.ContextModelService().run()
 
     InteractionService().run()
+    
+    SimpleDecisionProcessService.SimpleDecisionProcessService().run()
+
+    AuthenticationService().run()
+    
+    PughService.PughService().run()
+    
+    KnowledgeInferenceService().run()
+    
+    KnowledgeRepositoryService.KnowledgeRepositoryService().run()
+    
+    DirectoryService().run()
     
     ExpertOpinion.ExpertOpinion().run()
