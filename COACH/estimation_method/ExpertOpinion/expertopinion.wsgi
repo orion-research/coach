@@ -23,5 +23,4 @@ if sys.version_info[0] < 3:
 
 from COACH.framework import coach
 
-application = ExpertOpinion.ExpertOpinion(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
-                                                    working_directory = "/var/www/COACH/COACH/estimation_method/ExpertOpinion").ms
+application = ExpertOpinion.ExpertOpinion().ms

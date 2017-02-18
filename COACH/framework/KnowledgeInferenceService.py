@@ -25,7 +25,7 @@ import rdflib
 
 class KnowledgeInferenceService(coach.Microservice):
     
-    def __init__(self, settings_file_name, working_directory = None):
+    def __init__(self, settings_file_name = None, working_directory = None):
         """
         Initiates the KnowledgeInferenceService.
         """

@@ -23,5 +23,4 @@ if sys.version_info[0] < 3:
 
 from COACH.framework import coach
 
-application = DirectoryService(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
-                                        working_directory = os.path.abspath("/var/www/COACH/COACH/framework")).ms
+application = DirectoryService().ms

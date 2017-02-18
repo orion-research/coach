@@ -355,7 +355,7 @@ class EstimationMethodService(Microservice):
     If the method has parameters, the subclasses should also redefine the method parameter_names.
     """
     
-    def __init__(self, settings_file_name, working_directory = None):
+    def __init__(self, settings_file_name = None, working_directory = None):
         super().__init__(settings_file_name, working_directory = working_directory)
 
 

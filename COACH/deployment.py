@@ -87,10 +87,10 @@ application = {application}
         """
         Returns the wsgi application call for this service.
         """
-        template = """{package_name}.{name}(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                                    working_directory = "/var/www/COACH/COACH/{file_path}").ms"""
+        template = """{package_name}.{name}().ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
+
 
     def virtual_host(self, port, configuration):
         """
@@ -345,7 +345,7 @@ class DirectoryService(Service):
 
         file_path = "/".join(self.path.split("."))
         result = """    
-    DirectoryService(os.path.join(topdir, os.path.normpath("{settings_file_name}"))).run()
+    DirectoryService().run()
 """
         return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
@@ -363,8 +363,7 @@ class DirectoryService(Service):
         Returns the wsgi application call for this service.
         The directory service uses the application coach.DirectoryService.
         """
-        template = """DirectoryService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                        working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        template = """DirectoryService().ms"""
         return template.format(file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
 
@@ -387,7 +386,7 @@ class ContextModelService(Service):
         """
 
         result = """    
-    ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("{settings_file_name}"))).run()
+    ContextModelService.ContextModelService().run()
 """
         return result.format(settings_file_name = configuration.settings_file_name)
 
@@ -396,8 +395,7 @@ class ContextModelService(Service):
         """
         Returns the wsgi application call for this service.
         """
-        template = """ContextModelService.ContextModelService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                                    working_directory = "/var/www/COACH/COACH/{file_path}").ms"""
+        template = """ContextModelService.ContextModelService().ms"""
         return template.format(file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
 
@@ -430,8 +428,6 @@ class KnowledgeRepositoryService(Service):
         """
 
         result = """    
-    wdir = os.path.join(topdir, "framework")
-    os.chdir(wdir)
     KnowledgeRepositoryService.KnowledgeRepositoryService().run()
 """
         return result.format(settings_file_name = configuration.settings_file_name)
@@ -474,7 +470,7 @@ class DecisionProcessService(Service):
         
         file_path = "/".join(self.path.split("."))
         result = """    
-    {name}.{name}(os.path.join(topdir, os.path.normpath("{settings_file_name}"))).run()
+    {name}.{name}().run()
 """
         return result.format(name = self.name, file_path = file_path, settings_file_name = configuration.settings_file_name)
 
@@ -541,7 +537,7 @@ class EstimationMethodService(Service):
         
         file_path = "/".join(self.path.split("."))
         result = """    
-    {name}.{name}(os.path.join(topdir, os.path.normpath("{settings_file_name}"))).run()
+    {name}.{name}().run()
 """
         return result.format(name = self.name, file_path = file_path, settings_file_name = configuration.settings_file_name)
 
@@ -615,7 +611,7 @@ class KnowledgeInferenceService(Service):
         
         file_path = "/".join(self.path.split("."))
         result = """    
-    {name}.{name}(os.path.join(topdir, os.path.normpath("{settings_file_name}"))).run()
+    {name}.{name}().run()
 """
         return result.format(name = self.name, file_path = file_path, settings_file_name = configuration.settings_file_name)
 
@@ -624,8 +620,7 @@ class KnowledgeInferenceService(Service):
         """
         Returns the wsgi application call for this service.
         """
-        template = """KnowledgeInferenceService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                                working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        template = """KnowledgeInferenceService().ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
@@ -753,11 +748,6 @@ from COACH.framework import coach
 
         launch_local += """
 if __name__ == '__main__':
-    # Start root service and directory service from the framework module
-    topdir = os.path.dirname(os.path.abspath(__file__))
-    wdir = os.path.join(topdir, "framework")
-    os.chdir(wdir)
-    
     # Start all the services
 """
 

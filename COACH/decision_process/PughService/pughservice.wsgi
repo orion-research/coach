@@ -23,5 +23,4 @@ if sys.version_info[0] < 3:
 
 from COACH.framework import coach
 
-application = PughService.PughService(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
-                                                    working_directory = "/var/www/COACH/COACH/decision_process/PughService").ms
+application = PughService.PughService().ms
