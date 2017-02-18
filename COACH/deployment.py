@@ -596,14 +596,14 @@ if __name__ == '__main__':
     
 class KnowledgeInferenceService(Service):
 
-    def __init__(self, name, description, path, database, knowledge_repository):
+    def __init__(self, name, description, path, database, directory):
         """
         Creates a KnowledgeRepositoryService object. In addition to the Service, it has the following parameter:
-        - database: a url to the database where knowledge is stored.
+        - directory: a url to the directory that contains links to knowledge repositories.
         """
         super().__init__(name, description, path)
         self.database = database
-        self.knowledge_repository = knowledge_repository
+        self.directory = directory
 
 
     def settings(self, configuration):
@@ -614,7 +614,7 @@ class KnowledgeInferenceService(Service):
                 "name": self.description,
                 "port": configuration.service_port(self),
                 "database": configuration.service_url(self.database),
-                "knowledge_repository": configuration.service_url(self.knowledge_repository)
+                "directory": configuration.service_url(self.directory)
                 }
 
     

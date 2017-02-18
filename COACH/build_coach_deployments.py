@@ -40,19 +40,19 @@ knowledge_repository = KnowledgeRepositoryService("KnowledgeRepositoryService",
 # Case database
 database = CaseDatabase("CaseDatabase", "COACH case database service", "framework", "CaseDB", authentication)
  
-# Knowledge inference service
-knowledge_inference = KnowledgeInferenceService("KnowledgeInferenceService",
-                                                "Knowledge inference microservice for the ORION project",
-                                                "framework",
-                                                database,
-                                                knowledge_repository) 
-
-
 # Directory services
 services_listed_in_directory = [simple, pugh, average_of_two, expert_opinion, database, knowledge_repository]
 
 directory = DirectoryService("DirectoryService", "Directory service for COACH", "framework",
                              services_listed_in_directory) 
+
+# Knowledge inference service
+knowledge_inference = KnowledgeInferenceService("KnowledgeInferenceService",
+                                                "Knowledge inference microservice for the ORION project",
+                                                "framework",
+                                                database,
+                                                directory) 
+
 
 # Interaction service
 root = InteractionService("InteractionService", "COACH interaction microservice for ORION project", "framework",

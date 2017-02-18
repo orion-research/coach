@@ -7,15 +7,15 @@ sys.path.append(os.path.join(os.curdir, os.pardir))
 
 from COACH.framework import coach
 from COACH.framework.casedb import CaseDatabase
+from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
 from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.context_model import ContextModelService
 from COACH.framework.InteractionService import InteractionService
-from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
+from COACH.framework.DirectoryService import DirectoryService
 from COACH.framework.AuthenticationService import AuthenticationService
 from COACH.decision_process.PughService import PughService
-from COACH.framework.KnowledgeInferenceService import KnowledgeInferenceService
 from COACH.knowledge_repository import KnowledgeRepositoryService
-from COACH.framework.DirectoryService import DirectoryService
+from COACH.framework.KnowledgeInferenceService import KnowledgeInferenceService
 from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 
 if __name__ == '__main__':
@@ -23,22 +23,22 @@ if __name__ == '__main__':
 
     CaseDatabase().run()
     
+    SimpleDecisionProcessService.SimpleDecisionProcessService().run()
+    
     AverageOfTwo.AverageOfTwo().run()
     
     ContextModelService.ContextModelService().run()
 
     InteractionService().run()
     
-    SimpleDecisionProcessService.SimpleDecisionProcessService().run()
+    DirectoryService().run()
 
     AuthenticationService().run()
     
     PughService.PughService().run()
     
-    KnowledgeInferenceService().run()
-    
     KnowledgeRepositoryService.KnowledgeRepositoryService().run()
     
-    DirectoryService().run()
+    KnowledgeInferenceService().run()
     
     ExpertOpinion.ExpertOpinion().run()

@@ -198,13 +198,17 @@ class InteractionService(coach.Microservice):
     @endpoint("/add_stakeholder_dialogue", ["GET"])
     def add_stakeholder_dialogue_transition(self):
         # Create links to the decision processes
-        # Get all users who exist both in the authentication list and in the case DB
+        # Get the users who are currently stakeholders in the case
+        case_users = self.case_db_proxy.case_users(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
+
+        # Get all users who exist both in the authentication list and in the case DB but are not stakeholders already
         user_ids = [u for u in self.case_db_proxy.user_ids(user_id = session["user_id"], user_token = session["user_token"]) 
                     if self.authentication_service_proxy.user_exists(user_id = u)]
-        users = [(u, self.authentication_service_proxy.get_user_name(user_id = u)) for u in user_ids]
-        links = ["<A HREF=\"/add_stakeholder?stakeholder=%s\"> %s </A>" % pair for pair in users]
+        new_users = [(u, self.authentication_service_proxy.get_user_name(user_id = u)) for u in user_ids if u not in case_users]
+
+        links = ["<A HREF=\"/add_stakeholder?stakeholder=%s\"> %s </A>" % pair for pair in new_users]
         
-        dialogue = render_template("add_stakeholder_dialogue.html", stakeholders = links)
+        dialogue = render_template("add_stakeholder_dialogue.html", case_users = case_users, new_users = links)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
@@ -361,8 +365,8 @@ class InteractionService(coach.Microservice):
         return Response(json.dumps(self.get_setting("service_directories")))
 
 
-    @endpoint("/get_ontology", ["GET", "POST"])
-    def get_ontology(self, format):
+    @endpoint("/ontology", ["GET", "POST"])
+    def ontology(self, format):
         """
         Returns the base OWL ontology used by the core services in the service specified by the format parameter.
         """

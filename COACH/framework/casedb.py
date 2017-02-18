@@ -160,6 +160,22 @@ class CaseDatabase(coach.Microservice):
             return Response("Invalid user token")
         
     
+    @endpoint("/case_users", ["GET"])
+    def case_users(self, user_id, user_token, case_id):
+        """
+        Returns a list of ids of the users who are currently stakeholders in the case with case_id.
+        """
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            q = """\
+            MATCH (case:Case:$label) -[:Stakeholder]-> (user:$label) 
+            WHERE id(case) = {case_id}
+            RETURN user.user_id AS user_id"""
+            params = { "case_id": int(case_id) }
+            return Response(json.dumps([result["user_id"] for result in self.query(q, params)]))
+        else:
+            return Response("Invalid user token")
+        
+        
     @endpoint("/create_user", ["POST"])
     def create_user(self, user_id, user_token):
         """
@@ -528,6 +544,6 @@ class CaseDatabase(coach.Microservice):
                         rdfgraph.add((alt_node, orion[p], rdflib.Literal(v)))
                     rdfgraph.add((case_node, orion.alternative, alt_node))
 
-                return Response(rdfgraph.serialize(format = format))
+                return Response(json.dumps(rdfgraph.serialize(format = format).decode("utf-8")))
         else:
             return Response("Invalid user token")    

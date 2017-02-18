@@ -85,8 +85,8 @@ class KnowledgeInferenceService(coach.Microservice):
             return Response("Error: " + str(e))
         
         
-    @endpoint("/test_dialogue", ["GET", "POST"])
-    def test_dialogue(self):
+    @endpoint("/test_dialogue", ["POST"])
+    def test_dialogue(self, user_id, user_token):
         """
         Returns a test dialogue that can be used to try out queries. It has fields for the data sources, the query, and the results.
         If the data sources are not loaded, it first loads them, and then evaluates the query.
@@ -112,8 +112,22 @@ Data sources (semicolon separated): <BR>
 </BODY>            
 </HTML>
 """
+
+        # Load data set from the case database for all cases which this user can access
+        print(self.settings)
+        case_db_proxy = self.create_proxy(self.get_setting("database"))
+        cases = case_db_proxy.user_cases(user_id = user_id, user_token = user_token)
+        for [c, _] in cases:
+            try:
+                print("Loading case data for case " + str(c))
+                case_data = case_db_proxy.export_case_data(user_id = user_id, user_token = user_token, case_id = c, format = "n3")
+                self.graph.parse(data = case_data, format = "n3")
+            except Exception:
+                print("Failed to load case data for case " + str(c))
+            
         # Ensure that all datasets are loaded
         data_sources = request.values.get("data_sources", "")
+        """
         data_sources_list = { ds.strip() for ds in request.values.get("data_sources", "").split(";") }
         if data_sources_list != self.data_sources:
             self.graph = rdflib.Graph()
@@ -125,13 +139,28 @@ Data sources (semicolon separated): <BR>
                     print("Loaded " + ds)
                 except Exception:
                     print("Could not load " + ds)
+        """
 
         # Make the query        
         q = request.values.get("query", "")
+        
+        # The following query gives the id of all the user who work in any of the cases
+        q = """
+PREFIX orion: <https://github.com/orion-research/coach/tree/master/COACH/ontology#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX ns: <http://127.0.0.1#>
+
+SELECT ?user_id
+WHERE {
+    ?user rdf:type orion:User .
+    ?user orion:user_id ?user_id .
+}
+"""        
         try:
+            print("Executing query: " + str(q))
             result = self.graph.query(q)
-        except:
-            print("Could not execute query")
+        except Exception as e:
+            print("Could not execute query: " + str(e))
             result = []
         
         # Transform the result into a string
