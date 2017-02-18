@@ -34,7 +34,7 @@ class CaseDatabase(coach.Microservice):
     This is useful for being able to analyze decision processes. 
     """
 
-    def __init__(self, settings_file_name, secret_data_file_name, working_directory = None):
+    def __init__(self, settings_file_name = None, working_directory = None):
         """
         Initiates the database at the provided url using the provided credentials.
         label indicates a label attached to all nodes used by this database, to distinguish them from nodes created by 
@@ -43,6 +43,7 @@ class CaseDatabase(coach.Microservice):
         super().__init__(settings_file_name, working_directory = working_directory)
 
         # Read secret data file
+        secret_data_file_name = self.get_setting("secret_data_file_name")
         with open(os.path.join(self.working_directory, os.path.normpath(secret_data_file_name)), "r") as file:
             fileData = file.read()
         secret_data = json.loads(fileData)

@@ -37,6 +37,17 @@ Having installed Python 3.x (whatever the latest version is), and the pip packag
 
 ## Configuration settings
 
+Most of the settings used by the system are stored in one file in the COACH top directory. However, since the installation can be done
+in different ways, the repository contains several alternative setting files, and depending on how the system is deployed the correct
+one must be indicated. This is done by creating a symbolic file link from "settings.json" in the COACH top directory to the appropriate
+settings file. On a Linux system the command for a local installation is (assuming you are in the right directory):
+
+	$ sudo ln -s local_settings.json settings.json
+
+On a Windows system, the corresponding command is:
+
+	$ mklink local_settings.json settings.json
+
 The file COACH/framework/settings/directory.json, where the directory information is stored, needs to be created.
 It should contain url paths to the different installed services, using this format:
 
@@ -165,7 +176,14 @@ Then, use the following git commands:
 
 
 ## Configuration settings
-Depending on where and how COACH is installed, the settings are in the file COACH/development_settings.json need to be updated.
+Depending on where and how COACH is installed, the settings in the file COACH/development_settings.json need to be updated.
+
+Most of the settings used by the system are stored in one file in the COACH top directory. However, since the installation can be done
+in different ways, the repository contains several alternative setting files, and depending on how the system is deployed the correct
+one must be indicated. This is done by creating a symbolic file link from "settings.json" in the COACH top directory to the appropriate
+settings file. On a Linux system the command for a local installation is (assuming you are in the right directory):
+
+	$ sudo ln -s local_settings.json settings.json
 
 The file COACH/framework/settings/directory.json, where the directory information is stored, needs to be created.
 It should contain url paths to the different installed services, using this format:

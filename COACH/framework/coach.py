@@ -89,6 +89,9 @@ class Microservice:
         """
         Returns the absolute file path to the top directory of the COACH installation.
         """
+        
+        # It is difficult to find a reliable way to determine the top directory that works on all kinds of system.
+        # However, COACH top directory must be on the sys path of any module which is below it.
         syspath0 = os.path.abspath(sys.path[0]) 
         return syspath0[0:syspath0.rfind("COACH")+len("COACH")]
     
@@ -97,6 +100,7 @@ class Microservice:
         """
         Returns the absolute file path to the location of the source file of the class from which this microservice was instantiated.
         """
+        # The module name determines the path from the top directory to where the module is located.
         return os.path.join(self.coach_top_directory(), *self.__module__.split(".")[1:-1])
     
 

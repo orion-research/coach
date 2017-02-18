@@ -277,7 +277,8 @@ class CaseDatabase(Service):
                 "name": self.description,
                 "port": configuration.service_port(self),
                 "label": self.label,
-                "authentication_service": configuration.service_url(self.authentication)
+                "authentication_service": configuration.service_url(self.authentication),
+                "secret_data_file_name": "settings/root_secret_data.json"
                 }
 
 
@@ -296,8 +297,7 @@ class CaseDatabase(Service):
 
         file_path = "/".join(self.path.split("."))
         result = """
-    CaseDatabase(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
-                 os.path.normpath("settings/root_secret_data.json")).run()
+    CaseDatabase().run()
 """
         return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
@@ -307,9 +307,7 @@ class CaseDatabase(Service):
         Returns the wsgi application call for this service.
         The case database service uses the application name coach.CaseDatabase, and has an extra argument point to the secret data and one for the node label.
         """
-        template = """CaseDatabase(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                         os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
-                                         working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        template = """CaseDatabase().ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
