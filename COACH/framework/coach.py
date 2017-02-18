@@ -45,7 +45,7 @@ class Microservice:
     Microservice is the base class of all microservices. It contains the functionality for setting up a service that can act as a stand-alone web server.
     """
     
-    def __init__(self, settings_file_name, working_directory = None):
+    def __init__(self, settings_file_name = None, working_directory = None):
         """
         Initialize the microservice.
         """
@@ -57,11 +57,12 @@ class Microservice:
         if working_directory:
             self.working_directory = working_directory
         else:
-            self.working_directory = os.path.join(sys.path[0], "/".join(self.__module__.split(".")[1:-1]))
+            self.working_directory = self.microservice_directory()
         os.chdir(self.working_directory)
         
         # Read settings from settings_file_name
-        self.load_settings(settings_file_name)
+#        self.load_settings(settings_file_name)
+        self.load_settings()
 
         self.name = self.get_setting("name")
         self.host = self.get_setting("host")
@@ -84,12 +85,41 @@ class Microservice:
         self.create_endpoints()
             
 
-    def load_settings(self, settings_file_name):
+    def coach_top_directory(self):
         """
-        Loads settings from a file.
+        Returns the absolute file path to the top directory of the COACH installation.
         """
-        with open(os.path.join(self.working_directory, os.path.normpath(settings_file_name)), "r") as file:
-            fileData = file.read()
+        return sys.path[0]
+    
+    
+    def microservice_directory(self):
+        """
+        Returns the absolute file path to the location of the source file of the class from which this microservice was instantiated.
+        """
+        return os.path.join(self.coach_top_directory(), "/".join(self.__module__.split(".")[1:-1]))
+    
+
+    def load_settings(self, settings_file_name = None):
+        """
+        Loads settings from a file. If a settings file name is provided the settings are loaded from that file.
+        If the file name was not provided, the function looks for a file called "settings.json", first in the same directory as 
+        the class is defined, then in the subdirectory "settings", and finally in the COACH top directory.
+        """
+        fileData = ""
+        if settings_file_name:
+            with open(os.path.join(self.working_directory, os.path.normpath(settings_file_name)), "r") as file:
+                fileData = file.read()
+        else:
+            try:
+                with open(os.path.join(self.microservice_directory(), "settings.json"), "r") as file:
+                    fileData = file.read()
+            except OSError:
+                try:
+                    with open(os.path.join(self.microservice_directory(), "settings", "settings.json"), "r") as file:
+                        fileData = file.read()
+                except OSError:
+                    with open(os.path.join(self.coach_top_directory(), "settings.json"), "r") as file:
+                        fileData = file.read()
         self.settings = json.loads(fileData)
 
 
