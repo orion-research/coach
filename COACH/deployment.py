@@ -161,7 +161,8 @@ class InteractionService(Service):
                 "logfile": "root.log",
                 "authentication_service": configuration.service_url(self.authentication),
                 "knowledge_repository": configuration.service_url(self.knowledge_repository_service),
-                "context_service": configuration.service_url(self.context_model_service)
+                "context_service": configuration.service_url(self.context_model_service),
+                "secret_data_file_name": "settings/root_secret_data.json"
                 }
 
 
@@ -180,8 +181,7 @@ class InteractionService(Service):
 
         file_path = "/".join(self.path.split("."))
         result = """
-    InteractionService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
-                       os.path.normpath("settings/root_secret_data.json")).run()
+    InteractionService().run()
 """
         return result.format(settings_file_name = configuration.settings_file_name, file_path = file_path)
 
@@ -191,9 +191,7 @@ class InteractionService(Service):
         Returns the wsgi application call for this service.
         The root service uses the application name coach.InteractionService, and has an extra argument point to the secret data.
         """
-        template = """InteractionService(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                        os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
-                                        working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        template = """InteractionService().ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 
