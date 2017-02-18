@@ -420,6 +420,7 @@ class KnowledgeRepositoryService(Service):
                 "name": self.description,
                 "port": configuration.service_port(self),
                 "database": self.database,
+                "secret_data_file_name": "../framework/settings/root_secret_data.json"
                 }
 
     
@@ -431,9 +432,7 @@ class KnowledgeRepositoryService(Service):
         result = """    
     wdir = os.path.join(topdir, "framework")
     os.chdir(wdir)
-    KnowledgeRepositoryService.KnowledgeRepositoryService(os.path.join(topdir, os.path.normpath("{settings_file_name}")), 
-                                                    os.path.normpath("settings/root_secret_data.json"),
-                                                    working_directory = wdir).run()
+    KnowledgeRepositoryService.KnowledgeRepositoryService().run()
 """
         return result.format(settings_file_name = configuration.settings_file_name)
 
@@ -443,9 +442,7 @@ class KnowledgeRepositoryService(Service):
         Returns the wsgi application call for this service.
         The knowledge repository service has an extra argument pointing to the secret data.
         """
-        template = """{package_name}.{name}(os.path.normpath("/var/www/COACH/COACH/{settings_file_name}"),
-                                                    os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
-                                                    working_directory = os.path.abspath("/var/www/COACH/COACH/{file_path}")).ms"""
+        template = """{package_name}.{name}().ms"""
         return template.format(name = self.name, package_name = self.path.split(".")[-1], 
                                file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
 

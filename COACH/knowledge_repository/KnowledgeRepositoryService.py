@@ -172,10 +172,11 @@ class KnowledgeRepositoryService(Microservice):
     Implements the KR as a microservice with a web service interface.
     """
 
-    def __init__(self, settings_file_name, secret_data_file_name, working_directory = None):
+    def __init__(self, settings_file_name = None, working_directory = None):
         super().__init__(settings_file_name, working_directory = working_directory)
 
         # Read secret data file
+        secret_data_file_name = self.get_setting("secret_data_file_name")
         with open(os.path.join(self.working_directory, os.path.normpath(secret_data_file_name)), "r") as file:
             fileData = file.read()
         secret_data = json.loads(fileData)

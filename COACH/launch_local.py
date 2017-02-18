@@ -6,16 +6,16 @@ import sys
 sys.path.append(os.path.join(os.curdir, os.pardir))
 
 from COACH.framework import coach
-from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
-from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.framework.DirectoryService import DirectoryService
-from COACH.knowledge_repository import KnowledgeRepositoryService
-from COACH.framework.AuthenticationService import AuthenticationService
-from COACH.decision_process.PughService import PughService
-from COACH.framework import KnowledgeInferenceService
-from COACH.framework.InteractionService import InteractionService
-from COACH.framework.casedb import CaseDatabase
 from COACH.context_model import ContextModelService
+from COACH.knowledge_repository import KnowledgeRepositoryService
+from COACH.framework import KnowledgeInferenceService
+from COACH.framework.casedb import CaseDatabase
+from COACH.framework.AuthenticationService import AuthenticationService
+from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
+from COACH.decision_process.PughService import PughService
+from COACH.framework.InteractionService import InteractionService
+from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 
 if __name__ == '__main__':
@@ -26,28 +26,26 @@ if __name__ == '__main__':
     
     # Start all the services
     
-    SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
-    
-    AverageOfTwo.AverageOfTwo(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
-    
     DirectoryService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+    
+    ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
     
     wdir = os.path.join(topdir, "framework")
     os.chdir(wdir)
-    KnowledgeRepositoryService.KnowledgeRepositoryService(os.path.join(topdir, os.path.normpath("local_settings.json")), 
-                                                    os.path.normpath("settings/root_secret_data.json"),
-                                                    working_directory = wdir).run()
-
-    AuthenticationService().run()
-    
-    PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+    KnowledgeRepositoryService.KnowledgeRepositoryService().run()
     
     KnowledgeInferenceService.KnowledgeInferenceService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
 
-    InteractionService().run()
-
     CaseDatabase().run()
+
+    AuthenticationService().run()
     
-    ContextModelService.ContextModelService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+    SimpleDecisionProcessService.SimpleDecisionProcessService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+    
+    PughService.PughService(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
+
+    InteractionService().run()
+    
+    AverageOfTwo.AverageOfTwo(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()
     
     ExpertOpinion.ExpertOpinion(os.path.join(topdir, os.path.normpath("local_settings.json"))).run()

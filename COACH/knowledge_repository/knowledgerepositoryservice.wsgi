@@ -23,6 +23,4 @@ if sys.version_info[0] < 3:
 
 from COACH.framework import coach
 
-application = knowledge_repository.KnowledgeRepositoryService(os.path.normpath("/var/www/COACH/COACH/development_settings.json"),
-                                                    os.path.normpath("/var/www/COACH/COACH/framework/settings/root_secret_data.json"),
-                                                    working_directory = os.path.abspath("/var/www/COACH/COACH/knowledge_repository")).ms
+application = knowledge_repository.KnowledgeRepositoryService().ms
