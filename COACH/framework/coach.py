@@ -89,14 +89,15 @@ class Microservice:
         """
         Returns the absolute file path to the top directory of the COACH installation.
         """
-        return sys.path[0]
+        syspath0 = os.path.abspath(sys.path[0]) 
+        return syspath0[0:syspath0.rfind("COACH")+len("COACH")]
     
     
     def microservice_directory(self):
         """
         Returns the absolute file path to the location of the source file of the class from which this microservice was instantiated.
         """
-        return os.path.join(self.coach_top_directory(), "/".join(self.__module__.split(".")[1:-1]))
+        return os.path.join(self.coach_top_directory(), *self.__module__.split(".")[1:-1])
     
 
     def load_settings(self, settings_file_name = None):
