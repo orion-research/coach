@@ -428,19 +428,20 @@ class CaseDatabase(coach.GraphDatabaseService):
                 # Serialize graph as json
                 return Response(json.dumps(graph, indent = 4))
             else:
+                # Serialize case data as RDF triples by transforming graph to an rdflib graph, and then serialize it using the formats provided in the rdflib.
                 (nodes, edges, properties, labels) = self.get_graph_starting_in_node(int(case_id))
 
-                # Serialize case data as RDF triples by transforming graph to an rdflib graph, and then serialize it using the formats provided in the rdflib.
-
                 # Create the name spaces
-                ns = rdflib.Namespace(self.host + "/#")  # The name space for this data source
-                orion = rdflib.Namespace("https://github.com/orion-research/coach/tree/master/COACH/ontology#")  # The name space for the ontology used
                 rdf = rdflib.RDF
+                ns = rdflib.Namespace(self.host + "/data#")  # The name space for this data source
+                orion = rdflib.Namespace("https://www.orion-research.se/ontology#")  # The name space for the ontology used
+                neo4j = rdflib.Namespace("https://www.orion-research.se/neo4j#") # The name space for annotations related to neo4j <-> triples mapping
 
                 # Create the graph and bind the name spaces    
                 rdfgraph = rdflib.ConjunctiveGraph()
                 rdfgraph.bind("ns", ns)
                 rdfgraph.bind("orion", orion)
+                rdfgraph.bind("neo4j", neo4j)
                 
                 # TODO: Rewrite the below using the case_graph data from above.
                 # Add the node ids and types
@@ -455,7 +456,7 @@ class CaseDatabase(coach.GraphDatabaseService):
 
                 # Add the edge node ids and types
                 for (n1, e, n2) in edges:
-                    if e in properties:
+                    if e in properties[e]:
                         # If the edge has properties, it has to be represented as a node in the triples
                         # Add edge id
                         rdfgraph.add((ns.node + str(e), orion.id, rdflib.Literal(str(e))))
@@ -467,42 +468,14 @@ class CaseDatabase(coach.GraphDatabaseService):
                         # Add edge relations
                         rdfgraph.add((ns.node + str(e), orion[labels[n1].lower()], ns.node + str(n1)))
                         rdfgraph.add((ns.node + str(e), orion[labels[n2].lower()], ns.node + str(n2)))
+                        # Add neo4j annotations to make it possible to map the triples back into a neo4j graph
+                        rdfgraph.add((ns.node + str(e), rdf.type, neo4j.Relationship))
+                        rdfgraph.add((ns.node + str(e), neo4j.from_node, ns.node + str(n1)))
+                        rdfgraph.add((ns.node + str(e), neo4j.to_node, ns.node + str(n2)))
                     else:
                         # If the edge has no properties, there is no need to create a node for it
-                        rdfgraph.add((ns.node + str(n1), orion[labels[e]], ns.node + str(n2)))
+                        rdfgraph.add((ns.node + str(n1), orion[labels[e].lower()], ns.node + str(n2)))
                 
-                # OLD:
-                """
-                # Add the case node and its properties
-                case_node = ns.case + str(graph["case"]["id"])
-                rdfgraph.add((case_node, rdf.type, orion.Case))
-                rdfgraph.add((case_node, orion.id, rdflib.Literal(graph["case"]["id"])))
-                for (p, v) in graph["case"]["properties"].items():
-                    rdfgraph.add((case_node, orion[p], rdflib.Literal(v)))
-                
-                # Add the stakeholders and their relationships, which is represented by a blank "stakeholder_in" node.
-                for s in graph["stakeholders"]:
-                    user_node = ns.user + str(s["id"])
-                    rdfgraph.add((user_node, rdf.type, orion.User))
-                    rdfgraph.add((user_node, orion.id, rdflib.Literal(s["id"])))
-                    rdfgraph.add((user_node, orion.user_id, rdflib.Literal(s["properties"]["user_id"])))
-
-                    rel_node = rdflib.BNode()
-                    rdfgraph.add((rel_node, rdf.type, orion.Stakeholder))
-                    rdfgraph.add((rel_node, rdf.type, orion.is_stakeholder))
-                    rdfgraph.add((rel_node, orion.role, rdflib.Literal(s["role"])))
-                    rdfgraph.add((rel_node, orion.case, case_node))
-                    rdfgraph.add((rel_node, orion.user, user_node))
-                    
-                # Add the alternatives and their relationships
-                for a in graph["alternatives"]:
-                    alt_node = ns.alternative + str(a["id"])
-                    rdfgraph.add((alt_node, rdf.type, orion.alternative))
-                    rdfgraph.add((alt_node, orion.id, rdflib.Literal(a["id"])))
-                    for (p, v) in a["properties"].items():
-                        rdfgraph.add((alt_node, orion[p], rdflib.Literal(v)))
-                    rdfgraph.add((case_node, orion.alternative, alt_node))
-                """
                 print(rdfgraph.serialize(format = format).decode("utf-8"))
                 return Response(json.dumps(rdfgraph.serialize(format = format).decode("utf-8")))
         else:
