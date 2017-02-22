@@ -17,16 +17,12 @@ from COACH.framework.coach import endpoint
 
 # Standard libraries
 import json
-from string import Template
-
-# Database connection
-from neo4j.v1 import GraphDatabase, basic_auth
 
 # Semantic web framework
 import rdflib
 
 
-class CaseDatabase(coach.Microservice):
+class CaseDatabase(coach.GraphDatabaseService):
     
     """
     The case database provides the interface to the database for storing case information. 
@@ -36,77 +32,6 @@ class CaseDatabase(coach.Microservice):
     - All actions should generate entries into a history, showing who, when, and what has been done.
     This is useful for being able to analyze decision processes. 
     """
-
-    def __init__(self, settings_file_name = None, working_directory = None):
-        """
-        Initiates the database at the provided url using the provided credentials.
-        label indicates a label attached to all nodes used by this database, to distinguish them from nodes created by 
-        other databases in the same DBMS.
-        """
-        super().__init__(settings_file_name, working_directory = working_directory)
-
-        # Read secret data file
-        secret_data_file_name = self.get_setting("secret_data_file_name")
-        with open(os.path.join(self.working_directory, os.path.normpath(secret_data_file_name)), "r") as file:
-            fileData = file.read()
-        secret_data = json.loads(fileData)
-
-        self.root_service_url = self.get_setting("protocol") + "://" + self.get_setting("host") + ":" + str(self.get_setting("port"))
-
-        self.label = self.get_setting("label")
-        
-        # Store authentication service connection
-        self.authentication_service_proxy = self.create_proxy(self.get_setting("authentication_service"))
-
-        # Initiate neo4j
-        try:
-            self._db = GraphDatabase.driver("bolt://localhost", 
-                                            auth=basic_auth(secret_data["neo4j_user_name"], 
-                                                            secret_data["neo4j_password"]))
-            self.ms.logger.info("Case database successfully connected")
-            print("Case database successfully connected")
-        except:
-            self.ms.logger.error("Fatal error: Case database cannot be accessed. Make sure that Neo4j is running!")
-            print("Fatal error: Case database cannot be accessed. Make sure that Neo4j is running!")
-    
-    
-    def open_session(self):
-        """
-        Creates a database session and returns it.
-        """    
-        return self._db.session()
-    
-    
-    def close_session(self, s):
-        """
-        Closes a database session.
-        """
-        s.close()
-        
-
-    def query(self, q, context = {}, session = None):
-        """
-        Function encapsulating the query interface to the database.
-        q is the query string, and context is an optional dictionary containing parameters to be substituted into q.
-        If a session is provided, the query is executed in that session. Otherwise, a session is created, used
-        for the query, and then closed again.
-        """
-        try:
-            # Add the label to the context, so that it can be used in queries
-            context["label"] = self.label
-            # Build query string by substituting template parameters with their context values
-            q = Template(q).substitute(**context)
-            if session:
-                return session.run(q, context)
-            else:
-                # If no session was provided, create one for this query and close it when done
-                s = self.open_session()
-                result = s.run(q, context)
-                self.close_session(s)
-                return result
-        except Exception as e:
-            print("Error in Case Database query: " + str(e))
-
 
     def is_stakeholder(self, user_id, case_id):
         """
@@ -452,7 +377,7 @@ class CaseDatabase(coach.Microservice):
             # Define Stakeholder_in class and attribute role
             (orion.Stakeholder_in, rdf.type, owl.Class),       
             (orion.role, rdf.type, owl.DatatypeProperty),
-            (orion.role, rdfs.domain, orion.Stakeholder_in),
+            (orion.role, rdfs.domain, orion.Stakeholder),
             (orion.role, rdfs.range, xsd.string)
         ]
         for t in triples:
@@ -461,7 +386,7 @@ class CaseDatabase(coach.Microservice):
         # Serialize the ontology graph
         return Response(json.dumps(ontology.serialize(format = format).decode("utf-8")))
      
-    
+     
     @endpoint("/export_case_data", ["GET"])
     def export_case_data(self, user_id, user_token, case_id, format):
         """
@@ -477,6 +402,7 @@ class CaseDatabase(coach.Microservice):
             # Build the graph as a dictionary based tree
             graph = dict()
     
+            
             # Get case node
             q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} RETURN case"""
             params = { "case_id": int(case_id)}
@@ -502,6 +428,8 @@ class CaseDatabase(coach.Microservice):
                 # Serialize graph as json
                 return Response(json.dumps(graph, indent = 4))
             else:
+                (nodes, edges, properties, labels) = self.get_graph_starting_in_node(int(case_id))
+
                 # Serialize case data as RDF triples by transforming graph to an rdflib graph, and then serialize it using the formats provided in the rdflib.
 
                 # Create the name spaces
@@ -514,6 +442,37 @@ class CaseDatabase(coach.Microservice):
                 rdfgraph.bind("ns", ns)
                 rdfgraph.bind("orion", orion)
                 
+                # TODO: Rewrite the below using the case_graph data from above.
+                # Add the node ids and types
+                for n in nodes:
+                    # Add node id
+                    rdfgraph.add((ns.node + str(n), orion.id, rdflib.Literal(str(n))))
+                    # Add node type
+                    rdfgraph.add((ns.node + str(n), rdf.type, orion[labels[n]]))
+                    # Add node properties
+                    for (p, v) in properties[n].items():
+                        rdfgraph.add((ns.node + str(n), orion[p], rdflib.Literal(v)))
+
+                # Add the edge node ids and types
+                for (n1, e, n2) in edges:
+                    if e in properties:
+                        # If the edge has properties, it has to be represented as a node in the triples
+                        # Add edge id
+                        rdfgraph.add((ns.node + str(e), orion.id, rdflib.Literal(str(e))))
+                        # Add edge type
+                        rdfgraph.add((ns.node + str(e), rdf.type, orion[labels[e]]))
+                        # Add edge properties
+                        for (p, v) in properties[e].items():
+                            rdfgraph.add((ns.node + str(e), orion[p], rdflib.Literal(v)))
+                        # Add edge relations
+                        rdfgraph.add((ns.node + str(e), orion[labels[n1].lower()], ns.node + str(n1)))
+                        rdfgraph.add((ns.node + str(e), orion[labels[n2].lower()], ns.node + str(n2)))
+                    else:
+                        # If the edge has no properties, there is no need to create a node for it
+                        rdfgraph.add((ns.node + str(n1), orion[labels[e]], ns.node + str(n2)))
+                
+                # OLD:
+                """
                 # Add the case node and its properties
                 case_node = ns.case + str(graph["case"]["id"])
                 rdfgraph.add((case_node, rdf.type, orion.Case))
@@ -529,7 +488,7 @@ class CaseDatabase(coach.Microservice):
                     rdfgraph.add((user_node, orion.user_id, rdflib.Literal(s["properties"]["user_id"])))
 
                     rel_node = rdflib.BNode()
-                    rdfgraph.add((rel_node, rdf.type, orion.Stakeholder_in))
+                    rdfgraph.add((rel_node, rdf.type, orion.Stakeholder))
                     rdfgraph.add((rel_node, rdf.type, orion.is_stakeholder))
                     rdfgraph.add((rel_node, orion.role, rdflib.Literal(s["role"])))
                     rdfgraph.add((rel_node, orion.case, case_node))
@@ -543,7 +502,8 @@ class CaseDatabase(coach.Microservice):
                     for (p, v) in a["properties"].items():
                         rdfgraph.add((alt_node, orion[p], rdflib.Literal(v)))
                     rdfgraph.add((case_node, orion.alternative, alt_node))
-
+                """
+                print(rdfgraph.serialize(format = format).decode("utf-8"))
                 return Response(json.dumps(rdfgraph.serialize(format = format).decode("utf-8")))
         else:
             return Response("Invalid user token")    

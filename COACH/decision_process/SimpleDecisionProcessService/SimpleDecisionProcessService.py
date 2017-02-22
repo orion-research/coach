@@ -37,7 +37,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         # Fetch the available services from the directories available in the case_db.
         services = []
         for d in [self.create_proxy(sd) for sd in json.loads(directories)]:
-            services += d.get_services(type="estimation_method")
+            services += d.get_services(service_type="estimation_method")
 
         # Create the alternatives for a dropdown menu
         # TODO: It should show the current estimation method as preselected.

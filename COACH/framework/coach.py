@@ -11,12 +11,17 @@ import inspect
 import json
 import logging
 import os
+from string import Template
 import sys
 import threading
 
 # Web server framework
 from flask import Flask, Response, request
 import requests
+
+# Database connection
+from neo4j.v1 import GraphDatabase, basic_auth
+
 
 # Auxiliary functions
         
@@ -331,6 +336,133 @@ class Proxy():
 
         return service_call
     
+    
+class GraphDatabaseService(Microservice):
+    
+    """
+    Class for implementing a graph database storage service based on Neo4j. It contains functionality for initializing the
+    database connection, making queries, and importing and exporting data based on semantic web triples.
+    """
+    
+    def __init__(self, settings_file_name = None, working_directory = None):
+        """
+        Initiates the database at the provided url using the provided credentials.
+        label indicates a label attached to all nodes used by this database, to distinguish them from nodes created by 
+        other databases in the same DBMS.
+        """
+        super().__init__(settings_file_name, working_directory = working_directory)
+
+        # Read secret data file
+        secret_data_file_name = self.get_setting("secret_data_file_name")
+        with open(os.path.join(self.working_directory, os.path.normpath(secret_data_file_name)), "r") as file:
+            fileData = file.read()
+        secret_data = json.loads(fileData)
+
+        self.root_service_url = self.get_setting("protocol") + "://" + self.get_setting("host") + ":" + str(self.get_setting("port"))
+
+        self.label = self.get_setting("label")
+        
+        # Store authentication service connection
+        self.authentication_service_proxy = self.create_proxy(self.get_setting("authentication_service"))
+
+        # Initiate neo4j
+        try:
+            self._db = GraphDatabase.driver("bolt://localhost", 
+                                            auth=basic_auth(secret_data["neo4j_user_name"], 
+                                                            secret_data["neo4j_password"]))
+            self.ms.logger.info("Case database successfully connected")
+            print("Case database successfully connected")
+        except:
+            self.ms.logger.error("Fatal error: Case database cannot be accessed. Make sure that Neo4j is running!")
+            print("Fatal error: Case database cannot be accessed. Make sure that Neo4j is running!")
+    
+    
+    def open_session(self):
+        """
+        Creates a database session and returns it.
+        """    
+        return self._db.session()
+    
+    
+    def close_session(self, s):
+        """
+        Closes a database session.
+        """
+        s.close()
+        
+
+    def query(self, q, context = {}, session = None):
+        """
+        Function encapsulating the query interface to the database.
+        q is the query string, and context is an optional dictionary containing parameters to be substituted into q.
+        If a session is provided, the query is executed in that session. Otherwise, a session is created, used
+        for the query, and then closed again.
+        """
+        try:
+            # Add the label to the context, so that it can be used in queries
+            context["label"] = self.label
+            # Build query string by substituting template parameters with their context values
+            q = Template(q).substitute(**context)
+            if session:
+                return session.run(q, context)
+            else:
+                # If no session was provided, create one for this query and close it when done
+                s = self.open_session()
+                result = s.run(q, context)
+                self.close_session(s)
+                return result
+        except Exception as e:
+            print("Error in database query: " + str(e))
+    
+   
+    def get_graph_starting_in_node(self, start_node_id):
+        """
+        Return a 4-tuple where the first element is the set of node ids which can be reached by relations from the node with id = start_node.
+        The second pair is a set of triples (n1, r, n2), where n1 and n2 are the ids of the nodes in a relation, and
+        r is the id of the relation itself. 
+        The third is mapping from ids to the properties of the node or relation with that id.
+        The forth is a mapping from ids to the labels of nodes and types of relationships.
+        The start_node_id parameter is an int, and the returned ids are also ints.
+        """
+        # Get nodes and edges by traversing relationships recursively starting in the node with case_id.
+        visited_nodes = {start_node_id}
+        edges = set()
+        not_traversed = [start_node_id]
+        while not_traversed:
+            q = """MATCH (node1:$label) -[r]-> (node2:$label)
+                   WHERE id(node1) = {node1_id}
+                   RETURN id(node2) as node2_id, id(r) as r_id"""
+            params = { "node1_id": not_traversed[0] }
+            query_result = list(self.query(q, params))
+            reached_nodes = { int(result["node2_id"]) for result in query_result }
+            visited_nodes = visited_nodes | reached_nodes
+            edges = edges | { (not_traversed[0], result["r_id"], result["node2_id"]) for result in query_result }
+            not_traversed = not_traversed[1:] + list(reached_nodes - visited_nodes)
+
+        # Get the properties and labels of all nodes
+        properties = dict()
+        labels = dict()
+        for node_id in visited_nodes:
+            q = """MATCH (node:$label)
+                   WHERE id(node) = {node_id}
+                   RETURN properties(node) as properties, labels(node) as label"""
+            params = { "node_id": node_id }
+            query_result = self.query(q, params).single()
+            properties[node_id] = query_result["properties"]
+            labels[node_id] = [label for label in query_result["label"] if label != self.label][0]
+        
+        # Get the properties and types of all relationships
+        for (_, r_id, _) in edges:
+            q = """MATCH (node1:$label) -[r]-> (node2:$label)
+                   WHERE id(r) = {r_id}
+                   RETURN properties(r) as properties, type(r) as label"""
+            params = { "r_id": r_id }
+            query_result = self.query(q, params).single()
+            properties[r_id] = query_result["properties"]
+            labels[r_id] = query_result["label"]
+        
+        return (visited_nodes, edges, properties, labels)
+                
     
 class DecisionProcessService(Microservice):
     

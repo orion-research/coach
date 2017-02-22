@@ -188,7 +188,7 @@ class InteractionService(coach.Microservice):
                                                                            case_id = session["case_id"])
 
         for d in self.service_directory_proxies:
-            services += d.get_services(type = "decision_process")
+            services += d.get_services(service_type = "decision_process")
         options = ["<OPTION value=\"%s\" %s> %s </A>" % (s[2], "selected" if s[2] == current_decision_process else "", s[1]) for s in services]
         
         dialogue = render_template("change_decision_process_dialogue.html", decision_processes = options)
