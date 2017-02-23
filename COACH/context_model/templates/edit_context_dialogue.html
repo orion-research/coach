@@ -1,29 +1,96 @@
 <H2>Edit Context</H2>
-<BR>
-<FORM action="/context_model_request?endpoint=edit_context" method="post">
-<B>Context</B>
-<br><i>General information concerning the context, to be further elaborated in the categories below.</i>
-<BR><textarea rows="5" cols="70" name="context_general">{{context_data['general']}}</textarea>
-<BR>
-<BR><B>Organization</B>
-<br><i>Information concerning the structure of the organization(s) and the people in it where the decision was made.</i>
-<BR><textarea rows="3" cols="70" name="context_organization">{{context_data['organization']}}</textarea>
-<BR>
-<BR><B>Product</B>
-<br><i>Information concerning the product for which the decision was made (product = software-intensive system).</i>
-<BR><textarea rows="3" cols="70" name="context_product">{{context_data['product']}}</textarea>
-<BR>
-<BR><B>Stakeholders</B>
-<br><i>Information concerning stakeholders that affected or were affected by the decision.</i>
-<BR><textarea rows="3" cols="70" name="context_stakeholders">{{context_data['stakeholders']}}</textarea>
-<BR>
-<BR><B>Development method and technology</B>
-<br><i>Information concerning systematic approaches that were used in the development of the product.</i>
-<BR><textarea rows="3" cols="70" name="context_methodandtechnology">{{context_data['methodandtechnology']}}</textarea>
-<BR>
-<BR><B>Market and business</B>
-<br><i>Information concerning external factors that affected the decision from market, business, society etc.</i>
-<BR><textarea rows="3" cols="70"name="context_marketandbusiness">{{context_data['marketandbusiness']}}</textarea>
-<BR>
-<BR><INPUT type="submit" value="Save Context"/>
-</FORM>
+
+<form action="/context_model_request?endpoint=edit_context" method="post">
+
+
+<div class="contextentry">
+<h2>Context</h2>
+<i>General information concerning the context in which the decision is made.</i>
+<br><textarea name="C-text" rows="5" cols="70">{% if values['C'] %}{{values['C']}}{% endif %}</textarea>
+</div>
+
+<details>
+<summary>Context details</summary>
+<div class="contextdetails">
+
+<div class="contextentry">
+<h3>Organization</h3>
+<i>Information concerning the structure of the organization(s) and the people in it where the decision was made.</i>
+<br><textarea name="O-text" rows="5" cols="70">{% if values['O'] %}{{values['O']}}{% endif %}</textarea>
+</div>
+
+<details>
+<summary>Organization details</summary>
+<div class="contextdetails">
+{% for e in organization %}
+{% include "entries.html" %}
+{% endfor %} 
+</div>
+</details>
+
+<div class="contextentry">
+<h3>Product</h3>
+<i>Information concerning the product for which the decision was made (product = software-intensive system).</i>
+<br><textarea name="P-text" rows="5" cols="70">{% if values['P'] %}{{values['P']}}{% endif %}</textarea>
+</div>
+
+<details>
+<summary>Product details</summary>
+<div class="contextdetails">
+{% for e in product %}
+{% include "entries.html" %}
+{% endfor %} 
+</div>
+</details>
+
+<div class="contextentry">
+<h3>Stakeholders</h3>
+<i>Information concerning stakeholders that affected or were affected by the decision.</i>
+<br><textarea name="S-text" rows="5" cols="70">{% if values['S'] %}{{values['S']}}{% endif %}</textarea>
+</div>
+
+<details>
+<summary>Stakeholders details</summary>
+<div class="contextdetails">
+{% for e in stakeholders %}
+{% include "entries.html" %}
+{% endfor %}
+</div>
+</details>
+
+<div class="contextentry">
+<h3>Development method and technology</h3>
+<i>Information concerning systematic approaches that were used in the development of the product.</i>
+<br><textarea name="M-text" rows="5" cols="70">{% if values['M'] %}{{values['M']}}{% endif %}</textarea>
+</div>
+
+<details>
+<summary>Development method and technology details</summary>
+<div class="contextdetails">
+{% for e in methods %}
+{% include "entries.html" %}
+{% endfor %}
+</div>
+</details>
+
+<div class="contextentry">
+<h3>Market and business</h3>
+<i>Information concerning external factors that affected the decision from market, business, society etc.</i>
+<br><textarea name="B-text" rows="5" cols="70">{% if values['B'] %}{{values['B']}}{% endif %}</textarea>
+</div>
+
+<details>
+<summary>Market and business details</summary>
+<div class="contextdetails">
+{% for e in business %}
+{% include "entries.html" %}
+{% endfor %}</div>
+</details>
+
+</div>
+</details>
+
+<br>
+<input type="submit" value="Save Context"/>
+</form>
+    

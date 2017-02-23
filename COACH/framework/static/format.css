@@ -47,3 +47,14 @@ ul {
     padding: 5px;
     height: 100vh;
 }
+
+div.contextdetails {
+   /*  background-color: #AAAAAA; */
+    margin-left: 1cm;
+}
+
+div.contextentry {
+/*     background-color: #EEEEEE;  */
+    margin-top: 1em;
+    width: 38em; /* NOTE: Hard-coded to look ok locally */
+}
