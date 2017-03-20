@@ -9,11 +9,15 @@
 #   The alternatives are either to store the attribute values in an array, or make a node and relation for each value.
 #   Since the values are finite, there will be a finite set of nodes which are reused between cases, so maybe the latter 
 #   is preferable. 
-# - SGR9, SGR15, SGR16, SGR17, SGR20, ESGR9, ESGR10 lack descriptions.
+# - SGR9, SGR15, SGR16, SGR17, SGR20, ESGR9, ESGR10, RP12, RP19 lack descriptions.
+# - RP16 should be renamed from "Process/Business Analyst" to "Process analyst", or split into two roles.
 # - How to handle "other" values in selection lists? Predefined categories can be instance nodes, but other values
 #   must be a special class, since different instances must be able to hold a description of what the "other" is
 #   in each case. So a specific class "Other", and then we need for each concrete instance say that it is
 #   both "Other" and the category to which it belongs (e.g. CustomerValue).
+# - The subcategory "Roles" of "Role" in GRADE should be renamed to something more specific. Suggestion: "Role title".
+# - The User class needs to be elaborated. Should it build on FOAF?
+# - RP20-RP22 are identical to RT1-RT3. Only RT1-RT3 are currently included in this ontology.
 
 
 ##### Namespaces
@@ -376,11 +380,256 @@ orion:stayInGame
 	orion:description "This goal influences the decision about component selection by taking into account external factors (external environmental survey). Competitiveness might be kept/enhanced by reducing cost and/or time-to-market, by providing on-time features, by improving quality, by releasing (partially) open source systems, and so forth. These added values will have a weight in the component selection decision." .
 
 
+
 ##### Roles element
+
+# A Role links a system User to a DecisionCase, and specifies four different role perspectives:
+# The role type; role function; role level; and role title. 
 
 orion:Role
 	rdfs:subClassOf orion:Class .
 
+orion:user
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Role ;
+	rdfs:range orion:User .
+
+orion:User
+	rdfs:subClassOf orion:Class .
+
+
+### Role type
+
+# Role types can be asset supplier; asset user; system end-user; or other.
+
+orion:roleType
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Role ;
+	rdfs:range orion:RoleType .
+
+orion:RoleType
+	rdfs:subClassOf orion:Class .
+	
+orion:assetSupplier 
+	orion:gradeId "RT1" ;
+	a orion:RoleType ;
+	orion:title "Asset supplier" ;
+	orion:description "The organization providing the asset." .
+
+orion:assetUser
+	orion:gradeId "RT2" ;
+	a orion:RoleType ;
+	orion:title "Asset user" ;
+	orion:description "The organization using the asset." .
+
+orion:systemEndUser
+	orion:gradeId "RT3" ;
+	a orion:RoleType ;
+	orion:title "System end-user" ;
+	orion:description "The organization that is the user of the system in which the asset is utilized." .
+
+
+### Role function
+
+# Role functions can be initiator; leader; supporter; influencer; decider; or other.
+
+orion:roleFunction
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Role ;
+	rdfs:range orion:RoleFunction .
+
+orion:RoleFunction
+	rdfs:subClassOf orion:Class .
+	
+orion:initiator
+	orion:gradeId "RF1" ;
+	a orion:RoleFunction ;
+	orion:title "Initiator" ;
+	orion:description "Initiator is a person who starts the whole process of decision-making, explicitly points out the need to make a decision." .
+
+orion:leader
+	orion:gradeId "RF2" ;
+	a orion:RoleFunction ;
+	orion:title "Leader" ;
+	orion:description "Leader is a person who leads the decision process, e.g. combines diverging contributions by relating them to a summarizing statement; if the discussion diverges, the person calls for an informal vote to reach consensus." .
+
+orion:supporter
+	orion:gradeId "RF3" ;
+	a orion:RoleFunction ;
+	orion:title "Supporter" ;
+	orion:description "Supporter is a person who supplies the information needed to make the decision." .
+
+orion:influencer
+	orion:gradeId "RF4" ;
+	a orion:RoleFunction ;
+	orion:title "Influencer" ;
+	orion:description "Infuencer is a person who influences the outcome of the decision making and hence has influence on the decision maker." .
+
+orion:decider
+	orion:gradeId "RF5" ;
+	a orion:RoleFunction ;
+	orion:title "Decider" ;
+	orion:description "Decider is a person who is responsible for taking the decision, actually reaches to the decision." .
+
+
+### Role level
+
+# Role level can be strategic; tactical; or operational.
+
+orion:roleLevel
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Role ;
+	rdfs:range orion:RoleLevel .
+
+orion:RoleLevel
+	rdfs:subClassOf orion:Class .
+	
+orion:strategic
+	orion:gradeId "RL1" ;
+	a orion:RoleLevel ;
+	orion:title "Strategic" ;
+	orion:description "Policy decisions, long-term, complex, non-routine decision-making, typically made by Senior Management." .
+	
+orion:tactical
+	orion:gradeId "RL2" ;
+	a orion:RoleLevel ;
+	orion:title "Tactical" ;
+	orion:description "Relates to how to achieve policy, medium-term, less complex decision-making, typically made by Middle Management." .
+	
+orion:operational
+	orion:gradeId "RL3" ;
+	a orion:RoleLevel ;
+	orion:title "Operational" ;
+	orion:description "Day-to-day, simple, routine decision-making typically made by Junior Management." .
+
+
+### Role title
+
+# Role title can be one of 22 different pre-defined values, or other.
+
+orion:roleTitle
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Role ;
+	rdfs:range orion:RoleTitle .
+
+orion:RoleTitle
+	rdfs:subClassOf orion:Class .
+	
+orion:productManager 
+	orion:gradeId "RP1" ;
+	a orion:RoleTitle ;
+	orion:title "Product Manager" ;
+	orion:description "Product Manager (PrM) is a business-owner in the small, representing the enterprise or business unit in strategy definition and operational execution. He governs a product (or solution or service) from its inception to the market/customer delivery in order to generate biggest possible value to the business." .
+	
+orion:lineManager
+	orion:gradeId "RP2" ;
+	a orion:RoleTitle ;
+	orion:title "Line Manager" ;
+	orion:description "Line Manager (LM) is a person who discretion over policy, appropriations, and operation in a unit such as subsidiary, factory, division, district, or minor function of a larger organization." .
+	
+orion:portfolioManager
+	orion:gradeId "RP3" ;
+	a orion:RoleTitle ;
+	orion:title "Portfolio manager" ;
+	orion:description "Portfolio Manager (PoM) is an executive responsible for the overall smooth running of portfolio management. The competences and skills this individual should possess are superior to those of project managers, as portfolio managers should take a helicopter view over all running projects." .
+	
+orion:projectManager
+	orion:gradeId "RP4" ;
+	a orion:RoleTitle ;
+	orion:title "Project Manager" ;
+	orion:description "Project Manager (PM) is a person who manage the projects and also responsible for overall quality management, staff development, and professional activities. The responsibilities may begin before project acquisition and continue beyond project close-out." .
+	
+orion:chiefTechnicalOfficer
+	orion:gradeId "RP5" ;
+	a orion:RoleTitle ;
+	orion:title "Chief Technical Officer (CTO)" ;
+	orion:description "Chief Technical Officer (CTO) is a person responsible for overall technical activities, including the management of client relations to ensure that service objective expectations are developed and managed in the operations areas." .
+	
+orion:developmentLead
+	orion:gradeId "RP6" ;
+	a orion:RoleTitle ;
+	orion:title "Development lead" ;
+	orion:description "Development Lead (DL) is person who being highly technical lead the development project and team, taking part in different activities from the initial stage to the successful delivery of projects." .
+	
+orion:developer
+	orion:gradeId "RP7" ;
+	a orion:RoleTitle ;
+	orion:title "Developer" ;
+	orion:description "Developer (Dev) is a person involved in the development of software, typically use the architecture as a reference for developing the system and/or assembling system components." .
+	
+orion:testLead
+	orion:gradeId "RP8" ;
+	a orion:RoleTitle ;
+	orion:title "Test lead" ;
+	orion:description "Test Leader (TL) is a person involved in the planning, monitoring, and control of the testing activities and tasks. TL is Responsible for management of all quality assurance functions including planning, strategy, testing execution and tools." .
+	
+orion:testAnalyst
+	orion:gradeId "RP9" ;
+	a orion:RoleTitle ;
+	orion:title "Test Analyst" ;
+	orion:description "Test Analyst (TA) is a person responsible for initially identifying and subsequently defining the required tests, monitoring the test coverage and evaluating the overall quality experienced when testing the target test Items. " .
+	
+orion:architect
+	orion:gradeId "RP10" ;
+	a orion:RoleTitle ;
+	orion:title "Architect" ;
+	orion:description "Architect is a person responsible for designing, developing, nurturing, and maintaining the architecture of the software systems he/she is involved with." .
+	
+orion:integrator
+	orion:gradeId "RP11" ;
+	a orion:RoleTitle ;
+	orion:title "Integrator" ;
+	orion:description "Integrator is person who is responsible to ensure that a system comes together by assembling the essential components and elements into a cohesive and fully functional system that satisfies the original user needs." .
+	
+orion:supportStaffForAssets
+	orion:gradeId "RP12" ;
+	a orion:RoleTitle ;
+	orion:title "Support staff for assets" ;
+	orion:description "" .
+	
+orion:chiefExecutiveOfficer 
+	orion:gradeId "RP13" ;
+	a orion:RoleTitle ;
+	orion:title "Chief Executive Officer (CEO)" ;
+	orion:description "Chief Executive Officer (CEO) is a person responsible for not only making decision by also executing the decisions." .
+	
+orion:certificationAuthority
+	orion:gradeId "RP14" ;
+	a orion:RoleTitle ;
+	orion:title "Certification Authority" ;
+	orion:description "Certification Authority (CA) attests the validity of bindings by issuing digitally signed certificates that specify these bindings and by providing a means for clients to check the validity of certificates." .
+	
+orion:configurationManager 
+	orion:gradeId "RP15" ;
+	a orion:RoleTitle ;
+	orion:title "Configuration Manager" ;
+	orion:description "Ensures that the change management process is implemented and proposed changes are reviewed and approved." .
+	
+orion:processAnalyst
+	orion:gradeId "RP16" ;
+	a orion:RoleTitle ;
+	orion:title "Process Analyst" ;
+	orion:description "Planning and conducting process improvement efforts in an organization." .
+	
+orion:dataProvider
+	orion:gradeId "RP17" ;
+	a orion:RoleTitle ;
+	orion:title "Data Provider" ;
+	orion:description "Provides and keeps data up-to-date to enable measurements." .
+	
+orion:measurementProgramPlanner
+	orion:gradeId "RP18" ;
+	a orion:RoleTitle ;
+	orion:title "Measurement program planner" ;
+	orion:description "Responsible for measurement planning with regard to goal definition, elicitation, and decision making of which metrics to collect." .
+	
+orion:softwareQualityManager
+	orion:gradeId "RP19" ;
+	a orion:RoleTitle ;
+	orion:title "Software quality manager" ;
+	orion:description "" .
+	
+	
 
 ##### Assets element
 
