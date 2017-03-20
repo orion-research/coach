@@ -1,0 +1,400 @@
+####### Machine-readable ontology based on ORION GRADE v1.0
+
+##### TODO / Open questions:
+
+# - Should we use term Asset or Alternative?
+# - Should we use term Environment or Context?
+# - Are multiple choices allowed for the different value categories (the SGRx)? Yes, and that is probably not an
+#   issue in RDF since you can have multiple links of the same name from a node, but could be problematic in Neo4j.
+#   The alternatives are either to store the attribute values in an array, or make a node and relation for each value.
+#   Since the values are finite, there will be a finite set of nodes which are reused between cases, so maybe the latter 
+#   is preferable. 
+# - SGR9, SGR15, SGR16, SGR17, SGR20, ESGR9, ESGR10 lack descriptions.
+# - How to handle "other" values in selection lists? Predefined categories can be instance nodes, but other values
+#   must be a special class, since different instances must be able to hold a description of what the "other" is
+#   in each case. So a specific class "Other", and then we need for each concrete instance say that it is
+#   both "Other" and the category to which it belongs (e.g. CustomerValue).
+
+
+##### Namespaces
+
+# Namespace prefix for the ORION ontology
+
+@prefix orion: <http://www.orion-research.se/ontology#> .
+
+
+# Standard namespace prefixes
+
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+
+##### Common attributes and classes
+
+# All Orion classes can have attributes id, title and description
+
+orion:Class
+	a owl:Class .
+
+orion:id
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Class ;
+	rdfs:range xsd:positiveInteger .
+
+orion:title
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Class ;
+	rdfs:range xsd:string .
+
+orion:description
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Class ;
+	rdfs:range xsd:string .
+
+
+# The GRADE taxonomy contains a number of categories with predefined elements. However, the categories are 
+# intended to be open ended, where other elements can be added when needed. This is captured in this ontology
+# using the Other class. Instances of the Other class should also always be instances of a specific class
+# representing a certain category.
+
+orion:Other
+	rdfs:subClassOf orion:Class .
+
+
+##### Decision case
+
+# A decision case includes one Goal element, multiple Role
+# Asset, and Decision elements, and one Environment element.
+
+orion:DecisionCase
+	rdfs:subClassOf orion:Class .
+
+orion:goal
+	a owl:ObjectProperty ;
+	rdfs:domain orion:DecisionCase ;
+	rdfs:range orion:Goal .
+	
+orion:role
+	a owl:ObjectProperty ;
+	rdfs:domain orion:DecisionCase ;
+	rdfs:range orion:Role .
+	
+orion:asset
+	a owl:ObjectProperty ;
+	rdfs:domain orion:DecisionCase ;
+	rdfs:range orion:Asset .
+	
+orion:decision
+	a owl:ObjectProperty ;
+	rdfs:domain orion:DecisionCase ;
+	rdfs:range orion:Decision .
+
+orion:environment
+	a owl:ObjectProperty ;
+	rdfs:domain orion:DecisionCase ;
+	rdfs:range orion:Environment .
+
+
+##### Goals element
+
+# A Goal includes five different value perspectives, related to
+# customer, financial, internal business, innovation and
+# learning, and market values. 
+
+orion:Goal
+	rdfs:subClassOf orion:Class .
+
+
+### Customer value [GV1]
+
+# Customer value can be one of: extending a system;
+# improving/increasing quality; improving customer
+# satisfaction; increase robustness; increase safety; or other. 
+
+orion:customerValue
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Goal ;
+	rdfs:range orion:CustomerValue .
+
+orion:CustomerValue
+	rdfs:subClassOf orion:Class .
+	
+orion:extendASystem 
+	orion:gradeId "SGR1" ;
+	a orion:CustomerValue ;
+	orion:title "Extend a system (functional)" ;
+	orion:description "Cover some customer need by extending system functionality. Extensions can be through the addition of new functionality or through modification of existing functionality." .
+	
+orion:improveQuality 
+	orion:gradeId "SGR2" ;
+	a orion:CustomerValue ;
+	orion:title "Improve/increase quality" ;
+	orion:description "The quality of the system should be improved, this may relate to meeting the perceived fulfillment of needs by the customer with regard to functional and non-functional properties of the system. Non-functional properties are, for example, reliability, security, performance, etc." .
+
+orion:improveCustomerSatisfaction 
+	orion:gradeId "SGR3" ;
+	a orion:CustomerValue ;
+	orion:title "Improve customer satisfaction" ;
+	orion:description "In this case, the component selection aims at enhancing customer satisfaction by trying to anticipate customers' needs. In this respect, the decision could take into account characteristics of the available components and select the best suited for the application customers. It is worth noting that customer satisfaction could include timely available features, that is reduced time-to-market, as well as high quality/price ratio, and so on." .
+
+# orion:increaseRobustness and orion:increaseSafety are considered both CustomerValue and InternalBusinessValue.
+
+orion:increaseRobustness 
+	orion:gradeId "SGR15" ;
+	a orion:CustomerValue ;
+	a orion:InternalBusinessValue ;
+	orion:title "Increase robustness" ;
+	orion:description "" .
+
+orion:increaseSafety 
+	orion:gradeId "SGR16" ;
+	a orion:CustomerValue ;
+	a orion:InternalBusinessValue ;
+	orion:title "Increase safety" ;
+	orion:description "" .
+
+
+### Financial value [GV2]
+
+# Financial value can be one of: increasing profit; 
+# identifying potential for acquisition; other.
+
+orion:financialValue
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Goal ;
+	rdfs:range orion:FinancialValue .
+
+orion:FinancialValue
+	rdfs:subClassOf orion:Class .
+	
+orion:increaseProfit 
+	orion:gradeId "SGR4" ;
+	a orion:FinancialValue ;
+	orion:title "Increase profit" ;
+	orion:description "Financial gain obtained by the company, calculated as the difference between cost and gains." .
+
+orion:acquisitionPotential 
+	orion:gradeId "SGR5" ;
+	a orion:FinancialValue ;
+	orion:title "Identify potential for acquisition of companies" ;
+	orion:description "This goal leverages the decision about component selection for external environmental survey. In fact, the decision would prefer outsourcing, COTS, or services as component selection in order to concretely inspect the qualities of a certain subcontractor and possibly buy it." .
+
+
+### Internal business value [GV3]
+
+# Internal business value can be one of ten different 
+# alternatives, or other.
+
+orion:internalBusinessValue
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Goal ;
+	rdfs:range orion:InternalBusinessValue .
+
+orion:InternalBusinessValue
+	rdfs:subClassOf orion:Class .
+	
+orion:replaceAnAsset 
+	orion:gradeId "SGR6" ;
+	a orion:InternalBusinessValue ;
+	orion:title "Replace an asset" ;
+	orion:description "An existing asset currently in use shall be replaced with another asset, a potential reason could be change in platforms, poor quality of existing assets, etc." .
+
+orion:increaseReuse 
+	orion:gradeId "SGR7" ;
+	a orion:InternalBusinessValue ;
+	orion:title "Increase reuse" ;
+	orion:description "The goal influences decision making aiming at selecting a component that could be reused in a variety of products by, for examle, providing more generic functionalities and high configurability." .
+
+orion:minimimzeTimeToMarket 
+	orion:gradeId "SGR8" ;
+	a orion:InternalBusinessValue ;
+	orion:title "Mimimize time to market" ;
+	orion:description "The goal drives the selection in that an option should be chosen that requires a short time to integrate and test into the system to minimize the duration needed to deliver to the market." .
+
+orion:increaseEffectiveness 
+	orion:gradeId "SGR9" ;
+	a orion:InternalBusinessValue ;
+	orion:title "Increase effectiveness" ;
+	orion:description "" .
+
+orion:costSavings 
+	orion:gradeId "SGR10" ;
+	a orion:InternalBusinessValue ;
+	orion:title "Cost savings" ;
+	orion:description "Different forms of cost (cost to develop, cost to maintain, etc.) should be reduced and the impact of the selection options on cost has to be evaluated." .
+
+orion:simplifySystem 
+	orion:gradeId "SGR11" ;
+	a orion:InternalBusinessValue ;
+	orion:title "Simplify the system" ;
+	orion:description "This goal impacts the decision about component selection by taking into account current system complexity with the aim of reducing it. As a consequence, the component selection decision might target a component grouping multiple existing features as well as services externalizing some of the system functionalities." .
+
+orion:increaseInternalCapacity 
+	orion:gradeId "SGR12" ;
+	a orion:InternalBusinessValue ;
+	orion:title "Extend internal owner development organization (increase capacity)" ;
+	orion:description "This goal aims at exploiting the component development need as a way to trigger organization extension and internal increase of capacity. The development of a new component might require the acquisition of new skills, expertise, personnel, and so forth. As a consequence, the decision will prefer internal component development." .
+
+orion:reduceTechnicalDept 
+	orion:gradeId "SGR13" ;
+	a orion:InternalBusinessValue ;
+	orion:title "Reduce technical debt" ;
+	orion:description "This goal aims at exploiting the component development need as a way to trigger organization extension and internal increase of capacity (internal environmental survey). The development of the new component might require the acquisition of new skills, expertise, personnel, and so forth, to reduce the technical debt uncovered by the component need. As a consequence, the decision will prefer internal component development (maybe also open source?)." .
+
+orion:buidAdvancedSystems 
+	orion:gradeId "SGR14" ;
+	a orion:InternalBusinessValue ;
+	orion:title "Built advanced systems (systems of systems)" ;
+	orion:description "The goal influences the decision to choose an alternative that enables the delivery of advanced functionality on a system level by integrating with other large-scale systems (hardware as well as software systems)." .
+
+# Note that orion:increaseRobustness and orion:increaseSafety defined above are also members of the InternalBusinessValue class.
+
+
+### Innovation & learning value [GV4]
+
+# Innovation and learning value can be one of six different 
+# alternatives, or other.
+
+orion:innovationAndLearningValue
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Goal ;
+	rdfs:range orion:InnovationAndLearningValue .
+
+orion:InnovationAndLearningValue
+	rdfs:subClassOf orion:Class .
+	
+orion:enterAnEcosystem 
+	orion:gradeId "SGR17" ;
+	a orion:InnovationAndLearningValue ;
+	orion:title "Enter an ecosystem" ;
+	orion:description "" .
+
+orion:establishNewBusinessRelations 
+	orion:gradeId "SGR18" ;
+	a orion:InnovationAndLearningValue ;
+	orion:title "Establish new relationships in a business" ;
+	orion:description "This goal influences the decision about component selection as it considers the potential to get access to new partners in business by making a contractual agreement on obtaining a component" .
+
+orion:reinforceRleations 
+	orion:gradeId "SGR19" ;
+	a orion:InnovationAndLearningValue ;
+	orion:title "Reinforce relations in partnerships" ;
+	orion:description "This goal influences the decision about component selection by taking into account partnership aspects (external environmental survey). It could be devoted to either extending the set of existing development partners or to reinforce the partnership relation with existing ones. As a consequence, the decision prefers outsourcing, COTS, or services as selection decision." .
+
+orion:participateInEvolvingCommunity 
+	orion:gradeId "SGR20" ;
+	a orion:InnovationAndLearningValue ;
+	orion:title "Participate in an evolving community" ;
+	orion:description "" .
+
+orion:leverageOnExternalCompetence 
+	orion:gradeId "SGR21" ;
+	a orion:InnovationAndLearningValue ;
+	orion:title "Leverage on external competence" ;
+	orion:description "This goal influences the decision about component selection by taking into account both internal and external factors (internal and external environmental survey). In fact, given the owned and required skills at the time of the decision, it might be opportunistically chosen to get components through external provision (i.e. sub- contracting, COTS, open source, service), where those skills would be less expensive if compared to the cost and time of educating internal personnel." .
+
+orion:benefitFromOtherExperience 
+	orion:gradeId "SGR22" ;
+	a orion:InnovationAndLearningValue ;
+	orion:title "Benefit from other experience" ;
+	orion:description "This goal aims at profiting from others? experience in component development when making a decision choice. The accumulated experience could be useful to reduce testing time and costs, to anticipate possible issues, to provide unplanned features, and so forth. Therefore, the decision will tend to promote the selection of sub- contracting, open source, COTS, or services as component of choice." .
+
+
+### Market value [GV5]
+
+# Innovation and learning value can be one of ten different 
+# alternatives, or other.
+
+orion:marketValue
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Goal ;
+	rdfs:range orion:MarketValue .
+
+orion:MarketValue
+	rdfs:subClassOf orion:Class .
+	
+orion:reachDiversifiedCustomers 
+	orion:gradeId "ESGR5" ;
+	a orion:MarketValue ;
+	orion:title "Reach diversified customers (other than typical ones)" ;
+	orion:description "This goal aims at exploiting the component development need as a way to expand the plethora of potential customers. Such an aim could be reached by selecting a component with additional features, with specific properties/quality attributes, and so forth. Notably, the adoption of an open source component could disclose the opportunity of attracting open source communities, or a certified component might make the product appealing for safety-sensitive customers." .
+
+orion:addressLargerMarket 
+	orion:gradeId "ESGR6" ;
+	a orion:MarketValue ;
+	orion:title "Address a larger market (more variation in features)" ;
+	orion:description "The goal influences decision making with regard to the ability to customize the product to the specific needs of customers within a specific market segment (software product line approach), i.e. a system should be configurable to specific needs (a good example is the configuration of different products from a common platform for cars, which can be tailored through product instantiation." .
+
+orion:newMarket 
+	orion:gradeId "ESGR7" ;
+	a orion:MarketValue ;
+	orion:title "New market" ;
+	orion:description "The goal impacts decision making in enabling the entry into a new market, which could be a new market segment or domain, i.e. by targeting a new group/subset of customers that were not targeted before. The new segment should differ from the existing segments in their response to market strategies" .
+
+orion:raiseMarketEntranceBarriers 
+	orion:gradeId "ESGR8" ;
+	a orion:MarketValue ;
+	orion:title "Raise the barriers for entering the market" ;
+	orion:description "Introduce barriers to enter the market, barriers known in literature are economies of scale, product differentiation, capital/investment requirements to do what the company plans to do, introduce cost disadvantages for competitors, distribution channelges, and exploition of gouvernment policies." .
+
+orion:createBrandIdentity 
+	orion:gradeId "ESGR9" ;
+	a orion:MarketValue ;
+	orion:title "Create brand identity" ;
+	orion:description "" .
+
+orion:increaseSales 
+	orion:gradeId "ESGR10" ;
+	a orion:MarketValue ;
+	orion:title "Increase sales" ;
+	orion:description "" .
+
+orion:sustainMarketPosition 
+	orion:gradeId "ESGR11" ;
+	a orion:MarketValue ;
+	orion:title "Sustain/retain market position" ;
+	orion:description "The current market share (e.g. sales) should be retained." .
+
+orion:createCompetitiveAdvantage 
+	orion:gradeId "ESGR12" ;
+	a orion:MarketValue ;
+	orion:title "Create a competitive advantage" ;
+	orion:description "The selection of the component should increase the advantage over other customers, for example by creating barriers of market entry by utilizing economies of scale, exploit gouvernment policies, etc. that makes it challenging for a new competitor to enter the market" .
+
+orion:improveCorporateImage 
+	orion:gradeId "ESGR13" ;
+	a orion:MarketValue ;
+	orion:title "Improve the corporate image" ;
+	orion:description "This goal influences the decision about component selection by taking into account external factors (external environmental survey). Notably, depending on the decision scenario openness could be considered as an added value, or the conformance to standards, the environmental impact, and so forth. These added values will have a weight in the component selection decision." .
+
+orion:stayInGame 
+	orion:gradeId "ESGR14" ;
+	a orion:MarketValue ;
+	orion:title "Stay in the game, be competitive" ;
+	orion:description "This goal influences the decision about component selection by taking into account external factors (external environmental survey). Competitiveness might be kept/enhanced by reducing cost and/or time-to-market, by providing on-time features, by improving quality, by releasing (partially) open source systems, and so forth. These added values will have a weight in the component selection decision." .
+
+
+##### Roles element
+
+orion:Role
+	rdfs:subClassOf orion:Class .
+
+
+##### Assets element
+
+orion:Asset 
+	rdfs:subClassOf orion:Class .
+
+
+##### Decisions element
+
+orion:Decision
+	rdfs:subClassOf orion:Class .
+
+
+##### Environment element
+
+orion:Environment
+	rdfs:subClassOf orion:Class .

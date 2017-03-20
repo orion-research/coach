@@ -338,6 +338,8 @@ class CaseDatabase(coach.GraphDatabaseService):
         Returns the base OWL ontology used by this case database. The base ontology may be extended by services.
         The format parameter indicates which serialization format should be used.
         """
+        
+        """
         # Create the name spaces
         owl = rdflib.OWL
         rdf = rdflib.RDF
@@ -384,6 +386,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             ontology.add(t)
         
         # Serialize the ontology graph
+        """
+        
+        # Load the ontology from file
+        ontology = rdflib.ConjunctiveGraph()
+        ontology.parse(source = "C:/Users/Jakob Axelsson/Documents/Arbetsdokument/Eclipse workspace/COACH/COACH/Ontology.ttl", format = "ttl")
+        
         return Response(json.dumps(ontology.serialize(format = format).decode("utf-8")))
      
      

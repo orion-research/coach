@@ -668,9 +668,9 @@ class ContextModelService(coach.Microservice):
         It writes the new context information to the database, and then returns a status message to be shown in the main dialogue window.
         """
         # DEBUGGING
-        #print("XXXX str(request.values)) XXX")
-        #print(str(request.values))
-        #print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+        print("XXXX str(request.values)) XXX")
+        print(str(request.values))
+        print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
         
         
         # Write the new context information to the database.
