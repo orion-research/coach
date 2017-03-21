@@ -2,14 +2,15 @@
 
 ##### TODO / Open questions:
 
-# - Should we use term Asset or Alternative?
+# - Should we use term Asset or Alternative? I prefer Alternative on the top level, since it is more general,
+#    and that is how it is currently encoded in this ontology. However, Asset is provided as a subclass of Alternative.
 # - Should we use term Environment or Context?
 # - Are multiple choices allowed for the different value categories (the SGRx)? Yes, and that is probably not an
 #   issue in RDF since you can have multiple links of the same name from a node, but could be problematic in Neo4j.
 #   The alternatives are either to store the attribute values in an array, or make a node and relation for each value.
 #   Since the values are finite, there will be a finite set of nodes which are reused between cases, so maybe the latter 
 #   is preferable. 
-# - SGR9, SGR15, SGR16, SGR17, SGR20, ESGR9, ESGR10, RP12, RP19 lack descriptions.
+# - SGR9, SGR15, SGR16, SGR17, SGR20, ESGR9, ESGR10, RP12, RP19, AT1-6, AT8 lack descriptions.
 # - RP16 should be renamed from "Process/Business Analyst" to "Process analyst", or split into two roles.
 # - How to handle "other" values in selection lists? Predefined categories can be instance nodes, but other values
 #   must be a special class, since different instances must be able to hold a description of what the "other" is
@@ -18,6 +19,16 @@
 # - The subcategory "Roles" of "Role" in GRADE should be renamed to something more specific. Suggestion: "Role title".
 # - The User class needs to be elaborated. Should it build on FOAF?
 # - RP20-RP22 are identical to RT1-RT3. Only RT1-RT3 are currently included in this ontology.
+# - Add suitable restrictions on relations (such as one-to-one, one-to-many, etc.)
+# - Asset origin options/suboption should be refined. They overlap now. In particular regarding "open source", but also
+#   for some other data.
+# - Why is AO4 mentioning "government contract" in the definition field?
+# - The properties part of Asset seems to be placed in a rather strange place. Shouldn't it be in Goals, or perhaps Decisions?
+
+##### Missing parts:
+# - Asset properties, needs to clarified how properties should be handled in general, and how to align with the property model work.
+# - Decision, not started yet.
+# - Environment/Context, not started yet. Alignment needed.
 
 
 ##### Namespaces
@@ -85,10 +96,10 @@ orion:role
 	rdfs:domain orion:DecisionCase ;
 	rdfs:range orion:Role .
 	
-orion:asset
+orion:alternative
 	a owl:ObjectProperty ;
 	rdfs:domain orion:DecisionCase ;
-	rdfs:range orion:Asset .
+	rdfs:range orion:Alternative .
 	
 orion:decision
 	a owl:ObjectProperty ;
@@ -631,10 +642,308 @@ orion:softwareQualityManager
 	
 	
 
-##### Assets element
+##### Alternative and Asset elements
 
-orion:Asset 
+orion:Alternative 
 	rdfs:subClassOf orion:Class .
+
+orion:Asset
+	rdfs:subClassOf orion:Alternative .
+
+
+### Asset usage
+
+# Asset usage can be reuse; adapt; buy; develop; or other.
+
+orion:assetUsage
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Asset ;
+	rdfs:range orion:AssetUsage .
+
+orion:AssetUsage
+	rdfs:subClassOf orion:Class .
+	
+orion:reuse
+	orion:gradeId "AU1" ;
+	a orion:AssetUsage ;
+	orion:title "Reuse" ;
+	orion:description "An asset is reused with no change." .
+
+orion:adapt
+	orion:gradeId "AU2" ;
+	a orion:AssetUsage ;
+	orion:title "Adapt" ;
+	orion:description "An asset is used but tailored." .
+
+orion:buy 
+	orion:gradeId "AU3" ;
+	a orion:AssetUsage ;
+	orion:title "Buy" ;
+	orion:description "An asset is used after it is owned (bought)." .
+
+orion:develop
+	orion:gradeId "AU4" ;
+	a orion:AssetUsage ;
+	orion:title "Develop" ;
+	orion:description "An asset is developed by the company/individual." .
+
+
+### Origin options and suboptions
+
+# Origin options can be in-house; outsource; open source; COTS; or other. In-house has internal origin source,
+# the others have external origin source.
+# Origin suboptions are project-based; inner source; open source; subcontracting; crowdsource; or other.
+
+# Options
+
+orion:originOption
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Asset ;
+	rdfs:range orion:OriginOption .
+
+orion:OriginOption
+	rdfs:subClassOf orion:Class .
+	
+orion:InternalOriginOption
+	rdfs:subClassOf orion:OriginOption .
+	
+orion:ExternalOriginOption
+	rdfs:subClassOf orion:OriginOption .
+	
+orion:originSource
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:OriginOption ;
+	rdfs:range xsd:string .
+
+orion:inhouse
+	orion:gradeId "AO1" ;
+	a orion:InternalOriginOption ;
+	orion:title "In-house" ;
+	orion:description "This is the process whereby the company uses their own workers (in-house team) to develop or implement an IT system that fits the specific needs of the company." .
+
+orion:outsource
+	orion:gradeId "AO2" ;
+	a orion:ExternalOriginOption ;
+	orion:title "Outsource" ;
+	orion:description "Outsourcing is defined as a situation where a company (a client) contracts out all or part of its software development activities to another company (a vendor), who provides agreed services for remuneration." .
+
+# Note: orion:openSource contains more fields, that are defined below under origin suboptions.
+orion:openSource
+	orion:gradeId "AO3" ;
+	a orion:ExternalOriginOption ;
+	orion:title "Open source" ;
+	orion:description "Open source development refers to the case where the source code is available for modification or enhancement by anyone outside the boundaries of an organization or individual." .
+
+orion:cots
+	orion:gradeId "AO4" ;
+	a orion:ExternalOriginOption ;
+	orion:title "Commercial off-the-shelf (COTS)" ;
+	orion:description "Commercial items, including services, available in the commercial marketplace that can be bought and used under government contract." .
+
+
+# Suboptions
+
+orion:originSuboption
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Asset ;
+	rdfs:range orion:OriginSuboption .
+
+orion:OriginSuboption
+	rdfs:subClassOf orion:Class .
+	
+orion:projectBased
+	orion:gradeId "AS1" ;
+	a orion:OriginSuboption ;
+	orion:title "Project-based" ;
+	orion:description "Source code is originated only from specific projects." .
+
+orion:innerSource
+	orion:gradeId "AS2" ;
+	a orion:OriginSuboption ;
+	orion:title "Inner source" ;
+	orion:description "Source code is available for modification as in open source, but applied to internal software development." .
+
+# Note: orion:openSource is also defined above under origin options, where the orion:title and orion:description fields can be found.
+orion:openSource
+	orion:gradeId "AS3" ;
+	a orion:OriginSuboption .
+
+orion:subcontracting
+	orion:gradeId "AS4" ;
+	a orion:OriginSuboption ;
+	orion:title "Subcontracting" ;
+	orion:description "Subcontracting refers to when establishing a contractual agreement with an outside person or company to perform the work." .
+
+orion:crowdsource
+	orion:gradeId "AS5" ;
+	a orion:OriginSuboption ;
+	orion:title "Crowdsource" ;
+	orion:description "Crowdsourcing is a new on-line distributed problem solving and production model in which networked people collaborate to complete a task." .
+
+
+### Asset element types
+
+# Asset elements can be of the following classes: hardware; information; service; software; system; or other elements.
+# For each of these classes, there are concrete element types.
+
+# Element classes
+
+orion:elementType
+	a owl:DatatypeProperty ;
+	rdfs:domain orion:Asset ;
+	rdfs:range orion:ElementType .
+
+orion:ElementType
+	rdfs:subClassOf orion:Class .
+	
+orion:HardwareElement
+	rdfs:subClassOf orion:ElementType .
+	
+orion:InformationElement
+	rdfs:subClassOf orion:ElementType .
+	
+orion:ServiceElement
+	rdfs:subClassOf orion:ElementType .
+	
+orion:SoftwareElement
+	rdfs:subClassOf orion:ElementType .
+	
+orion:SystemElement
+	rdfs:subClassOf orion:ElementType .
+	
+# Concrete element types
+
+orion:processor
+	orion:gradeId "AT1" ;
+	a orion:HardwareElement ;
+	orion:title "Processor" ;
+	orion:description "" .
+
+orion:display
+	orion:gradeId "AT2" ;
+	a orion:HardwareElement ;
+	orion:title "Display" ;
+	orion:description "" .
+
+orion:sensor
+	orion:gradeId "AT3" ;
+	a orion:HardwareElement ;
+	orion:title "Sensor" ;
+	orion:description "" .
+
+orion:actuator
+	orion:gradeId "AT4" ;
+	a orion:HardwareElement ;
+	orion:title "Actuator" ;
+	orion:description "" .
+
+orion:circuit
+	orion:gradeId "AT5" ;
+	a orion:HardwareElement ;
+	orion:title "Circuit" ;
+	orion:description "" .
+
+orion:networkInfrastructure
+	orion:gradeId "AT6" ;
+	a orion:HardwareElement ;
+	orion:title "Network infrastructure" ;
+	orion:description "" .
+
+orion:designDocument
+	orion:gradeId "AT7" ;
+	a orion:InformationElement ;
+	orion:title "Design document (architecture)" ;
+	orion:description "The composite of the design architectures for products and their life cycle processes." .
+
+orion:modelAndMetamodel
+	orion:gradeId "AT8" ;
+	a orion:InformationElement ;
+	orion:title "Model and metamodel" ;
+	orion:description "" .
+
+orion:pattern
+	orion:gradeId "AT9" ;
+	a orion:InformationElement ;
+	orion:title "Pattern (Design)" ;
+	orion:description "A description of the problem and the essence of its solution to enable the solution to be reused in different settings." .
+
+orion:functionalService
+	orion:gradeId "AT10" ;
+	a orion:ServiceElement ;
+	orion:title "Service (funtional)" ;
+	orion:description "A service that must be implemented in the piece of software in order to fulfill functional user requirements." .
+
+orion:serviceOrComponentComposition
+	orion:gradeId "AT11" ;
+	a orion:ServiceElement ;
+	orion:title "Service/component composition" ;
+	orion:description "The combination of two or more software components yielding a new component behavior at a different level of abstraction. The characteristics of the new component behavior are determined by the components being combined and by the way they are combined." .
+
+orion:plugin
+	orion:gradeId "AT12" ;
+	a orion:SoftwareElement ;
+	orion:title "Plugin" ;
+	orion:description "A software that is installed into an existing application in order to enhance its capability. For example, plug-ins are widely used in image editing programs such as Photoshop to add some special effect. The term is widely used for software, but can also refer to a plug-in module for hardware." .
+
+orion:library
+	orion:gradeId "AT13" ;
+	a orion:SoftwareElement ;
+	orion:title "Library" ;
+	orion:description "A software library containing computer readable and human readable information relevant to a software development effort." .
+
+orion:functionalComponent
+	orion:gradeId "AT14" ;
+	a orion:SoftwareElement ;
+	orion:title "Functional component" ;
+	orion:description "A general term used to refer to a software system or an element, such as module, unit, data, or document." .
+
+orion:database
+	orion:gradeId "AT15" ;
+	a orion:SoftwareElement ;
+	orion:title "Database" ;
+	orion:description "1. It is a collection of interrelated data stored together in one or more computerized files. 2. It is a collection of data organized according to a conceptual structure describing the characteristics of the data and the relationships among their corresponding entities, supporting one or more application areas" .
+
+orion:middleware
+	orion:gradeId "AT16" ;
+	a orion:SoftwareElement ;
+	orion:title "Middleware" ;
+	orion:description "A middleware refers to the software that hides the complexity and heterogeneity of underlying hardware and network platforms,eases the management of system resources, and increases the predictability of application executions." .
+
+orion:operatingSystem
+	orion:gradeId "AT17" ;
+	a orion:SoftwareElement ;
+	orion:title "Operating system (OS)" ;
+	orion:description "A collection of software, firmware, and hardware elements that controls the execution of computer programs and provides such services as computer resource allocation, job control, input/output control, and file management in a computer system" .
+
+orion:server
+	orion:gradeId "AT18" ;
+	a orion:SoftwareElement ;
+	orion:title "Server" ;
+	orion:description "1. A hardware system or software program which provides a service to clients. 2. A process implementing one or more operations on one or more objects." .
+
+orion:userInterface
+	orion:gradeId "AT19" ;
+	a orion:SoftwareElement ;
+	orion:title "User interface" ;
+	orion:description "An interface that enables information to be passed between a human user and hardware or software components of a computer system." .
+
+orion:system
+	orion:gradeId "AT20" ;
+	a orion:SystemElement ;
+	orion:title "System" ;
+	orion:description "Computer System: A system containing one or more computers and associated software. Software System: Computer programs, procedures, and possibly associated documentation and data pertaining to the operation of a computer system." .
+
+orion:subsystem
+	orion:gradeId "AT21" ;
+	a orion:SystemElement ;
+	orion:title "Subsystem" ;
+	orion:description "Is a group of interconnected and interactive parts that performs an important job or task as a component of a larger system." .
+
+orion:systemOfSystems
+	orion:gradeId "AT22" ;
+	a orion:SystemElement ;
+	orion:title "System of systems" ;
+	orion:description "A large system that delivers unique capabilities, formed by integrating independently useful systems." .
 
 
 ##### Decisions element
