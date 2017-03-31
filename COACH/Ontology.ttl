@@ -17,25 +17,29 @@
 #   in each case. So a specific class "Other", and then we need for each concrete instance say that it is
 #   both "Other" and the category to which it belongs (e.g. CustomerValue).
 # - The subcategory "Roles" of "Role" in GRADE should be renamed to something more specific. Suggestion: "Role title".
-# - The User class needs to be elaborated. Should it build on FOAF?
+# - The User class needs to be elaborated. Should it build on FOAF? What fields are relevant?
 # - RP20-RP22 are identical to RT1-RT3. Only RT1-RT3 are currently included in this ontology.
 # - Add suitable restrictions on relations (such as one-to-one, one-to-many, etc.)
 # - Asset origin options/suboption should be refined. They overlap now. In particular regarding "open source", but also
 #   for some other data.
 # - Why is AO4 mentioning "government contract" in the definition field?
 # - The properties part of Asset seems to be placed in a rather strange place. Shouldn't it be in Goals, or perhaps Decisions?
+# - The top level of GRADE is quite generic. Maybe there should be a subclass for each of the top elements, that are used
+#   for the specific decision problem of selecting software components? This is how Alternative vs. Asset are handled now,
+#   but the same principle could be applied for the other categories as well.
 
 ##### Missing parts:
 # - Asset properties, needs to clarified how properties should be handled in general, and how to align with the property model work.
 # - Decision, not started yet.
-# - Environment/Context, not started yet. Alignment needed.
+# - Environment/Context. Started with the organization subcategory. Current idea is to use the Context model, since it is more mature,
+#   and skip the Environment part of GRADE.
 
 
 ##### Namespaces
 
 # Namespace prefix for the ORION ontology
 
-@prefix orion: <http://www.orion-research.se/ontology#> .
+@prefix : <http://www.orion-research.se/ontology#> .
 
 
 # Standard namespace prefixes
@@ -50,22 +54,22 @@
 
 # All Orion classes can have attributes id, title and description
 
-orion:Class
+:Class
 	a owl:Class .
 
-orion:id
+:id
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Class ;
+	rdfs:domain :Class ;
 	rdfs:range xsd:positiveInteger .
 
-orion:title
+:title
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Class ;
+	rdfs:domain :Class ;
 	rdfs:range xsd:string .
 
-orion:description
+:description
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Class ;
+	rdfs:domain :Class ;
 	rdfs:range xsd:string .
 
 
@@ -74,42 +78,85 @@ orion:description
 # using the Other class. Instances of the Other class should also always be instances of a specific class
 # representing a certain category.
 
-orion:Other
-	rdfs:subClassOf orion:Class .
+:Other
+	rdfs:subClassOf :Class .
+
+
+# Certain properties are related to ordinal sets of three (low, medium, high) or
+# five (veryLow, low, medium, high, veryHigh) categories.
+
+:Ordinal
+	a :Class .
+
+:rank
+	a owl:DatatypeProperty ;
+	rdfs:domain :Ordinal ;
+	rdfs:range xsd:positiveInteger .
+
+:Ordinal3
+	a :Ordinal .
+		
+:Ordinal5
+	a :Ordinal3 .
+		
+:veryLow
+	a :Ordinal5 ;
+	:rank 1 ;
+	:title "Very low" .
+
+:low
+	a :Ordinal3 ;
+	:rank 2 ;
+	:title "Low" .
+
+:medium
+	a :Ordinal3 ;
+	:rank 3 ;
+	:title "Medium" .
+
+:high
+	a :Ordinal3 ;
+	:rank 4 ;
+	:title "High" .
+
+:veryHigh
+	a :Ordinal5 ;
+	:rank 5 ; 
+	:title "Very high" .
 
 
 ##### Decision case
 
 # A decision case includes one Goal element, multiple Role
-# Asset, and Decision elements, and one Environment element.
+# Asset, and Decision elements, and one Context (Environment) element.
 
-orion:DecisionCase
-	rdfs:subClassOf orion:Class .
+:DecisionCase
+	rdfs:subClassOf :Class .
 
-orion:goal
+:goal
 	a owl:ObjectProperty ;
-	rdfs:domain orion:DecisionCase ;
-	rdfs:range orion:Goal .
+	rdfs:domain :DecisionCase ;
+	rdfs:range :Goal .
 	
-orion:role
+:role
 	a owl:ObjectProperty ;
-	rdfs:domain orion:DecisionCase ;
-	rdfs:range orion:Role .
+	rdfs:domain :DecisionCase ;
+	rdfs:range :Role .
 	
-orion:alternative
+:alternative
 	a owl:ObjectProperty ;
-	rdfs:domain orion:DecisionCase ;
-	rdfs:range orion:Alternative .
+	rdfs:domain :DecisionCase ;
+	rdfs:range :Alternative .
 	
-orion:decision
+:decision
 	a owl:ObjectProperty ;
-	rdfs:domain orion:DecisionCase ;
-	rdfs:range orion:Decision .
+	rdfs:domain :DecisionCase ;
+	rdfs:range :Decision .
 
-orion:environment
+:environment
 	a owl:ObjectProperty ;
-	rdfs:domain orion:DecisionCase ;
-	rdfs:range orion:Environment .
+	rdfs:domain :DecisionCase ;
+	rdfs:range :Context .
 
 
 ##### Goals element
@@ -118,8 +165,8 @@ orion:environment
 # customer, financial, internal business, innovation and
 # learning, and market values. 
 
-orion:Goal
-	rdfs:subClassOf orion:Class .
+:Goal
+	rdfs:subClassOf :Class .
 
 
 ### Customer value [GV1]
@@ -128,47 +175,47 @@ orion:Goal
 # improving/increasing quality; improving customer
 # satisfaction; increase robustness; increase safety; or other. 
 
-orion:customerValue
+:customerValue
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Goal ;
-	rdfs:range orion:CustomerValue .
+	rdfs:domain :Goal ;
+	rdfs:range :CustomerValue .
 
-orion:CustomerValue
-	rdfs:subClassOf orion:Class .
+:CustomerValue
+	rdfs:subClassOf :Class .
 	
-orion:extendASystem 
-	orion:gradeId "SGR1" ;
-	a orion:CustomerValue ;
-	orion:title "Extend a system (functional)" ;
-	orion:description "Cover some customer need by extending system functionality. Extensions can be through the addition of new functionality or through modification of existing functionality." .
+:extendASystem 
+	:gradeId "SGR1" ;
+	a :CustomerValue ;
+	:title "Extend a system (functional)" ;
+	:description "Cover some customer need by extending system functionality. Extensions can be through the addition of new functionality or through modification of existing functionality." .
 	
-orion:improveQuality 
-	orion:gradeId "SGR2" ;
-	a orion:CustomerValue ;
-	orion:title "Improve/increase quality" ;
-	orion:description "The quality of the system should be improved, this may relate to meeting the perceived fulfillment of needs by the customer with regard to functional and non-functional properties of the system. Non-functional properties are, for example, reliability, security, performance, etc." .
+:improveQuality 
+	:gradeId "SGR2" ;
+	a :CustomerValue ;
+	:title "Improve/increase quality" ;
+	:description "The quality of the system should be improved, this may relate to meeting the perceived fulfillment of needs by the customer with regard to functional and non-functional properties of the system. Non-functional properties are, for example, reliability, security, performance, etc." .
 
-orion:improveCustomerSatisfaction 
-	orion:gradeId "SGR3" ;
-	a orion:CustomerValue ;
-	orion:title "Improve customer satisfaction" ;
-	orion:description "In this case, the component selection aims at enhancing customer satisfaction by trying to anticipate customers' needs. In this respect, the decision could take into account characteristics of the available components and select the best suited for the application customers. It is worth noting that customer satisfaction could include timely available features, that is reduced time-to-market, as well as high quality/price ratio, and so on." .
+:improveCustomerSatisfaction 
+	:gradeId "SGR3" ;
+	a :CustomerValue ;
+	:title "Improve customer satisfaction" ;
+	:description "In this case, the component selection aims at enhancing customer satisfaction by trying to anticipate customers' needs. In this respect, the decision could take into account characteristics of the available components and select the best suited for the application customers. It is worth noting that customer satisfaction could include timely available features, that is reduced time-to-market, as well as high quality/price ratio, and so on." .
 
-# orion:increaseRobustness and orion:increaseSafety are considered both CustomerValue and InternalBusinessValue.
+# :increaseRobustness and :increaseSafety are considered both CustomerValue and InternalBusinessValue.
 
-orion:increaseRobustness 
-	orion:gradeId "SGR15" ;
-	a orion:CustomerValue ;
-	a orion:InternalBusinessValue ;
-	orion:title "Increase robustness" ;
-	orion:description "" .
+:increaseRobustness 
+	:gradeId "SGR15" ;
+	a :CustomerValue ;
+	a :InternalBusinessValue ;
+	:title "Increase robustness" ;
+	:description "" .
 
-orion:increaseSafety 
-	orion:gradeId "SGR16" ;
-	a orion:CustomerValue ;
-	a orion:InternalBusinessValue ;
-	orion:title "Increase safety" ;
-	orion:description "" .
+:increaseSafety 
+	:gradeId "SGR16" ;
+	a :CustomerValue ;
+	a :InternalBusinessValue ;
+	:title "Increase safety" ;
+	:description "" .
 
 
 ### Financial value [GV2]
@@ -176,25 +223,25 @@ orion:increaseSafety
 # Financial value can be one of: increasing profit; 
 # identifying potential for acquisition; other.
 
-orion:financialValue
+:financialValue
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Goal ;
-	rdfs:range orion:FinancialValue .
+	rdfs:domain :Goal ;
+	rdfs:range :FinancialValue .
 
-orion:FinancialValue
-	rdfs:subClassOf orion:Class .
+:FinancialValue
+	rdfs:subClassOf :Class .
 	
-orion:increaseProfit 
-	orion:gradeId "SGR4" ;
-	a orion:FinancialValue ;
-	orion:title "Increase profit" ;
-	orion:description "Financial gain obtained by the company, calculated as the difference between cost and gains." .
+:increaseProfit 
+	:gradeId "SGR4" ;
+	a :FinancialValue ;
+	:title "Increase profit" ;
+	:description "Financial gain obtained by the company, calculated as the difference between cost and gains." .
 
-orion:acquisitionPotential 
-	orion:gradeId "SGR5" ;
-	a orion:FinancialValue ;
-	orion:title "Identify potential for acquisition of companies" ;
-	orion:description "This goal leverages the decision about component selection for external environmental survey. In fact, the decision would prefer outsourcing, COTS, or services as component selection in order to concretely inspect the qualities of a certain subcontractor and possibly buy it." .
+:acquisitionPotential 
+	:gradeId "SGR5" ;
+	a :FinancialValue ;
+	:title "Identify potential for acquisition of companies" ;
+	:description "This goal leverages the decision about component selection for external environmental survey. In fact, the decision would prefer outsourcing, COTS, or services as component selection in order to concretely inspect the qualities of a certain subcontractor and possibly buy it." .
 
 
 ### Internal business value [GV3]
@@ -202,69 +249,69 @@ orion:acquisitionPotential
 # Internal business value can be one of ten different 
 # alternatives, or other.
 
-orion:internalBusinessValue
+:internalBusinessValue
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Goal ;
-	rdfs:range orion:InternalBusinessValue .
+	rdfs:domain :Goal ;
+	rdfs:range :InternalBusinessValue .
 
-orion:InternalBusinessValue
-	rdfs:subClassOf orion:Class .
+:InternalBusinessValue
+	rdfs:subClassOf :Class .
 	
-orion:replaceAnAsset 
-	orion:gradeId "SGR6" ;
-	a orion:InternalBusinessValue ;
-	orion:title "Replace an asset" ;
-	orion:description "An existing asset currently in use shall be replaced with another asset, a potential reason could be change in platforms, poor quality of existing assets, etc." .
+:replaceAnAsset 
+	:gradeId "SGR6" ;
+	a :InternalBusinessValue ;
+	:title "Replace an asset" ;
+	:description "An existing asset currently in use shall be replaced with another asset, a potential reason could be change in platforms, poor quality of existing assets, etc." .
 
-orion:increaseReuse 
-	orion:gradeId "SGR7" ;
-	a orion:InternalBusinessValue ;
-	orion:title "Increase reuse" ;
-	orion:description "The goal influences decision making aiming at selecting a component that could be reused in a variety of products by, for examle, providing more generic functionalities and high configurability." .
+:increaseReuse 
+	:gradeId "SGR7" ;
+	a :InternalBusinessValue ;
+	:title "Increase reuse" ;
+	:description "The goal influences decision making aiming at selecting a component that could be reused in a variety of products by, for examle, providing more generic functionalities and high configurability." .
 
-orion:minimimzeTimeToMarket 
-	orion:gradeId "SGR8" ;
-	a orion:InternalBusinessValue ;
-	orion:title "Mimimize time to market" ;
-	orion:description "The goal drives the selection in that an option should be chosen that requires a short time to integrate and test into the system to minimize the duration needed to deliver to the market." .
+:minimimzeTimeToMarket 
+	:gradeId "SGR8" ;
+	a :InternalBusinessValue ;
+	:title "Mimimize time to market" ;
+	:description "The goal drives the selection in that an option should be chosen that requires a short time to integrate and test into the system to minimize the duration needed to deliver to the market." .
 
-orion:increaseEffectiveness 
-	orion:gradeId "SGR9" ;
-	a orion:InternalBusinessValue ;
-	orion:title "Increase effectiveness" ;
-	orion:description "" .
+:increaseEffectiveness 
+	:gradeId "SGR9" ;
+	a :InternalBusinessValue ;
+	:title "Increase effectiveness" ;
+	:description "" .
 
-orion:costSavings 
-	orion:gradeId "SGR10" ;
-	a orion:InternalBusinessValue ;
-	orion:title "Cost savings" ;
-	orion:description "Different forms of cost (cost to develop, cost to maintain, etc.) should be reduced and the impact of the selection options on cost has to be evaluated." .
+:costSavings 
+	:gradeId "SGR10" ;
+	a :InternalBusinessValue ;
+	:title "Cost savings" ;
+	:description "Different forms of cost (cost to develop, cost to maintain, etc.) should be reduced and the impact of the selection options on cost has to be evaluated." .
 
-orion:simplifySystem 
-	orion:gradeId "SGR11" ;
-	a orion:InternalBusinessValue ;
-	orion:title "Simplify the system" ;
-	orion:description "This goal impacts the decision about component selection by taking into account current system complexity with the aim of reducing it. As a consequence, the component selection decision might target a component grouping multiple existing features as well as services externalizing some of the system functionalities." .
+:simplifySystem 
+	:gradeId "SGR11" ;
+	a :InternalBusinessValue ;
+	:title "Simplify the system" ;
+	:description "This goal impacts the decision about component selection by taking into account current system complexity with the aim of reducing it. As a consequence, the component selection decision might target a component grouping multiple existing features as well as services externalizing some of the system functionalities." .
 
-orion:increaseInternalCapacity 
-	orion:gradeId "SGR12" ;
-	a orion:InternalBusinessValue ;
-	orion:title "Extend internal owner development organization (increase capacity)" ;
-	orion:description "This goal aims at exploiting the component development need as a way to trigger organization extension and internal increase of capacity. The development of a new component might require the acquisition of new skills, expertise, personnel, and so forth. As a consequence, the decision will prefer internal component development." .
+:increaseInternalCapacity 
+	:gradeId "SGR12" ;
+	a :InternalBusinessValue ;
+	:title "Extend internal owner development organization (increase capacity)" ;
+	:description "This goal aims at exploiting the component development need as a way to trigger organization extension and internal increase of capacity. The development of a new component might require the acquisition of new skills, expertise, personnel, and so forth. As a consequence, the decision will prefer internal component development." .
 
-orion:reduceTechnicalDept 
-	orion:gradeId "SGR13" ;
-	a orion:InternalBusinessValue ;
-	orion:title "Reduce technical debt" ;
-	orion:description "This goal aims at exploiting the component development need as a way to trigger organization extension and internal increase of capacity (internal environmental survey). The development of the new component might require the acquisition of new skills, expertise, personnel, and so forth, to reduce the technical debt uncovered by the component need. As a consequence, the decision will prefer internal component development (maybe also open source?)." .
+:reduceTechnicalDept 
+	:gradeId "SGR13" ;
+	a :InternalBusinessValue ;
+	:title "Reduce technical debt" ;
+	:description "This goal aims at exploiting the component development need as a way to trigger organization extension and internal increase of capacity (internal environmental survey). The development of the new component might require the acquisition of new skills, expertise, personnel, and so forth, to reduce the technical debt uncovered by the component need. As a consequence, the decision will prefer internal component development (maybe also open source?)." .
 
-orion:buidAdvancedSystems 
-	orion:gradeId "SGR14" ;
-	a orion:InternalBusinessValue ;
-	orion:title "Built advanced systems (systems of systems)" ;
-	orion:description "The goal influences the decision to choose an alternative that enables the delivery of advanced functionality on a system level by integrating with other large-scale systems (hardware as well as software systems)." .
+:buidAdvancedSystems 
+	:gradeId "SGR14" ;
+	a :InternalBusinessValue ;
+	:title "Built advanced systems (systems of systems)" ;
+	:description "The goal influences the decision to choose an alternative that enables the delivery of advanced functionality on a system level by integrating with other large-scale systems (hardware as well as software systems)." .
 
-# Note that orion:increaseRobustness and orion:increaseSafety defined above are also members of the InternalBusinessValue class.
+# Note that :increaseRobustness and :increaseSafety defined above are also members of the InternalBusinessValue class.
 
 
 ### Innovation & learning value [GV4]
@@ -272,49 +319,49 @@ orion:buidAdvancedSystems
 # Innovation and learning value can be one of six different 
 # alternatives, or other.
 
-orion:innovationAndLearningValue
+:innovationAndLearningValue
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Goal ;
-	rdfs:range orion:InnovationAndLearningValue .
+	rdfs:domain :Goal ;
+	rdfs:range :InnovationAndLearningValue .
 
-orion:InnovationAndLearningValue
-	rdfs:subClassOf orion:Class .
+:InnovationAndLearningValue
+	rdfs:subClassOf :Class .
 	
-orion:enterAnEcosystem 
-	orion:gradeId "SGR17" ;
-	a orion:InnovationAndLearningValue ;
-	orion:title "Enter an ecosystem" ;
-	orion:description "" .
+:enterAnEcosystem 
+	:gradeId "SGR17" ;
+	a :InnovationAndLearningValue ;
+	:title "Enter an ecosystem" ;
+	:description "" .
 
-orion:establishNewBusinessRelations 
-	orion:gradeId "SGR18" ;
-	a orion:InnovationAndLearningValue ;
-	orion:title "Establish new relationships in a business" ;
-	orion:description "This goal influences the decision about component selection as it considers the potential to get access to new partners in business by making a contractual agreement on obtaining a component" .
+:establishNewBusinessRelations 
+	:gradeId "SGR18" ;
+	a :InnovationAndLearningValue ;
+	:title "Establish new relationships in a business" ;
+	:description "This goal influences the decision about component selection as it considers the potential to get access to new partners in business by making a contractual agreement on obtaining a component" .
 
-orion:reinforceRleations 
-	orion:gradeId "SGR19" ;
-	a orion:InnovationAndLearningValue ;
-	orion:title "Reinforce relations in partnerships" ;
-	orion:description "This goal influences the decision about component selection by taking into account partnership aspects (external environmental survey). It could be devoted to either extending the set of existing development partners or to reinforce the partnership relation with existing ones. As a consequence, the decision prefers outsourcing, COTS, or services as selection decision." .
+:reinforceRleations 
+	:gradeId "SGR19" ;
+	a :InnovationAndLearningValue ;
+	:title "Reinforce relations in partnerships" ;
+	:description "This goal influences the decision about component selection by taking into account partnership aspects (external environmental survey). It could be devoted to either extending the set of existing development partners or to reinforce the partnership relation with existing ones. As a consequence, the decision prefers outsourcing, COTS, or services as selection decision." .
 
-orion:participateInEvolvingCommunity 
-	orion:gradeId "SGR20" ;
-	a orion:InnovationAndLearningValue ;
-	orion:title "Participate in an evolving community" ;
-	orion:description "" .
+:participateInEvolvingCommunity 
+	:gradeId "SGR20" ;
+	a :InnovationAndLearningValue ;
+	:title "Participate in an evolving community" ;
+	:description "" .
 
-orion:leverageOnExternalCompetence 
-	orion:gradeId "SGR21" ;
-	a orion:InnovationAndLearningValue ;
-	orion:title "Leverage on external competence" ;
-	orion:description "This goal influences the decision about component selection by taking into account both internal and external factors (internal and external environmental survey). In fact, given the owned and required skills at the time of the decision, it might be opportunistically chosen to get components through external provision (i.e. sub- contracting, COTS, open source, service), where those skills would be less expensive if compared to the cost and time of educating internal personnel." .
+:leverageOnExternalCompetence 
+	:gradeId "SGR21" ;
+	a :InnovationAndLearningValue ;
+	:title "Leverage on external competence" ;
+	:description "This goal influences the decision about component selection by taking into account both internal and external factors (internal and external environmental survey). In fact, given the owned and required skills at the time of the decision, it might be opportunistically chosen to get components through external provision (i.e. sub- contracting, COTS, open source, service), where those skills would be less expensive if compared to the cost and time of educating internal personnel." .
 
-orion:benefitFromOtherExperience 
-	orion:gradeId "SGR22" ;
-	a orion:InnovationAndLearningValue ;
-	orion:title "Benefit from other experience" ;
-	orion:description "This goal aims at profiting from others? experience in component development when making a decision choice. The accumulated experience could be useful to reduce testing time and costs, to anticipate possible issues, to provide unplanned features, and so forth. Therefore, the decision will tend to promote the selection of sub- contracting, open source, COTS, or services as component of choice." .
+:benefitFromOtherExperience 
+	:gradeId "SGR22" ;
+	a :InnovationAndLearningValue ;
+	:title "Benefit from other experience" ;
+	:description "This goal aims at profiting from others? experience in component development when making a decision choice. The accumulated experience could be useful to reduce testing time and costs, to anticipate possible issues, to provide unplanned features, and so forth. Therefore, the decision will tend to promote the selection of sub- contracting, open source, COTS, or services as component of choice." .
 
 
 ### Market value [GV5]
@@ -322,73 +369,73 @@ orion:benefitFromOtherExperience
 # Innovation and learning value can be one of ten different 
 # alternatives, or other.
 
-orion:marketValue
+:marketValue
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Goal ;
-	rdfs:range orion:MarketValue .
+	rdfs:domain :Goal ;
+	rdfs:range :MarketValue .
 
-orion:MarketValue
-	rdfs:subClassOf orion:Class .
+:MarketValue
+	rdfs:subClassOf :Class .
 	
-orion:reachDiversifiedCustomers 
-	orion:gradeId "ESGR5" ;
-	a orion:MarketValue ;
-	orion:title "Reach diversified customers (other than typical ones)" ;
-	orion:description "This goal aims at exploiting the component development need as a way to expand the plethora of potential customers. Such an aim could be reached by selecting a component with additional features, with specific properties/quality attributes, and so forth. Notably, the adoption of an open source component could disclose the opportunity of attracting open source communities, or a certified component might make the product appealing for safety-sensitive customers." .
+:reachDiversifiedCustomers 
+	:gradeId "ESGR5" ;
+	a :MarketValue ;
+	:title "Reach diversified customers (other than typical ones)" ;
+	:description "This goal aims at exploiting the component development need as a way to expand the plethora of potential customers. Such an aim could be reached by selecting a component with additional features, with specific properties/quality attributes, and so forth. Notably, the adoption of an open source component could disclose the opportunity of attracting open source communities, or a certified component might make the product appealing for safety-sensitive customers." .
 
-orion:addressLargerMarket 
-	orion:gradeId "ESGR6" ;
-	a orion:MarketValue ;
-	orion:title "Address a larger market (more variation in features)" ;
-	orion:description "The goal influences decision making with regard to the ability to customize the product to the specific needs of customers within a specific market segment (software product line approach), i.e. a system should be configurable to specific needs (a good example is the configuration of different products from a common platform for cars, which can be tailored through product instantiation." .
+:addressLargerMarket 
+	:gradeId "ESGR6" ;
+	a :MarketValue ;
+	:title "Address a larger market (more variation in features)" ;
+	:description "The goal influences decision making with regard to the ability to customize the product to the specific needs of customers within a specific market segment (software product line approach), i.e. a system should be configurable to specific needs (a good example is the configuration of different products from a common platform for cars, which can be tailored through product instantiation." .
 
-orion:newMarket 
-	orion:gradeId "ESGR7" ;
-	a orion:MarketValue ;
-	orion:title "New market" ;
-	orion:description "The goal impacts decision making in enabling the entry into a new market, which could be a new market segment or domain, i.e. by targeting a new group/subset of customers that were not targeted before. The new segment should differ from the existing segments in their response to market strategies" .
+:newMarket 
+	:gradeId "ESGR7" ;
+	a :MarketValue ;
+	:title "New market" ;
+	:description "The goal impacts decision making in enabling the entry into a new market, which could be a new market segment or domain, i.e. by targeting a new group/subset of customers that were not targeted before. The new segment should differ from the existing segments in their response to market strategies" .
 
-orion:raiseMarketEntranceBarriers 
-	orion:gradeId "ESGR8" ;
-	a orion:MarketValue ;
-	orion:title "Raise the barriers for entering the market" ;
-	orion:description "Introduce barriers to enter the market, barriers known in literature are economies of scale, product differentiation, capital/investment requirements to do what the company plans to do, introduce cost disadvantages for competitors, distribution channelges, and exploition of gouvernment policies." .
+:raiseMarketEntranceBarriers 
+	:gradeId "ESGR8" ;
+	a :MarketValue ;
+	:title "Raise the barriers for entering the market" ;
+	:description "Introduce barriers to enter the market, barriers known in literature are economies of scale, product differentiation, capital/investment requirements to do what the company plans to do, introduce cost disadvantages for competitors, distribution channelges, and exploition of gouvernment policies." .
 
-orion:createBrandIdentity 
-	orion:gradeId "ESGR9" ;
-	a orion:MarketValue ;
-	orion:title "Create brand identity" ;
-	orion:description "" .
+:createBrandIdentity 
+	:gradeId "ESGR9" ;
+	a :MarketValue ;
+	:title "Create brand identity" ;
+	:description "" .
 
-orion:increaseSales 
-	orion:gradeId "ESGR10" ;
-	a orion:MarketValue ;
-	orion:title "Increase sales" ;
-	orion:description "" .
+:increaseSales 
+	:gradeId "ESGR10" ;
+	a :MarketValue ;
+	:title "Increase sales" ;
+	:description "" .
 
-orion:sustainMarketPosition 
-	orion:gradeId "ESGR11" ;
-	a orion:MarketValue ;
-	orion:title "Sustain/retain market position" ;
-	orion:description "The current market share (e.g. sales) should be retained." .
+:sustainMarketPosition 
+	:gradeId "ESGR11" ;
+	a :MarketValue ;
+	:title "Sustain/retain market position" ;
+	:description "The current market share (e.g. sales) should be retained." .
 
-orion:createCompetitiveAdvantage 
-	orion:gradeId "ESGR12" ;
-	a orion:MarketValue ;
-	orion:title "Create a competitive advantage" ;
-	orion:description "The selection of the component should increase the advantage over other customers, for example by creating barriers of market entry by utilizing economies of scale, exploit gouvernment policies, etc. that makes it challenging for a new competitor to enter the market" .
+:createCompetitiveAdvantage 
+	:gradeId "ESGR12" ;
+	a :MarketValue ;
+	:title "Create a competitive advantage" ;
+	:description "The selection of the component should increase the advantage over other customers, for example by creating barriers of market entry by utilizing economies of scale, exploit gouvernment policies, etc. that makes it challenging for a new competitor to enter the market" .
 
-orion:improveCorporateImage 
-	orion:gradeId "ESGR13" ;
-	a orion:MarketValue ;
-	orion:title "Improve the corporate image" ;
-	orion:description "This goal influences the decision about component selection by taking into account external factors (external environmental survey). Notably, depending on the decision scenario openness could be considered as an added value, or the conformance to standards, the environmental impact, and so forth. These added values will have a weight in the component selection decision." .
+:improveCorporateImage 
+	:gradeId "ESGR13" ;
+	a :MarketValue ;
+	:title "Improve the corporate image" ;
+	:description "This goal influences the decision about component selection by taking into account external factors (external environmental survey). Notably, depending on the decision scenario openness could be considered as an added value, or the conformance to standards, the environmental impact, and so forth. These added values will have a weight in the component selection decision." .
 
-orion:stayInGame 
-	orion:gradeId "ESGR14" ;
-	a orion:MarketValue ;
-	orion:title "Stay in the game, be competitive" ;
-	orion:description "This goal influences the decision about component selection by taking into account external factors (external environmental survey). Competitiveness might be kept/enhanced by reducing cost and/or time-to-market, by providing on-time features, by improving quality, by releasing (partially) open source systems, and so forth. These added values will have a weight in the component selection decision." .
+:stayInGame 
+	:gradeId "ESGR14" ;
+	a :MarketValue ;
+	:title "Stay in the game, be competitive" ;
+	:description "This goal influences the decision about component selection by taking into account external factors (external environmental survey). Competitiveness might be kept/enhanced by reducing cost and/or time-to-market, by providing on-time features, by improving quality, by releasing (partially) open source systems, and so forth. These added values will have a weight in the component selection decision." .
 
 
 
@@ -397,295 +444,299 @@ orion:stayInGame
 # A Role links a system User to a DecisionCase, and specifies four different role perspectives:
 # The role type; role function; role level; and role title. 
 
-orion:Role
-	rdfs:subClassOf orion:Class .
+:Role
+	rdfs:subClassOf :Class .
 
-orion:user
+:user
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Role ;
-	rdfs:range orion:User .
+	rdfs:domain :Role ;
+	rdfs:range :User .
 
-orion:User
-	rdfs:subClassOf orion:Class .
+:User
+	rdfs:subClassOf :Class .
 
 
 ### Role type
 
 # Role types can be asset supplier; asset user; system end-user; or other.
 
-orion:roleType
+:roleType
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Role ;
-	rdfs:range orion:RoleType .
+	rdfs:domain :Role ;
+	rdfs:range :RoleType .
 
-orion:RoleType
-	rdfs:subClassOf orion:Class .
+:RoleType
+	rdfs:subClassOf :Class .
 	
-orion:assetSupplier 
-	orion:gradeId "RT1" ;
-	a orion:RoleType ;
-	orion:title "Asset supplier" ;
-	orion:description "The organization providing the asset." .
+:assetSupplier 
+	:gradeId "RT1" ;
+	a :RoleType ;
+	:title "Asset supplier" ;
+	:description "The organization providing the asset." .
 
-orion:assetUser
-	orion:gradeId "RT2" ;
-	a orion:RoleType ;
-	orion:title "Asset user" ;
-	orion:description "The organization using the asset." .
+:assetUser
+	:gradeId "RT2" ;
+	a :RoleType ;
+	:title "Asset user" ;
+	:description "The organization using the asset." .
 
-orion:systemEndUser
-	orion:gradeId "RT3" ;
-	a orion:RoleType ;
-	orion:title "System end-user" ;
-	orion:description "The organization that is the user of the system in which the asset is utilized." .
+:systemEndUser
+	:gradeId "RT3" ;
+	a :RoleType ;
+	:title "System end-user" ;
+	:description "The organization that is the user of the system in which the asset is utilized." .
 
 
 ### Role function
 
 # Role functions can be initiator; leader; supporter; influencer; decider; or other.
 
-orion:roleFunction
+:roleFunction
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Role ;
-	rdfs:range orion:RoleFunction .
+	rdfs:domain :Role ;
+	rdfs:range :RoleFunction .
 
-orion:RoleFunction
-	rdfs:subClassOf orion:Class .
+:RoleFunction
+	rdfs:subClassOf :Class .
 	
-orion:initiator
-	orion:gradeId "RF1" ;
-	a orion:RoleFunction ;
-	orion:title "Initiator" ;
-	orion:description "Initiator is a person who starts the whole process of decision-making, explicitly points out the need to make a decision." .
+:initiator
+	:gradeId "RF1" ;
+	a :RoleFunction ;
+	:title "Initiator" ;
+	:description "Initiator is a person who starts the whole process of decision-making, explicitly points out the need to make a decision." .
 
-orion:leader
-	orion:gradeId "RF2" ;
-	a orion:RoleFunction ;
-	orion:title "Leader" ;
-	orion:description "Leader is a person who leads the decision process, e.g. combines diverging contributions by relating them to a summarizing statement; if the discussion diverges, the person calls for an informal vote to reach consensus." .
+:leader
+	:gradeId "RF2" ;
+	a :RoleFunction ;
+	:title "Leader" ;
+	:description "Leader is a person who leads the decision process, e.g. combines diverging contributions by relating them to a summarizing statement; if the discussion diverges, the person calls for an informal vote to reach consensus." .
 
-orion:supporter
-	orion:gradeId "RF3" ;
-	a orion:RoleFunction ;
-	orion:title "Supporter" ;
-	orion:description "Supporter is a person who supplies the information needed to make the decision." .
+:supporter
+	:gradeId "RF3" ;
+	a :RoleFunction ;
+	:title "Supporter" ;
+	:description "Supporter is a person who supplies the information needed to make the decision." .
 
-orion:influencer
-	orion:gradeId "RF4" ;
-	a orion:RoleFunction ;
-	orion:title "Influencer" ;
-	orion:description "Infuencer is a person who influences the outcome of the decision making and hence has influence on the decision maker." .
+:influencer
+	:gradeId "RF4" ;
+	a :RoleFunction ;
+	:title "Influencer" ;
+	:description "Infuencer is a person who influences the outcome of the decision making and hence has influence on the decision maker." .
 
-orion:decider
-	orion:gradeId "RF5" ;
-	a orion:RoleFunction ;
-	orion:title "Decider" ;
-	orion:description "Decider is a person who is responsible for taking the decision, actually reaches to the decision." .
+:decider
+	:gradeId "RF5" ;
+	a :RoleFunction ;
+	:title "Decider" ;
+	:description "Decider is a person who is responsible for taking the decision, actually reaches to the decision." .
 
 
 ### Role level
 
 # Role level can be strategic; tactical; or operational.
 
-orion:roleLevel
+:roleLevel
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Role ;
-	rdfs:range orion:RoleLevel .
+	rdfs:domain :Role ;
+	rdfs:range :RoleLevel .
 
-orion:RoleLevel
-	rdfs:subClassOf orion:Class .
+:RoleLevel
+	rdfs:subClassOf :Class .
 	
-orion:strategic
-	orion:gradeId "RL1" ;
-	a orion:RoleLevel ;
-	orion:title "Strategic" ;
-	orion:description "Policy decisions, long-term, complex, non-routine decision-making, typically made by Senior Management." .
+:strategic
+	:gradeId "RL1" ;
+	a :RoleLevel ;
+	:title "Strategic" ;
+	:description "Policy decisions, long-term, complex, non-routine decision-making, typically made by Senior Management." .
 	
-orion:tactical
-	orion:gradeId "RL2" ;
-	a orion:RoleLevel ;
-	orion:title "Tactical" ;
-	orion:description "Relates to how to achieve policy, medium-term, less complex decision-making, typically made by Middle Management." .
+:tactical
+	:gradeId "RL2" ;
+	a :RoleLevel ;
+	:title "Tactical" ;
+	:description "Relates to how to achieve policy, medium-term, less complex decision-making, typically made by Middle Management." .
 	
-orion:operational
-	orion:gradeId "RL3" ;
-	a orion:RoleLevel ;
-	orion:title "Operational" ;
-	orion:description "Day-to-day, simple, routine decision-making typically made by Junior Management." .
+:operational
+	:gradeId "RL3" ;
+	a :RoleLevel ;
+	:title "Operational" ;
+	:description "Day-to-day, simple, routine decision-making typically made by Junior Management." .
 
 
 ### Role title
 
 # Role title can be one of 22 different pre-defined values, or other.
 
-orion:roleTitle
+:roleTitle
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Role ;
-	rdfs:range orion:RoleTitle .
+	rdfs:domain :Role ;
+	rdfs:range :RoleTitle .
 
-orion:RoleTitle
-	rdfs:subClassOf orion:Class .
+:RoleTitle
+	rdfs:subClassOf :Class .
 	
-orion:productManager 
-	orion:gradeId "RP1" ;
-	a orion:RoleTitle ;
-	orion:title "Product Manager" ;
-	orion:description "Product Manager (PrM) is a business-owner in the small, representing the enterprise or business unit in strategy definition and operational execution. He governs a product (or solution or service) from its inception to the market/customer delivery in order to generate biggest possible value to the business." .
+:productManager 
+	:gradeId "RP1" ;
+	a :RoleTitle ;
+	:title "Product Manager" ;
+	:description "Product Manager (PrM) is a business-owner in the small, representing the enterprise or business unit in strategy definition and operational execution. He governs a product (or solution or service) from its inception to the market/customer delivery in order to generate biggest possible value to the business." .
 	
-orion:lineManager
-	orion:gradeId "RP2" ;
-	a orion:RoleTitle ;
-	orion:title "Line Manager" ;
-	orion:description "Line Manager (LM) is a person who discretion over policy, appropriations, and operation in a unit such as subsidiary, factory, division, district, or minor function of a larger organization." .
+:lineManager
+	:gradeId "RP2" ;
+	a :RoleTitle ;
+	:title "Line Manager" ;
+	:description "Line Manager (LM) is a person who discretion over policy, appropriations, and operation in a unit such as subsidiary, factory, division, district, or minor function of a larger organization." .
 	
-orion:portfolioManager
-	orion:gradeId "RP3" ;
-	a orion:RoleTitle ;
-	orion:title "Portfolio manager" ;
-	orion:description "Portfolio Manager (PoM) is an executive responsible for the overall smooth running of portfolio management. The competences and skills this individual should possess are superior to those of project managers, as portfolio managers should take a helicopter view over all running projects." .
+:portfolioManager
+	:gradeId "RP3" ;
+	a :RoleTitle ;
+	:title "Portfolio manager" ;
+	:description "Portfolio Manager (PoM) is an executive responsible for the overall smooth running of portfolio management. The competences and skills this individual should possess are superior to those of project managers, as portfolio managers should take a helicopter view over all running projects." .
 	
-orion:projectManager
-	orion:gradeId "RP4" ;
-	a orion:RoleTitle ;
-	orion:title "Project Manager" ;
-	orion:description "Project Manager (PM) is a person who manage the projects and also responsible for overall quality management, staff development, and professional activities. The responsibilities may begin before project acquisition and continue beyond project close-out." .
+:projectManager
+	:gradeId "RP4" ;
+	a :RoleTitle ;
+	:title "Project Manager" ;
+	:description "Project Manager (PM) is a person who manage the projects and also responsible for overall quality management, staff development, and professional activities. The responsibilities may begin before project acquisition and continue beyond project close-out." .
 	
-orion:chiefTechnicalOfficer
-	orion:gradeId "RP5" ;
-	a orion:RoleTitle ;
-	orion:title "Chief Technical Officer (CTO)" ;
-	orion:description "Chief Technical Officer (CTO) is a person responsible for overall technical activities, including the management of client relations to ensure that service objective expectations are developed and managed in the operations areas." .
+:chiefTechnicalOfficer
+	:gradeId "RP5" ;
+	a :RoleTitle ;
+	:title "Chief Technical Officer (CTO)" ;
+	:description "Chief Technical Officer (CTO) is a person responsible for overall technical activities, including the management of client relations to ensure that service objective expectations are developed and managed in the operations areas." .
 	
-orion:developmentLead
-	orion:gradeId "RP6" ;
-	a orion:RoleTitle ;
-	orion:title "Development lead" ;
-	orion:description "Development Lead (DL) is person who being highly technical lead the development project and team, taking part in different activities from the initial stage to the successful delivery of projects." .
+:developmentLead
+	:gradeId "RP6" ;
+	a :RoleTitle ;
+	:title "Development lead" ;
+	:description "Development Lead (DL) is person who being highly technical lead the development project and team, taking part in different activities from the initial stage to the successful delivery of projects." .
 	
-orion:developer
-	orion:gradeId "RP7" ;
-	a orion:RoleTitle ;
-	orion:title "Developer" ;
-	orion:description "Developer (Dev) is a person involved in the development of software, typically use the architecture as a reference for developing the system and/or assembling system components." .
+:developer
+	:gradeId "RP7" ;
+	a :RoleTitle ;
+	:title "Developer" ;
+	:description "Developer (Dev) is a person involved in the development of software, typically use the architecture as a reference for developing the system and/or assembling system components." .
 	
-orion:testLead
-	orion:gradeId "RP8" ;
-	a orion:RoleTitle ;
-	orion:title "Test lead" ;
-	orion:description "Test Leader (TL) is a person involved in the planning, monitoring, and control of the testing activities and tasks. TL is Responsible for management of all quality assurance functions including planning, strategy, testing execution and tools." .
+:testLead
+	:gradeId "RP8" ;
+	a :RoleTitle ;
+	:title "Test lead" ;
+	:description "Test Leader (TL) is a person involved in the planning, monitoring, and control of the testing activities and tasks. TL is Responsible for management of all quality assurance functions including planning, strategy, testing execution and tools." .
 	
-orion:testAnalyst
-	orion:gradeId "RP9" ;
-	a orion:RoleTitle ;
-	orion:title "Test Analyst" ;
-	orion:description "Test Analyst (TA) is a person responsible for initially identifying and subsequently defining the required tests, monitoring the test coverage and evaluating the overall quality experienced when testing the target test Items. " .
+:testAnalyst
+	:gradeId "RP9" ;
+	a :RoleTitle ;
+	:title "Test Analyst" ;
+	:description "Test Analyst (TA) is a person responsible for initially identifying and subsequently defining the required tests, monitoring the test coverage and evaluating the overall quality experienced when testing the target test Items. " .
 	
-orion:architect
-	orion:gradeId "RP10" ;
-	a orion:RoleTitle ;
-	orion:title "Architect" ;
-	orion:description "Architect is a person responsible for designing, developing, nurturing, and maintaining the architecture of the software systems he/she is involved with." .
+:architect
+	:gradeId "RP10" ;
+	a :RoleTitle ;
+	:title "Architect" ;
+	:description "Architect is a person responsible for designing, developing, nurturing, and maintaining the architecture of the software systems he/she is involved with." .
 	
-orion:integrator
-	orion:gradeId "RP11" ;
-	a orion:RoleTitle ;
-	orion:title "Integrator" ;
-	orion:description "Integrator is person who is responsible to ensure that a system comes together by assembling the essential components and elements into a cohesive and fully functional system that satisfies the original user needs." .
+:integrator
+	:gradeId "RP11" ;
+	a :RoleTitle ;
+	:title "Integrator" ;
+	:description "Integrator is person who is responsible to ensure that a system comes together by assembling the essential components and elements into a cohesive and fully functional system that satisfies the original user needs." .
 	
-orion:supportStaffForAssets
-	orion:gradeId "RP12" ;
-	a orion:RoleTitle ;
-	orion:title "Support staff for assets" ;
-	orion:description "" .
+:supportStaffForAssets
+	:gradeId "RP12" ;
+	a :RoleTitle ;
+	:title "Support staff for assets" ;
+	:description "" .
 	
-orion:chiefExecutiveOfficer 
-	orion:gradeId "RP13" ;
-	a orion:RoleTitle ;
-	orion:title "Chief Executive Officer (CEO)" ;
-	orion:description "Chief Executive Officer (CEO) is a person responsible for not only making decision by also executing the decisions." .
+:chiefExecutiveOfficer 
+	:gradeId "RP13" ;
+	a :RoleTitle ;
+	:title "Chief Executive Officer (CEO)" ;
+	:description "Chief Executive Officer (CEO) is a person responsible for not only making decision by also executing the decisions." .
 	
-orion:certificationAuthority
-	orion:gradeId "RP14" ;
-	a orion:RoleTitle ;
-	orion:title "Certification Authority" ;
-	orion:description "Certification Authority (CA) attests the validity of bindings by issuing digitally signed certificates that specify these bindings and by providing a means for clients to check the validity of certificates." .
+:certificationAuthority
+	:gradeId "RP14" ;
+	a :RoleTitle ;
+	:title "Certification Authority" ;
+	:description "Certification Authority (CA) attests the validity of bindings by issuing digitally signed certificates that specify these bindings and by providing a means for clients to check the validity of certificates." .
 	
-orion:configurationManager 
-	orion:gradeId "RP15" ;
-	a orion:RoleTitle ;
-	orion:title "Configuration Manager" ;
-	orion:description "Ensures that the change management process is implemented and proposed changes are reviewed and approved." .
+:configurationManager 
+	:gradeId "RP15" ;
+	a :RoleTitle ;
+	:title "Configuration Manager" ;
+	:description "Ensures that the change management process is implemented and proposed changes are reviewed and approved." .
 	
-orion:processAnalyst
-	orion:gradeId "RP16" ;
-	a orion:RoleTitle ;
-	orion:title "Process Analyst" ;
-	orion:description "Planning and conducting process improvement efforts in an organization." .
+:processAnalyst
+	:gradeId "RP16" ;
+	a :RoleTitle ;
+	:title "Process Analyst" ;
+	:description "Planning and conducting process improvement efforts in an organization." .
 	
-orion:dataProvider
-	orion:gradeId "RP17" ;
-	a orion:RoleTitle ;
-	orion:title "Data Provider" ;
-	orion:description "Provides and keeps data up-to-date to enable measurements." .
+:dataProvider
+	:gradeId "RP17" ;
+	a :RoleTitle ;
+	:title "Data Provider" ;
+	:description "Provides and keeps data up-to-date to enable measurements." .
 	
-orion:measurementProgramPlanner
-	orion:gradeId "RP18" ;
-	a orion:RoleTitle ;
-	orion:title "Measurement program planner" ;
-	orion:description "Responsible for measurement planning with regard to goal definition, elicitation, and decision making of which metrics to collect." .
+:measurementProgramPlanner
+	:gradeId "RP18" ;
+	a :RoleTitle ;
+	:title "Measurement program planner" ;
+	:description "Responsible for measurement planning with regard to goal definition, elicitation, and decision making of which metrics to collect." .
 	
-orion:softwareQualityManager
-	orion:gradeId "RP19" ;
-	a orion:RoleTitle ;
-	orion:title "Software quality manager" ;
-	orion:description "" .
+:softwareQualityManager
+	:gradeId "RP19" ;
+	a :RoleTitle ;
+	:title "Software quality manager" ;
+	:description "" .
 	
 	
 
 ##### Alternative and Asset elements
 
-orion:Alternative 
-	rdfs:subClassOf orion:Class .
+# An Alternative is specialized by Asset, which is the kind of alternatives considered in the ORION project.
+# An Asset links to asset usage; origin options and suboptions; and element types. 
+# In GRADE, there is also a link to properties, which is currently not represented in this ontology.
 
-orion:Asset
-	rdfs:subClassOf orion:Alternative .
+:Alternative 
+	rdfs:subClassOf :Class .
+
+:Asset
+	rdfs:subClassOf :Alternative .
 
 
 ### Asset usage
 
 # Asset usage can be reuse; adapt; buy; develop; or other.
 
-orion:assetUsage
+:assetUsage
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Asset ;
-	rdfs:range orion:AssetUsage .
+	rdfs:domain :Asset ;
+	rdfs:range :AssetUsage .
 
-orion:AssetUsage
-	rdfs:subClassOf orion:Class .
+:AssetUsage
+	rdfs:subClassOf :Class .
 	
-orion:reuse
-	orion:gradeId "AU1" ;
-	a orion:AssetUsage ;
-	orion:title "Reuse" ;
-	orion:description "An asset is reused with no change." .
+:reuse
+	:gradeId "AU1" ;
+	a :AssetUsage ;
+	:title "Reuse" ;
+	:description "An asset is reused with no change." .
 
-orion:adapt
-	orion:gradeId "AU2" ;
-	a orion:AssetUsage ;
-	orion:title "Adapt" ;
-	orion:description "An asset is used but tailored." .
+:adapt
+	:gradeId "AU2" ;
+	a :AssetUsage ;
+	:title "Adapt" ;
+	:description "An asset is used but tailored." .
 
-orion:buy 
-	orion:gradeId "AU3" ;
-	a orion:AssetUsage ;
-	orion:title "Buy" ;
-	orion:description "An asset is used after it is owned (bought)." .
+:buy 
+	:gradeId "AU3" ;
+	a :AssetUsage ;
+	:title "Buy" ;
+	:description "An asset is used after it is owned (bought)." .
 
-orion:develop
-	orion:gradeId "AU4" ;
-	a orion:AssetUsage ;
-	orion:title "Develop" ;
-	orion:description "An asset is developed by the company/individual." .
+:develop
+	:gradeId "AU4" ;
+	a :AssetUsage ;
+	:title "Develop" ;
+	:description "An asset is developed by the company/individual." .
 
 
 ### Origin options and suboptions
@@ -696,89 +747,89 @@ orion:develop
 
 # Options
 
-orion:originOption
+:originOption
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Asset ;
-	rdfs:range orion:OriginOption .
+	rdfs:domain :Asset ;
+	rdfs:range :OriginOption .
 
-orion:OriginOption
-	rdfs:subClassOf orion:Class .
+:OriginOption
+	rdfs:subClassOf :Class .
 	
-orion:InternalOriginOption
-	rdfs:subClassOf orion:OriginOption .
+:InternalOriginOption
+	rdfs:subClassOf :OriginOption .
 	
-orion:ExternalOriginOption
-	rdfs:subClassOf orion:OriginOption .
+:ExternalOriginOption
+	rdfs:subClassOf :OriginOption .
 	
-orion:originSource
+:originSource
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:OriginOption ;
+	rdfs:domain :OriginOption ;
 	rdfs:range xsd:string .
 
-orion:inhouse
-	orion:gradeId "AO1" ;
-	a orion:InternalOriginOption ;
-	orion:title "In-house" ;
-	orion:description "This is the process whereby the company uses their own workers (in-house team) to develop or implement an IT system that fits the specific needs of the company." .
+:inhouse
+	:gradeId "AO1" ;
+	a :InternalOriginOption ;
+	:title "In-house" ;
+	:description "This is the process whereby the company uses their own workers (in-house team) to develop or implement an IT system that fits the specific needs of the company." .
 
-orion:outsource
-	orion:gradeId "AO2" ;
-	a orion:ExternalOriginOption ;
-	orion:title "Outsource" ;
-	orion:description "Outsourcing is defined as a situation where a company (a client) contracts out all or part of its software development activities to another company (a vendor), who provides agreed services for remuneration." .
+:outsource
+	:gradeId "AO2" ;
+	a :ExternalOriginOption ;
+	:title "Outsource" ;
+	:description "Outsourcing is defined as a situation where a company (a client) contracts out all or part of its software development activities to another company (a vendor), who provides agreed services for remuneration." .
 
-# Note: orion:openSource contains more fields, that are defined below under origin suboptions.
-orion:openSource
-	orion:gradeId "AO3" ;
-	a orion:ExternalOriginOption ;
-	orion:title "Open source" ;
-	orion:description "Open source development refers to the case where the source code is available for modification or enhancement by anyone outside the boundaries of an organization or individual." .
+# Note: :openSource contains more fields, that are defined below under origin suboptions.
+:openSource
+	:gradeId "AO3" ;
+	a :ExternalOriginOption ;
+	:title "Open source" ;
+	:description "Open source development refers to the case where the source code is available for modification or enhancement by anyone outside the boundaries of an organization or individual." .
 
-orion:cots
-	orion:gradeId "AO4" ;
-	a orion:ExternalOriginOption ;
-	orion:title "Commercial off-the-shelf (COTS)" ;
-	orion:description "Commercial items, including services, available in the commercial marketplace that can be bought and used under government contract." .
+:cots
+	:gradeId "AO4" ;
+	a :ExternalOriginOption ;
+	:title "Commercial off-the-shelf (COTS)" ;
+	:description "Commercial items, including services, available in the commercial marketplace that can be bought and used under government contract." .
 
 
 # Suboptions
 
-orion:originSuboption
+:originSuboption
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Asset ;
-	rdfs:range orion:OriginSuboption .
+	rdfs:domain :Asset ;
+	rdfs:range :OriginSuboption .
 
-orion:OriginSuboption
-	rdfs:subClassOf orion:Class .
+:OriginSuboption
+	rdfs:subClassOf :Class .
 	
-orion:projectBased
-	orion:gradeId "AS1" ;
-	a orion:OriginSuboption ;
-	orion:title "Project-based" ;
-	orion:description "Source code is originated only from specific projects." .
+:projectBased
+	:gradeId "AS1" ;
+	a :OriginSuboption ;
+	:title "Project-based" ;
+	:description "Source code is originated only from specific projects." .
 
-orion:innerSource
-	orion:gradeId "AS2" ;
-	a orion:OriginSuboption ;
-	orion:title "Inner source" ;
-	orion:description "Source code is available for modification as in open source, but applied to internal software development." .
+:innerSource
+	:gradeId "AS2" ;
+	a :OriginSuboption ;
+	:title "Inner source" ;
+	:description "Source code is available for modification as in open source, but applied to internal software development." .
 
-# Note: orion:openSource is also defined above under origin options, where the orion:title and orion:description fields can be found.
-orion:openSource
-	orion:gradeId "AS3" ;
-	a orion:OriginSuboption .
+# Note: :openSource is also defined above under origin options, where the :title and :description fields can be found.
+:openSource
+	:gradeId "AS3" ;
+	a :OriginSuboption .
 
-orion:subcontracting
-	orion:gradeId "AS4" ;
-	a orion:OriginSuboption ;
-	orion:title "Subcontracting" ;
-	orion:description "Subcontracting refers to when establishing a contractual agreement with an outside person or company to perform the work." .
+:subcontracting
+	:gradeId "AS4" ;
+	a :OriginSuboption ;
+	:title "Subcontracting" ;
+	:description "Subcontracting refers to when establishing a contractual agreement with an outside person or company to perform the work." .
 
-orion:crowdsource
-	orion:gradeId "AS5" ;
-	a orion:OriginSuboption ;
-	orion:title "Crowdsource" ;
-	orion:description "Crowdsourcing is a new on-line distributed problem solving and production model in which networked people collaborate to complete a task." .
+:crowdsource
+	:gradeId "AS5" ;
+	a :OriginSuboption ;
+	:title "Crowdsource" ;
+	:description "Crowdsourcing is a new on-line distributed problem solving and production model in which networked people collaborate to complete a task." .
 
 
 ### Asset element types
@@ -788,171 +839,374 @@ orion:crowdsource
 
 # Element classes
 
-orion:elementType
+:elementType
 	a owl:DatatypeProperty ;
-	rdfs:domain orion:Asset ;
-	rdfs:range orion:ElementType .
+	rdfs:domain :Asset ;
+	rdfs:range :ElementType .
 
-orion:ElementType
-	rdfs:subClassOf orion:Class .
+:ElementType
+	rdfs:subClassOf :Class .
 	
-orion:HardwareElement
-	rdfs:subClassOf orion:ElementType .
+:HardwareElement
+	rdfs:subClassOf :ElementType .
 	
-orion:InformationElement
-	rdfs:subClassOf orion:ElementType .
+:InformationElement
+	rdfs:subClassOf :ElementType .
 	
-orion:ServiceElement
-	rdfs:subClassOf orion:ElementType .
+:ServiceElement
+	rdfs:subClassOf :ElementType .
 	
-orion:SoftwareElement
-	rdfs:subClassOf orion:ElementType .
+:SoftwareElement
+	rdfs:subClassOf :ElementType .
 	
-orion:SystemElement
-	rdfs:subClassOf orion:ElementType .
+:SystemElement
+	rdfs:subClassOf :ElementType .
 	
 # Concrete element types
 
-orion:processor
-	orion:gradeId "AT1" ;
-	a orion:HardwareElement ;
-	orion:title "Processor" ;
-	orion:description "" .
+:processor
+	:gradeId "AT1" ;
+	a :HardwareElement ;
+	:title "Processor" ;
+	:description "" .
 
-orion:display
-	orion:gradeId "AT2" ;
-	a orion:HardwareElement ;
-	orion:title "Display" ;
-	orion:description "" .
+:display
+	:gradeId "AT2" ;
+	a :HardwareElement ;
+	:title "Display" ;
+	:description "" .
 
-orion:sensor
-	orion:gradeId "AT3" ;
-	a orion:HardwareElement ;
-	orion:title "Sensor" ;
-	orion:description "" .
+:sensor
+	:gradeId "AT3" ;
+	a :HardwareElement ;
+	:title "Sensor" ;
+	:description "" .
 
-orion:actuator
-	orion:gradeId "AT4" ;
-	a orion:HardwareElement ;
-	orion:title "Actuator" ;
-	orion:description "" .
+:actuator
+	:gradeId "AT4" ;
+	a :HardwareElement ;
+	:title "Actuator" ;
+	:description "" .
 
-orion:circuit
-	orion:gradeId "AT5" ;
-	a orion:HardwareElement ;
-	orion:title "Circuit" ;
-	orion:description "" .
+:circuit
+	:gradeId "AT5" ;
+	a :HardwareElement ;
+	:title "Circuit" ;
+	:description "" .
 
-orion:networkInfrastructure
-	orion:gradeId "AT6" ;
-	a orion:HardwareElement ;
-	orion:title "Network infrastructure" ;
-	orion:description "" .
+:networkInfrastructure
+	:gradeId "AT6" ;
+	a :HardwareElement ;
+	:title "Network infrastructure" ;
+	:description "" .
 
-orion:designDocument
-	orion:gradeId "AT7" ;
-	a orion:InformationElement ;
-	orion:title "Design document (architecture)" ;
-	orion:description "The composite of the design architectures for products and their life cycle processes." .
+:designDocument
+	:gradeId "AT7" ;
+	a :InformationElement ;
+	:title "Design document (architecture)" ;
+	:description "The composite of the design architectures for products and their life cycle processes." .
 
-orion:modelAndMetamodel
-	orion:gradeId "AT8" ;
-	a orion:InformationElement ;
-	orion:title "Model and metamodel" ;
-	orion:description "" .
+:modelAndMetamodel
+	:gradeId "AT8" ;
+	a :InformationElement ;
+	:title "Model and metamodel" ;
+	:description "" .
 
-orion:pattern
-	orion:gradeId "AT9" ;
-	a orion:InformationElement ;
-	orion:title "Pattern (Design)" ;
-	orion:description "A description of the problem and the essence of its solution to enable the solution to be reused in different settings." .
+:pattern
+	:gradeId "AT9" ;
+	a :InformationElement ;
+	:title "Pattern (Design)" ;
+	:description "A description of the problem and the essence of its solution to enable the solution to be reused in different settings." .
 
-orion:functionalService
-	orion:gradeId "AT10" ;
-	a orion:ServiceElement ;
-	orion:title "Service (funtional)" ;
-	orion:description "A service that must be implemented in the piece of software in order to fulfill functional user requirements." .
+:functionalService
+	:gradeId "AT10" ;
+	a :ServiceElement ;
+	:title "Service (funtional)" ;
+	:description "A service that must be implemented in the piece of software in order to fulfill functional user requirements." .
 
-orion:serviceOrComponentComposition
-	orion:gradeId "AT11" ;
-	a orion:ServiceElement ;
-	orion:title "Service/component composition" ;
-	orion:description "The combination of two or more software components yielding a new component behavior at a different level of abstraction. The characteristics of the new component behavior are determined by the components being combined and by the way they are combined." .
+:serviceOrComponentComposition
+	:gradeId "AT11" ;
+	a :ServiceElement ;
+	:title "Service/component composition" ;
+	:description "The combination of two or more software components yielding a new component behavior at a different level of abstraction. The characteristics of the new component behavior are determined by the components being combined and by the way they are combined." .
 
-orion:plugin
-	orion:gradeId "AT12" ;
-	a orion:SoftwareElement ;
-	orion:title "Plugin" ;
-	orion:description "A software that is installed into an existing application in order to enhance its capability. For example, plug-ins are widely used in image editing programs such as Photoshop to add some special effect. The term is widely used for software, but can also refer to a plug-in module for hardware." .
+:plugin
+	:gradeId "AT12" ;
+	a :SoftwareElement ;
+	:title "Plugin" ;
+	:description "A software that is installed into an existing application in order to enhance its capability. For example, plug-ins are widely used in image editing programs such as Photoshop to add some special effect. The term is widely used for software, but can also refer to a plug-in module for hardware." .
 
-orion:library
-	orion:gradeId "AT13" ;
-	a orion:SoftwareElement ;
-	orion:title "Library" ;
-	orion:description "A software library containing computer readable and human readable information relevant to a software development effort." .
+:library
+	:gradeId "AT13" ;
+	a :SoftwareElement ;
+	:title "Library" ;
+	:description "A software library containing computer readable and human readable information relevant to a software development effort." .
 
-orion:functionalComponent
-	orion:gradeId "AT14" ;
-	a orion:SoftwareElement ;
-	orion:title "Functional component" ;
-	orion:description "A general term used to refer to a software system or an element, such as module, unit, data, or document." .
+:functionalComponent
+	:gradeId "AT14" ;
+	a :SoftwareElement ;
+	:title "Functional component" ;
+	:description "A general term used to refer to a software system or an element, such as module, unit, data, or document." .
 
-orion:database
-	orion:gradeId "AT15" ;
-	a orion:SoftwareElement ;
-	orion:title "Database" ;
-	orion:description "1. It is a collection of interrelated data stored together in one or more computerized files. 2. It is a collection of data organized according to a conceptual structure describing the characteristics of the data and the relationships among their corresponding entities, supporting one or more application areas" .
+:database
+	:gradeId "AT15" ;
+	a :SoftwareElement ;
+	:title "Database" ;
+	:description "1. It is a collection of interrelated data stored together in one or more computerized files. 2. It is a collection of data organized according to a conceptual structure describing the characteristics of the data and the relationships among their corresponding entities, supporting one or more application areas" .
 
-orion:middleware
-	orion:gradeId "AT16" ;
-	a orion:SoftwareElement ;
-	orion:title "Middleware" ;
-	orion:description "A middleware refers to the software that hides the complexity and heterogeneity of underlying hardware and network platforms,eases the management of system resources, and increases the predictability of application executions." .
+:middleware
+	:gradeId "AT16" ;
+	a :SoftwareElement ;
+	:title "Middleware" ;
+	:description "A middleware refers to the software that hides the complexity and heterogeneity of underlying hardware and network platforms,eases the management of system resources, and increases the predictability of application executions." .
 
-orion:operatingSystem
-	orion:gradeId "AT17" ;
-	a orion:SoftwareElement ;
-	orion:title "Operating system (OS)" ;
-	orion:description "A collection of software, firmware, and hardware elements that controls the execution of computer programs and provides such services as computer resource allocation, job control, input/output control, and file management in a computer system" .
+:operatingSystem
+	:gradeId "AT17" ;
+	a :SoftwareElement ;
+	:title "Operating system (OS)" ;
+	:description "A collection of software, firmware, and hardware elements that controls the execution of computer programs and provides such services as computer resource allocation, job control, input/output control, and file management in a computer system" .
 
-orion:server
-	orion:gradeId "AT18" ;
-	a orion:SoftwareElement ;
-	orion:title "Server" ;
-	orion:description "1. A hardware system or software program which provides a service to clients. 2. A process implementing one or more operations on one or more objects." .
+:server
+	:gradeId "AT18" ;
+	a :SoftwareElement ;
+	:title "Server" ;
+	:description "1. A hardware system or software program which provides a service to clients. 2. A process implementing one or more operations on one or more objects." .
 
-orion:userInterface
-	orion:gradeId "AT19" ;
-	a orion:SoftwareElement ;
-	orion:title "User interface" ;
-	orion:description "An interface that enables information to be passed between a human user and hardware or software components of a computer system." .
+:userInterface
+	:gradeId "AT19" ;
+	a :SoftwareElement ;
+	:title "User interface" ;
+	:description "An interface that enables information to be passed between a human user and hardware or software components of a computer system." .
 
-orion:system
-	orion:gradeId "AT20" ;
-	a orion:SystemElement ;
-	orion:title "System" ;
-	orion:description "Computer System: A system containing one or more computers and associated software. Software System: Computer programs, procedures, and possibly associated documentation and data pertaining to the operation of a computer system." .
+:system
+	:gradeId "AT20" ;
+	a :SystemElement ;
+	:title "System" ;
+	:description "Computer System: A system containing one or more computers and associated software. Software System: Computer programs, procedures, and possibly associated documentation and data pertaining to the operation of a computer system." .
 
-orion:subsystem
-	orion:gradeId "AT21" ;
-	a orion:SystemElement ;
-	orion:title "Subsystem" ;
-	orion:description "Is a group of interconnected and interactive parts that performs an important job or task as a component of a larger system." .
+:subsystem
+	:gradeId "AT21" ;
+	a :SystemElement ;
+	:title "Subsystem" ;
+	:description "Is a group of interconnected and interactive parts that performs an important job or task as a component of a larger system." .
 
-orion:systemOfSystems
-	orion:gradeId "AT22" ;
-	a orion:SystemElement ;
-	orion:title "System of systems" ;
-	orion:description "A large system that delivers unique capabilities, formed by integrating independently useful systems." .
+:systemOfSystems
+	:gradeId "AT22" ;
+	a :SystemElement ;
+	:title "System of systems" ;
+	:description "A large system that delivers unique capabilities, formed by integrating independently useful systems." .
 
 
 ##### Decisions element
 
-orion:Decision
-	rdfs:subClassOf orion:Class .
+:Decision
+	rdfs:subClassOf :Class .
 
 
-##### Environment element
+##### Context element (called Environment in GRADE)
 
-orion:Environment
-	rdfs:subClassOf orion:Class .
+# A Context element has five perspectives: organization; product; stakeholder; development method and technology; 
+# and market and business.
+
+# (For all elements in the context, the :gradeId refers to the context model ids rather than GRADE ids.)
+ 
+:Context
+	rdfs:subClassOf :Class .
+
+### Organization context
+
+:organizationContext
+	a owl:DatatypeProperty ;
+	rdfs:domain :Context ;
+	rdfs:range :OrganizationContext .
+
+:OrganizationContext
+	rdfs:subClassOf :Class .
+
+# Application domains (O1)
+
+:applicationDomain
+	a owl:DatatypeProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range :ApplicationDomain .
+
+:accounting
+	a :applicationDomain ;
+	:title "Accounting" .
+
+:aerospaceOrAviation
+	a :applicationDomain ;
+	:title "Aerospace/Aviation" .
+
+:agricultureOrForestryOrFishing
+	a :applicationDomain ;
+	:title "Agriculture/Forestry/Fishing" .
+
+:automotive
+	a :applicationDomain ;
+	:title "Automotive" .
+
+:biotechnology
+	a :applicationDomain ;
+	:title "Biotechnology" .
+
+:businessOrProfessionalServices
+	a :applicationDomain ;
+	:title "Business/Professional Services" .
+
+:computerSoftware
+	a :applicationDomain ;
+	:title "Computer [Software]" .
+
+:computerHardware
+	a :applicationDomain ;
+	:title "Computer [Hardware]" .
+
+:constructionOrHomeImprovement
+	a :applicationDomain ;
+	:title "Construction/Home Improvement" .
+
+:consulting
+	a :applicationDomain ;
+	:title "Consulting" .
+
+:corporateCommunication
+	a :applicationDomain ;
+	:title "Corporate Communication" .
+
+:education
+	a :applicationDomain ;
+	:title "Education" .
+
+:engineeringOrArchitecture
+	a :applicationDomain ;
+	:title "Engineering/Architecture" .
+
+:entertainmentOrRecreation
+	a :applicationDomain ;
+	:title "Entertainment/Recreation" .
+
+:financeOrBankingOrInsurance
+	a :applicationDomain ;
+	:title "Finance/Banking/Insurance" .
+
+:governmentOrMilitary
+	a :applicationDomain ;
+	:title "Government/Military" .
+
+:healthcareOrMedical
+	a :applicationDomain ;
+	:title "Healthcare/Medical" .
+
+:internetOrECommerce
+	a :applicationDomain ;
+	:title "Internet/eCommerce" .
+
+:logisticsOrShipping
+	a :applicationDomain ;
+	:title "Logistics/Shipping" .
+
+:manufacturing
+	a :applicationDomain ;
+	:title "Manufacturing" .
+
+:mobileApplications
+	a :applicationDomain ;
+	:title "Mobile Applications" .
+
+:services
+	a :applicationDomain ;
+	:title "Services [Hotels, Lodging Places]" .
+
+:telecommunication
+	a :applicationDomain ;
+	:title "Telecommunication" .
+
+
+# Degree of distribution (O2)
+# This is a property with value Low, Medium, or High.
+
+:degreeOfDistribution
+	a owl:DatatypeProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range :Ordinal3 .
+
+
+# Stability of the organization (O3)
+# This is a property with values Very low, Low, Medium, High, or Very high.
+
+:stabilityOfOrganization
+	a owl:DatatypeProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range :Ordinal5 .
+
+
+# Business strategy or goal of the organization (O4)
+# This is a free text property.
+
+:strategyOrGoal
+	a owl:DatatypeProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range xsd:string .
+
+
+# Size of the organization (05.1)
+# This is a positive integer property.
+
+:organizationSize
+	a owl:DatatypeProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range xsd:nonNegativeInteger .
+
+
+# Size of the team (O5.2)
+# This is a positive integer property.
+
+:teamSize
+	a owl:DatatypeProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range xsd:nonNegativeInteger .
+
+
+### Product context
+
+:productContext
+	a owl:DatatypeProperty ;
+	rdfs:domain :Context ;
+	rdfs:range :ProductContext .
+
+:ProductContext
+	rdfs:subClassOf :Class .
+	
+	
+### Stakeholder context
+
+:stakeholderContext
+	a owl:DatatypeProperty ;
+	rdfs:domain :Context ;
+	rdfs:range :StakeholderContext .
+
+:StakeholderContext
+	rdfs:subClassOf :Class .
+	
+	
+### Development method and technology context
+
+:developmentMethodAndTechnologyContext
+	a owl:DatatypeProperty ;
+	rdfs:domain :Context ;
+	rdfs:range :DevelopmentMethodAndTechnologyContext .
+
+:DevelopmentMethodAndTechnologyContext
+	rdfs:subClassOf :Class .
+	
+	
+### Market and business context
+
+:marketAndBusinessContext
+	a owl:DatatypeProperty ;
+	rdfs:domain :Context ;
+	rdfs:range :MarketAndBusinessContext .
+
+:MarketAndBusinessContext
+	rdfs:subClassOf :Class .
