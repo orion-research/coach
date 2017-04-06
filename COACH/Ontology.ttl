@@ -4,7 +4,7 @@
 
 # - Should we use term Asset or Alternative? I prefer Alternative on the top level, since it is more general,
 #    and that is how it is currently encoded in this ontology. However, Asset is provided as a subclass of Alternative.
-# - Should we use term Environment or Context?
+# - Should we use term Environment or Context? Currently, Context is used.
 # - Are multiple choices allowed for the different value categories (the SGRx)? Yes, and that is probably not an
 #   issue in RDF since you can have multiple links of the same name from a node, but could be problematic in Neo4j.
 #   The alternatives are either to store the attribute values in an array, or make a node and relation for each value.
@@ -37,7 +37,7 @@
 
 ##### Namespaces
 
-# Namespace prefix for the ORION ontology
+# The default namespace prefix : is used for elements of the ORION ontology
 
 @prefix : <http://www.orion-research.se/ontology#> .
 
@@ -52,12 +52,12 @@
 
 ##### Common attributes and classes
 
-# All Orion classes can have attributes id, title and description
+# All Orion classes can have attributes gradeId, title and description
 
 :Class
-	a owl:Class .
+	rdfs:subclassOf owl:Class .
 
-:id
+:gradeId
 	a owl:DatatypeProperty ;
 	rdfs:domain :Class ;
 	rdfs:range xsd:positiveInteger .
@@ -86,7 +86,7 @@
 # five (veryLow, low, medium, high, veryHigh) categories.
 
 :Ordinal
-	a :Class .
+	rdfs:subClassOf :Class .
 
 :rank
 	a owl:DatatypeProperty ;
@@ -94,10 +94,10 @@
 	rdfs:range xsd:positiveInteger .
 
 :Ordinal3
-	a :Ordinal .
+	rdfs:subClassOf :Ordinal .
 		
 :Ordinal5
-	a :Ordinal3 .
+	rdfs:subClassOf :Ordinal3 .
 		
 :veryLow
 	a :Ordinal5 ;
@@ -441,7 +441,7 @@
 
 ##### Roles element
 
-# A Role links a system User to a DecisionCase, and specifies four different role perspectives:
+# A Role links a certain individual, represented in COACH as a User, to a DecisionCase, and specifies four different role perspectives:
 # The role type; role function; role level; and role title. 
 
 :Role

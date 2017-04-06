@@ -298,10 +298,14 @@ class InteractionService(coach.Microservice):
         Endpoint representing the transition to the logged out state, which is the same as the initial state.
         The user and case being worked on is deleted from the session.
         """
-        self.authentication_service_proxy.logout_user(user_id = session.pop("user_id"), user_token = session.pop("user_token"))
-        session.pop("user_id", None)
-        session.pop("user_token", None)
-        session.pop("case_id", None)
+        try:
+            self.authentication_service_proxy.logout_user(user_id = session.pop("user_id"), user_token = session.pop("user_token"))
+            session.pop("user_id", None)
+            session.pop("user_token", None)
+            session.pop("case_id", None)
+        except:
+            # If the user is already logged out, the user_id, user_token, and case_id is no longer available.
+            pass
         return render_template("initial_dialogue.html")
 
 
