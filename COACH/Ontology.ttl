@@ -27,6 +27,9 @@
 # - The top level of GRADE is quite generic. Maybe there should be a subclass for each of the top elements, that are used
 #   for the specific decision problem of selecting software components? This is how Alternative vs. Asset are handled now,
 #   but the same principle could be applied for the other categories as well.
+# - The elements SGR15 and SGR16 appear as both "customer value" and "internal business value". This does not make much sense.
+#   It should be only "customer value".
+
 
 ##### Missing parts:
 # - Asset properties, needs to clarified how properties should be handled in general, and how to align with the property model work.
@@ -176,7 +179,7 @@
 # satisfaction; increase robustness; increase safety; or other. 
 
 :customerValue
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Goal ;
 	rdfs:range :CustomerValue .
 
@@ -201,19 +204,15 @@
 	:title "Improve customer satisfaction" ;
 	:description "In this case, the component selection aims at enhancing customer satisfaction by trying to anticipate customers' needs. In this respect, the decision could take into account characteristics of the available components and select the best suited for the application customers. It is worth noting that customer satisfaction could include timely available features, that is reduced time-to-market, as well as high quality/price ratio, and so on." .
 
-# :increaseRobustness and :increaseSafety are considered both CustomerValue and InternalBusinessValue.
-
 :increaseRobustness 
 	:gradeId "SGR15" ;
 	a :CustomerValue ;
-	a :InternalBusinessValue ;
 	:title "Increase robustness" ;
 	:description "" .
 
 :increaseSafety 
 	:gradeId "SGR16" ;
 	a :CustomerValue ;
-	a :InternalBusinessValue ;
 	:title "Increase safety" ;
 	:description "" .
 
@@ -224,7 +223,7 @@
 # identifying potential for acquisition; other.
 
 :financialValue
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Goal ;
 	rdfs:range :FinancialValue .
 
@@ -250,7 +249,7 @@
 # alternatives, or other.
 
 :internalBusinessValue
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Goal ;
 	rdfs:range :InternalBusinessValue .
 
@@ -305,7 +304,7 @@
 	:title "Reduce technical debt" ;
 	:description "This goal aims at exploiting the component development need as a way to trigger organization extension and internal increase of capacity (internal environmental survey). The development of the new component might require the acquisition of new skills, expertise, personnel, and so forth, to reduce the technical debt uncovered by the component need. As a consequence, the decision will prefer internal component development (maybe also open source?)." .
 
-:buidAdvancedSystems 
+:buildAdvancedSystems 
 	:gradeId "SGR14" ;
 	a :InternalBusinessValue ;
 	:title "Built advanced systems (systems of systems)" ;
@@ -320,7 +319,7 @@
 # alternatives, or other.
 
 :innovationAndLearningValue
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Goal ;
 	rdfs:range :InnovationAndLearningValue .
 
@@ -370,7 +369,7 @@
 # alternatives, or other.
 
 :marketValue
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Goal ;
 	rdfs:range :MarketValue .
 
@@ -448,7 +447,7 @@
 	rdfs:subClassOf :Class .
 
 :user
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Role ;
 	rdfs:range :User .
 
@@ -461,7 +460,7 @@
 # Role types can be asset supplier; asset user; system end-user; or other.
 
 :roleType
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Role ;
 	rdfs:range :RoleType .
 
@@ -492,7 +491,7 @@
 # Role functions can be initiator; leader; supporter; influencer; decider; or other.
 
 :roleFunction
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Role ;
 	rdfs:range :RoleFunction .
 
@@ -535,7 +534,7 @@
 # Role level can be strategic; tactical; or operational.
 
 :roleLevel
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Role ;
 	rdfs:range :RoleLevel .
 
@@ -566,7 +565,7 @@
 # Role title can be one of 22 different pre-defined values, or other.
 
 :roleTitle
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Role ;
 	rdfs:range :RoleTitle .
 
@@ -707,7 +706,7 @@
 # Asset usage can be reuse; adapt; buy; develop; or other.
 
 :assetUsage
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Asset ;
 	rdfs:range :AssetUsage .
 
@@ -748,7 +747,7 @@
 # Options
 
 :originOption
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Asset ;
 	rdfs:range :OriginOption .
 
@@ -795,7 +794,7 @@
 # Suboptions
 
 :originSuboption
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Asset ;
 	rdfs:range :OriginSuboption .
 
@@ -840,7 +839,7 @@
 # Element classes
 
 :elementType
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Asset ;
 	rdfs:range :ElementType .
 
@@ -1016,7 +1015,7 @@
 ### Organization context
 
 :organizationContext
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Context ;
 	rdfs:range :OrganizationContext .
 
@@ -1026,100 +1025,103 @@
 # Application domains (O1)
 
 :applicationDomain
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :OrganizationContext ;
 	rdfs:range :ApplicationDomain .
 
+:ApplicationDomain
+	rdfs:subClassOf :Class .
+
 :accounting
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Accounting" .
 
 :aerospaceOrAviation
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Aerospace/Aviation" .
 
 :agricultureOrForestryOrFishing
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Agriculture/Forestry/Fishing" .
 
 :automotive
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Automotive" .
 
 :biotechnology
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Biotechnology" .
 
 :businessOrProfessionalServices
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Business/Professional Services" .
 
 :computerSoftware
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Computer [Software]" .
 
 :computerHardware
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Computer [Hardware]" .
 
 :constructionOrHomeImprovement
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Construction/Home Improvement" .
 
 :consulting
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Consulting" .
 
 :corporateCommunication
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Corporate Communication" .
 
 :education
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Education" .
 
 :engineeringOrArchitecture
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Engineering/Architecture" .
 
 :entertainmentOrRecreation
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Entertainment/Recreation" .
 
 :financeOrBankingOrInsurance
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Finance/Banking/Insurance" .
 
 :governmentOrMilitary
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Government/Military" .
 
 :healthcareOrMedical
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Healthcare/Medical" .
 
 :internetOrECommerce
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Internet/eCommerce" .
 
 :logisticsOrShipping
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Logistics/Shipping" .
 
 :manufacturing
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Manufacturing" .
 
 :mobileApplications
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Mobile Applications" .
 
 :services
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Services [Hotels, Lodging Places]" .
 
 :telecommunication
-	a :applicationDomain ;
+	a :ApplicationDomain ;
 	:title "Telecommunication" .
 
 
@@ -1127,7 +1129,7 @@
 # This is a property with value Low, Medium, or High.
 
 :degreeOfDistribution
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :OrganizationContext ;
 	rdfs:range :Ordinal3 .
 
@@ -1136,7 +1138,7 @@
 # This is a property with values Very low, Low, Medium, High, or Very high.
 
 :stabilityOfOrganization
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :OrganizationContext ;
 	rdfs:range :Ordinal5 .
 
@@ -1171,7 +1173,7 @@
 ### Product context
 
 :productContext
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Context ;
 	rdfs:range :ProductContext .
 
@@ -1182,7 +1184,7 @@
 ### Stakeholder context
 
 :stakeholderContext
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Context ;
 	rdfs:range :StakeholderContext .
 
@@ -1193,7 +1195,7 @@
 ### Development method and technology context
 
 :developmentMethodAndTechnologyContext
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Context ;
 	rdfs:range :DevelopmentMethodAndTechnologyContext .
 
@@ -1204,7 +1206,7 @@
 ### Market and business context
 
 :marketAndBusinessContext
-	a owl:DatatypeProperty ;
+	a owl:ObjectProperty ;
 	rdfs:domain :Context ;
 	rdfs:range :MarketAndBusinessContext .
 

@@ -22,6 +22,9 @@ from flask.templating import render_template
 
 import requests
 
+# Linked data
+import rdflib
+
 
 class InteractionService(coach.Microservice):
     
@@ -63,8 +66,12 @@ class InteractionService(coach.Microservice):
 
         # Store point to service directories
         self.service_directory_proxies = [self.create_proxy(sd) for sd in self.get_setting("service_directories")]
-                        
-    
+
+        # Fetch the ORION ontology
+        self.ontology = rdflib.ConjunctiveGraph()
+        self.ontology.parse(data = self.case_db_proxy.get_ontology(format = "ttl"), format = "ttl")
+
+                            
     def get_version(self):
         """
         Returns the version of the software running. It fetches this information from git.
@@ -369,12 +376,75 @@ class InteractionService(coach.Microservice):
         return Response(json.dumps(self.get_setting("service_directories")))
 
 
-    @endpoint("/ontology", ["GET", "POST"])
-    def ontology(self, format):
+    @endpoint("/get_ontology", ["GET", "POST"])
+    def get_ontology(self, format):
         """
         Returns the base OWL ontology used by the core services in the service specified by the format parameter.
         """
         return Response(self.case_db_proxy.get_ontology(format = format))
+    
+    
+    @endpoint("/customer_value_dialogue_transition", ["GET", "POST"])
+    def customer_value_dialogue_transition(self):
+        """
+        Transition to the dialogue for the goal category customer value.
+        """
+        
+        orion_ns = rdflib.Namespace("http://www.orion-research.se/ontology#")
+        data_ns = rdflib.Namespace(self.case_db_proxy.get_data_namespace())
+        case_uri = data_ns[str(session["case_id"])]
+        
+        # Does the case already have a Goal element? If not, create it, and bind its url to goal_url.
+        goals = self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], 
+                                                         resource = case_uri, property_name = "goal")
+        if goals:
+            goal_uri = goals[0]
+        else:
+            goal_uri = self.case_db_proxy.add_resource(user_id = session["user_id"], user_token = session["user_token"], 
+                                                       resource_class = "Goal")
+            self.case_db_proxy.add_object_property(user_id = session["user_id"], user_token = session["user_token"], 
+                                                   resource1 = case_uri, property_name = "goal", resource2 = goal_uri)
+        
+        # Get all predefined resources of type CustomerValue from the ORION ontology, as a list of uri, gradeId, title, description
+        # and a boolean indicating if it is currently selected or not.
+        result = []
+        for s, _, _ in self.ontology.triples( (None,  rdflib.RDF.type, orion_ns.CustomerValue) ):
+            result += [(str(s),  # The URI
+                        self.ontology.value(s, orion_ns.gradeId, None), 
+                        self.ontology.value(s, orion_ns.title, None),
+                        self.ontology.value(s, orion_ns.description, None),
+                        str(s) in self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], 
+                                                                           resource = goal_uri, property_name = "customerValue"))]
+
+        # Sort the items according to gradeId
+        result.sort(key = lambda p: p[1])
+        result = "".join(["<INPUT type=\"checkbox\" onclick='window.location.assign(\"/change_customer_value?goal_uri=" + 
+                          goal_uri.replace("#", "%23") + "&value_uri=" + uri.replace("#", "%23") + "\")' " + 
+                          ("checked" if checked else "") + "/>" + str(title) + "<BR>" + str(description) + "</BR>" 
+                          for (uri, _, title, description, checked) in result])
+        result = "<FORM><FIELDSET><LEGEND><H2>Goal: Customer value</H2></LEGEND>" + result + "</FIELDSET></FORM>"
+        
+        return self.main_menu_transition(main_dialogue = str(result))
+    
+    
+    @endpoint("/change_customer_value", ["GET", "POST"])
+    def change_customer_value(self, goal_uri, value_uri):
+        """
+        This method is called when the user ticks a checkbox on the customer value dialogue.
+        It updates the database, and then displays the customer value dialogue again.
+        """
+        # Read value from database here, then invert it!
+        if value_uri in self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], 
+                                                                 resource = goal_uri, property_name = "customerValue"):
+            # Value is already set, so remove it
+            self.case_db_proxy.remove_object_property(user_id = session["user_id"], user_token = session["user_token"], 
+                                                      resource1 = goal_uri, property_name = "customerValue", resource2 = value_uri)
+        else:
+            # Value is not set, so add id
+            self.case_db_proxy.add_object_property(user_id = session["user_id"], user_token = session["user_token"], 
+                                                   resource1 = goal_uri, property_name = "customerValue", resource2 = value_uri)
+
+        return self.customer_value_dialogue_transition()
     
     
     @endpoint("/github_update", ["GET", "POST"])
