@@ -79,11 +79,11 @@
     <div class="dropdown-content">
       {% if session["case_id"] is defined %}
       <a href="#" style="color: lightgray">General</a>
-      <a href="/customer_value_dialogue_transition">Customer value</a>
-      <a href="#" style="color: lightgray">Financial value</a>
-      <a href="#" style="color: lightgray">Internal business value</a>
-      <a href="#" style="color: lightgray">Innovation and learning value</a>
-      <a href="#" style="color: lightgray">Market value</a>
+      <a href="/goal_dialogue_transition?class_name=CustomerValue&property_name=customerValue">Customer value</a>
+      <a href="/goal_dialogue_transition?class_name=FinancialValue&property_name=financialValue">Financial value</a>
+      <a href="/goal_dialogue_transition?class_name=InternalBusinessValue&property_name=internalBusinessValue">Internal business value</a>
+      <a href="/goal_dialogue_transition?class_name=InnovationAndLearningValue&property_name=innovationAndLearningValue">Innovation and learning value</a>
+      <a href="/goal_dialogue_transition?class_name=MarketValue&property_name=marketValue">Market value</a>
 	  {% endif %}
     </div>
 	</li>
@@ -139,6 +139,7 @@
     <a href="javascript:void(0)" class="dropbtn">About</a>
     <div class="dropdown-content">
       <a href="#">Version: {{ session["version"] }}</a>
+      <a href="/get_ontology?format=ttl">Ontology</a>
     </div>
 	</li>
 

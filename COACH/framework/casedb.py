@@ -741,3 +741,25 @@ class CaseDatabase(coach.GraphDatabaseService):
             return Response(json.dumps("Ok"))
         else:
             return Response("Invalid user token")
+
+
+    @endpoint("/toggle_object_property", ["GET", "POST"])
+    def toggle_object_property(self, user_id, user_token, resource1, property_name, resource2):
+        """
+        If the triple (resource1, property_name, resource2) exists, it is deleted and False is returned. 
+        Otherwise, it is added, and True is returned. The result thus reflects if the triple exists after the call.
+        """
+        
+        # Read value from database here, then invert it!
+        props = self.get_object_properties(user_id = user_id, user_token = user_token, 
+                                           resource = resource1, property_name = property_name)
+        if resource2 in json.loads(props.get_data(as_text = True)):
+            # Value is already set, so remove it
+            self.remove_object_property(user_id = user_id, user_token = user_token, 
+                                        resource1 = resource1, property_name = property_name, resource2 = resource2)
+            return Response(json.dumps(False))
+        else:
+            # Value is not set, so add id
+            self.add_object_property(user_id = user_id, user_token = user_token, 
+                                     resource1 = resource1, property_name = property_name, resource2 = resource2)
+            return Response(json.dumps(True))

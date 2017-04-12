@@ -379,13 +379,14 @@ class InteractionService(coach.Microservice):
     @endpoint("/get_ontology", ["GET", "POST"])
     def get_ontology(self, format):
         """
-        Returns the base OWL ontology used by the core services in the service specified by the format parameter.
+        Shows the base OWL ontology used by the core services in the service specified by the format parameter.
         """
-        return Response(self.case_db_proxy.get_ontology(format = format))
+        result = "<DIV style=\"\white-space: pre-wrap;\">" + self.case_db_proxy.get_ontology(format = format) + "</DIV>"
+        return self.main_menu_transition(main_dialogue = result)
     
     
-    @endpoint("/customer_value_dialogue_transition", ["GET", "POST"])
-    def customer_value_dialogue_transition(self):
+    @endpoint("/goal_dialogue_transition", ["GET", "POST"])
+    def goal_dialogue_transition(self, class_name, property_name):
         """
         Transition to the dialogue for the goal category customer value.
         """
@@ -408,43 +409,35 @@ class InteractionService(coach.Microservice):
         # Get all predefined resources of type CustomerValue from the ORION ontology, as a list of uri, gradeId, title, description
         # and a boolean indicating if it is currently selected or not.
         result = []
-        for s, _, _ in self.ontology.triples( (None,  rdflib.RDF.type, orion_ns.CustomerValue) ):
+        for s, _, _ in self.ontology.triples( (None,  rdflib.RDF.type, orion_ns[class_name]) ):
             result += [(str(s),  # The URI
                         self.ontology.value(s, orion_ns.gradeId, None), 
                         self.ontology.value(s, orion_ns.title, None),
                         self.ontology.value(s, orion_ns.description, None),
                         str(s) in self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], 
-                                                                           resource = goal_uri, property_name = "customerValue"))]
+                                                                           resource = goal_uri, property_name = property_name))]
 
         # Sort the items according to gradeId
         result.sort(key = lambda p: p[1])
-        result = "".join(["<INPUT type=\"checkbox\" onclick='window.location.assign(\"/change_customer_value?goal_uri=" + 
-                          goal_uri.replace("#", "%23") + "&value_uri=" + uri.replace("#", "%23") + "\")' " + 
+        result = "".join(["<INPUT type=\"checkbox\" onclick='window.location.assign(\"/toggle_goal_value?goal_uri=" + 
+                          goal_uri.replace("#", "%23") + "&value_uri=" + uri.replace("#", "%23") + 
+                          "&class_name=" + class_name + "&property_name=" + property_name + "\")' " + 
                           ("checked" if checked else "") + "/>" + str(title) + "<BR>" + str(description) + "</BR>" 
                           for (uri, _, title, description, checked) in result])
-        result = "<FORM><FIELDSET><LEGEND><H2>Goal: Customer value</H2></LEGEND>" + result + "</FIELDSET></FORM>"
+        result = "<FORM><FIELDSET><LEGEND><H2>Goal: " + self.ontology.value(orion_ns[class_name], orion_ns.title, None) + "</H2></LEGEND>" + result + "</FIELDSET></FORM>"
         
         return self.main_menu_transition(main_dialogue = str(result))
     
     
-    @endpoint("/change_customer_value", ["GET", "POST"])
-    def change_customer_value(self, goal_uri, value_uri):
+    @endpoint("/toggle_goal_value", ["GET", "POST"])
+    def toggle_goal_value(self, class_name, property_name, goal_uri, value_uri):
         """
-        This method is called when the user ticks a checkbox on the customer value dialogue.
-        It updates the database, and then displays the customer value dialogue again.
+        This method is called when the user ticks a checkbox in one of the goal dialogues.
+        It updates the database, and then displays the goal dialogue again.
         """
-        # Read value from database here, then invert it!
-        if value_uri in self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], 
-                                                                 resource = goal_uri, property_name = "customerValue"):
-            # Value is already set, so remove it
-            self.case_db_proxy.remove_object_property(user_id = session["user_id"], user_token = session["user_token"], 
-                                                      resource1 = goal_uri, property_name = "customerValue", resource2 = value_uri)
-        else:
-            # Value is not set, so add id
-            self.case_db_proxy.add_object_property(user_id = session["user_id"], user_token = session["user_token"], 
-                                                   resource1 = goal_uri, property_name = "customerValue", resource2 = value_uri)
-
-        return self.customer_value_dialogue_transition()
+        self.case_db_proxy.toggle_object_property(user_id = session["user_id"], user_token = session["user_token"], 
+                                                  resource1 = goal_uri, property_name = property_name, resource2 = value_uri)
+        return self.goal_dialogue_transition(class_name = class_name, property_name = property_name)
     
     
     @endpoint("/github_update", ["GET", "POST"])

@@ -29,6 +29,7 @@
 #   but the same principle could be applied for the other categories as well.
 # - The elements SGR15 and SGR16 appear as both "customer value" and "internal business value". This does not make much sense.
 #   It should be only "customer value".
+# - The different classes defined should have :title and :description fields.
 
 
 ##### Missing parts:
@@ -184,7 +185,8 @@
 	rdfs:range :CustomerValue .
 
 :CustomerValue
-	rdfs:subClassOf :Class .
+	rdfs:subClassOf :Class ;
+	:title "Customer value" .
 	
 :extendASystem 
 	:gradeId "SGR1" ;
@@ -228,7 +230,8 @@
 	rdfs:range :FinancialValue .
 
 :FinancialValue
-	rdfs:subClassOf :Class .
+	rdfs:subClassOf :Class ;
+	:title "Financial value" .
 	
 :increaseProfit 
 	:gradeId "SGR4" ;
@@ -254,7 +257,8 @@
 	rdfs:range :InternalBusinessValue .
 
 :InternalBusinessValue
-	rdfs:subClassOf :Class .
+	rdfs:subClassOf :Class ;
+	:title "Internal business value" .
 	
 :replaceAnAsset 
 	:gradeId "SGR6" ;
@@ -324,7 +328,8 @@
 	rdfs:range :InnovationAndLearningValue .
 
 :InnovationAndLearningValue
-	rdfs:subClassOf :Class .
+	rdfs:subClassOf :Class ;
+	:title "Innovation and learning value" .
 	
 :enterAnEcosystem 
 	:gradeId "SGR17" ;
@@ -374,7 +379,8 @@
 	rdfs:range :MarketValue .
 
 :MarketValue
-	rdfs:subClassOf :Class .
+	rdfs:subClassOf :Class ;
+	:title "Market value" .
 	
 :reachDiversifiedCustomers 
 	:gradeId "ESGR5" ;
