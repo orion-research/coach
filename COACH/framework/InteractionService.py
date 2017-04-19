@@ -22,6 +22,9 @@ from flask.templating import render_template
 
 import requests
 
+# Linked data
+import rdflib
+
 
 class InteractionService(coach.Microservice):
     
@@ -63,8 +66,12 @@ class InteractionService(coach.Microservice):
 
         # Store point to service directories
         self.service_directory_proxies = [self.create_proxy(sd) for sd in self.get_setting("service_directories")]
-                        
-    
+
+        # Fetch the ORION ontology
+        self.ontology = rdflib.ConjunctiveGraph()
+        self.ontology.parse(data = self.case_db_proxy.get_ontology(format = "ttl"), format = "ttl")
+
+                            
     def get_version(self):
         """
         Returns the version of the software running. It fetches this information from git.
@@ -298,10 +305,14 @@ class InteractionService(coach.Microservice):
         Endpoint representing the transition to the logged out state, which is the same as the initial state.
         The user and case being worked on is deleted from the session.
         """
-        self.authentication_service_proxy.logout_user(user_id = session.pop("user_id"), user_token = session.pop("user_token"))
-        session.pop("user_id", None)
-        session.pop("user_token", None)
-        session.pop("case_id", None)
+        try:
+            self.authentication_service_proxy.logout_user(user_id = session.pop("user_id"), user_token = session.pop("user_token"))
+            session.pop("user_id", None)
+            session.pop("user_token", None)
+            session.pop("case_id", None)
+        except:
+            # If the user is already logged out, the user_id, user_token, and case_id is no longer available.
+            pass
         return render_template("initial_dialogue.html")
 
 
@@ -365,12 +376,68 @@ class InteractionService(coach.Microservice):
         return Response(json.dumps(self.get_setting("service_directories")))
 
 
-    @endpoint("/ontology", ["GET", "POST"])
-    def ontology(self, format):
+    @endpoint("/get_ontology", ["GET", "POST"])
+    def get_ontology(self, format):
         """
-        Returns the base OWL ontology used by the core services in the service specified by the format parameter.
+        Shows the base OWL ontology used by the core services in the service specified by the format parameter.
         """
-        return Response(self.case_db_proxy.get_ontology(format = format))
+        result = "<DIV style=\"\white-space: pre-wrap;\">" + self.case_db_proxy.get_ontology(format = format) + "</DIV>"
+        return self.main_menu_transition(main_dialogue = result)
+    
+    
+    @endpoint("/goal_dialogue_transition", ["GET", "POST"])
+    def goal_dialogue_transition(self, class_name, property_name):
+        """
+        Transition to the dialogue for the goal category customer value.
+        """
+        
+        orion_ns = rdflib.Namespace("http://www.orion-research.se/ontology#")
+        data_ns = rdflib.Namespace(self.case_db_proxy.get_data_namespace())
+        case_uri = data_ns[str(session["case_id"])]
+        
+        # Does the case already have a Goal element? If not, create it, and bind its url to goal_url.
+        goals = self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], 
+                                                         resource = case_uri, property_name = "goal")
+        if goals:
+            goal_uri = goals[0]
+        else:
+            goal_uri = self.case_db_proxy.add_resource(user_id = session["user_id"], user_token = session["user_token"], 
+                                                       resource_class = "Goal")
+            self.case_db_proxy.add_object_property(user_id = session["user_id"], user_token = session["user_token"], 
+                                                   resource1 = case_uri, property_name = "goal", resource2 = goal_uri)
+        
+        # Get all predefined resources of type CustomerValue from the ORION ontology, as a list of uri, gradeId, title, description
+        # and a boolean indicating if it is currently selected or not.
+        result = []
+        for s, _, _ in self.ontology.triples( (None,  rdflib.RDF.type, orion_ns[class_name]) ):
+            result += [(str(s),  # The URI
+                        self.ontology.value(s, orion_ns.gradeId, None), 
+                        self.ontology.value(s, orion_ns.title, None),
+                        self.ontology.value(s, orion_ns.description, None),
+                        str(s) in self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], 
+                                                                           resource = goal_uri, property_name = property_name))]
+
+        # Sort the items according to gradeId
+        result.sort(key = lambda p: p[1])
+        result = "".join(["<INPUT type=\"checkbox\" onclick='window.location.assign(\"/toggle_goal_value?goal_uri=" + 
+                          goal_uri.replace("#", "%23") + "&value_uri=" + uri.replace("#", "%23") + 
+                          "&class_name=" + class_name + "&property_name=" + property_name + "\")' " + 
+                          ("checked" if checked else "") + "/>" + str(title) + "<BR>" + str(description) + "</BR>" 
+                          for (uri, _, title, description, checked) in result])
+        result = "<FORM><FIELDSET><LEGEND><H2>Goal: " + self.ontology.value(orion_ns[class_name], orion_ns.title, None) + "</H2></LEGEND>" + result + "</FIELDSET></FORM>"
+        
+        return self.main_menu_transition(main_dialogue = str(result))
+    
+    
+    @endpoint("/toggle_goal_value", ["GET", "POST"])
+    def toggle_goal_value(self, class_name, property_name, goal_uri, value_uri):
+        """
+        This method is called when the user ticks a checkbox in one of the goal dialogues.
+        It updates the database, and then displays the goal dialogue again.
+        """
+        self.case_db_proxy.toggle_object_property(user_id = session["user_id"], user_token = session["user_token"], 
+                                                  resource1 = goal_uri, property_name = property_name, resource2 = value_uri)
+        return self.goal_dialogue_transition(class_name = class_name, property_name = property_name)
     
     
     @endpoint("/github_update", ["GET", "POST"])

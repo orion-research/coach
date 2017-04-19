@@ -33,6 +33,56 @@ class CaseDatabase(coach.GraphDatabaseService):
     This is useful for being able to analyze decision processes. 
     """
 
+    def __init__(self, settings_file_name = None, working_directory = None):
+        """
+        The case database is initialized by loading the ontology from file.
+        """
+        
+        super().__init__(settings_file_name, working_directory = working_directory)
+        # Load the ontology from file
+        self.orion_ns = "http://www.orion-research.se/ontology#"  # The name space for the ontology used
+        self.data_ns = self.host + "/data#"  # The name space for this data source
+
+        # Namespace objects cannot be stored as object attributes, since they collide with the microservice mechanisms
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        data_ns = rdflib.Namespace(self.data_ns)
+
+        self.ontology = rdflib.ConjunctiveGraph()
+        self.ontology.bind("data", data_ns)
+        self.ontology.bind("orion", orion_ns)
+        ontology_path = os.path.join(self.working_directory, os.pardir, "Ontology.ttl")
+        self.ontology.parse(source = ontology_path, format = "ttl")
+        
+        # Populate the database by all instance elements in the ontology, ensuring to not duplicate data already there.
+        for s, _, o in self.ontology.triples( (None, rdflib.RDF.type, None) ):
+            (_, ns1, _) = self.ontology.compute_qname(s)
+            (_, ns2, r2) = self.ontology.compute_qname(o)
+            # Only include triples where both subject and object are from the ORION ontology
+            if str(ns1) == self.orion_ns and str(ns2) == self.orion_ns:
+                
+                # If this resource is not in the database, add it
+                self.add_resource_with_uri(r2, str(s))
+
+                # Update the properties gradeId, title and description (if they exist), to ensure that the latest ontology data is used.
+                gradeId = self.ontology.value(s, orion_ns.gradeId, None)
+                if gradeId:
+                    q = """MATCH (r:$label { uri : { uri } }) SET r.gradeId = {value}"""
+                    params = { "uri" : str(s), "value" : gradeId }
+                    self.query(q, params)
+
+                title = self.ontology.value(s, orion_ns.title, None)
+                if title:
+                    q = """MATCH (r:$label { uri : { uri } }) SET r.title = {value}"""
+                    params = { "uri" : str(s), "value" : title }
+                    self.query(q, params)
+
+                description = self.ontology.value(s, orion_ns.description, None)
+                if description:
+                    q = """MATCH (r:$label { uri : { uri } }) SET r.description = {value}"""
+                    params = { "uri" : str(s), "value" : description }
+                    self.query(q, params)
+    
+    
     def is_stakeholder(self, user_id, case_id):
         """
         Returns true if user_id is a stakeholder in case_id.
@@ -129,14 +179,19 @@ class CaseDatabase(coach.GraphDatabaseService):
             params1 = { "title": title, "description": description }
             case_id = int(self.query(q1, params1, s).single()["case_id"])
             
+            # Then set the uri attribute of the case node.
+            q2 = """MATCH (c:Case:$label) WHERE id(c) = {case_id} SET c.uri = {uri}"""
+            params2 = { "case_id": case_id, "uri": self.id_to_uri(case_id) }
+            self.query(q2, params2, s)
+            
             # Then create the relationship
-            q2 = """\
+            q3 = """\
             MATCH (c:Case:$label), (u:User:$label)
             WHERE id(c) = {case_id} AND u.user_id = {initiator}
             CREATE (c) -[:Stakeholder {role: "initiator"}]-> (u)
             """
-            params2 = { "case_id": case_id, "initiator": initiator }
-            self.query(q2, params2, s)
+            params3 = { "case_id": case_id, "initiator": initiator }
+            self.query(q3, params3, s)
             self.close_session(s)
             return Response(json.dumps(case_id))        
         else:
@@ -338,6 +393,8 @@ class CaseDatabase(coach.GraphDatabaseService):
         Returns the base OWL ontology used by this case database. The base ontology may be extended by services.
         The format parameter indicates which serialization format should be used.
         """
+        
+        """
         # Create the name spaces
         owl = rdflib.OWL
         rdf = rdflib.RDF
@@ -384,7 +441,9 @@ class CaseDatabase(coach.GraphDatabaseService):
             ontology.add(t)
         
         # Serialize the ontology graph
-        return Response(json.dumps(ontology.serialize(format = format).decode("utf-8")))
+        """
+        
+        return Response(json.dumps(self.ontology.serialize(format = format).decode("utf-8")))
      
      
     @endpoint("/export_case_data", ["GET"])
@@ -479,4 +538,228 @@ class CaseDatabase(coach.GraphDatabaseService):
                 print(rdfgraph.serialize(format = format).decode("utf-8"))
                 return Response(json.dumps(rdfgraph.serialize(format = format).decode("utf-8")))
         else:
-            return Response("Invalid user token")    
+            return Response("Invalid user token")
+    
+        
+    #### NEW API FOR LINKED DATA #########################################################################
+    
+    def uri_to_id(self, uri):
+        """
+        Given a URI with the namespace used for the database followed by an id, return the id as an int.
+        If the namespace is not a prefix of the uri, raise an exception.
+        """
+        if self.data_ns == uri[0 : len(self.data_ns)]:
+            return int(uri[len(self.data_ns) : ])
+        else:
+            raise Exception("Wrong namespace: " + uri)
+    
+    
+    def id_to_uri(self, resource_id):
+        """
+        Given a database id, return the corresponding URI.
+        """
+        return self.data_ns + str(resource_id)
+    
+    
+    @endpoint("/get_data_namespace", ["GET", "POST"])
+    def get_data_namespace(self):
+        """
+        Returns the namespace used for data in this case database.
+        """
+        return Response(json.dumps(self.data_ns))
+    
+    
+    @endpoint("/add_resource", ["POST"])
+    def add_resource(self, user_id, user_token, resource_class):
+        """
+        Adds a new resource of the given resource_class, and returns its generated URI.
+        """
+
+        # TODO: Add ontology and stakeholder checks.
+        
+        # A resource is stored in Neo4j as a node with the resource_class as a label.
+        # The database id is used as the last part of the returned URI.
+        
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            s = self.open_session()
+            # First, create the resource and get back its id, which is used to generate the URI.
+            q = """CREATE (r:$class:$label) RETURN id(r) AS id"""
+            resource_id = self.query(q, { "class" : resource_class }).single()["id"]
+            uri = self.id_to_uri(resource_id)
+            # Then, set the uri property of the node to the generated URI.
+            q = """MATCH (r:$label) WHERE id(r) = {r_id} SET r.uri = {uri}"""
+            params = { "r_id" : resource_id, "uri" : uri }
+            self.query(q, params)
+            self.close_session(s)
+            return Response(json.dumps(uri))        
+        else:
+            return Response("Invalid user token")
+
+    
+    def add_resource_with_uri(self, resource_class, uri):
+        """
+        Adds a new resource of the given resource_class, where the uri is provided.
+        If a node with the uri already exists, nothing is done.
+        This is used to store relations to other namespaces in the database.
+        It is only available internally in the CaseDB to set up elements from the ontology.
+        """
+
+        q = """MERGE (r:$class:$label { uri : { uri } } )"""
+        self.query(q, { "class" : resource_class, "uri" : uri })
+
+    
+    @endpoint("/remove_resource", ["GET", "POST"])
+    def remove_resource(self, user_id, user_token, resource):
+        """
+        Removes a resource, and all properties to and from it.
+        """
+
+        # TODO: Add ontology and stakeholder checks.
+        
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            q = """MATCH (r:$label { uri: {uri} }) DETACH DELETE r"""
+            self.query(q, { "uri" : resource })
+            return Response("Ok")        
+        else:
+            return Response("Invalid user token")
+
+    
+    @endpoint("/add_datatype_property", ["GET", "POST"])
+    def add_datatype_property(self, user_id, user_token, resource, property_name, value):
+        """
+        Adds value to resource under the given property_name.
+        """
+
+        # TODO: Add ontology and stakeholder checks.
+        
+        # A datatype property is stored in Neo4j as a node attribute.
+#        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            q = """MATCH (r:$label { uri : { uri } }) SET r.$property_name = {value}"""
+            params = { "uri" : resource, "property_name" : property_name, "value" : value }
+            self.query(q, params)
+            return Response(json.dumps("Ok"))
+        else:
+            return Response("Invalid user token")
+        
+        
+    @endpoint("/add_object_property", ["GET", "POST"])
+    def add_object_property(self, user_id, user_token, resource1, property_name, resource2):
+        """
+        Relates resource1 to resource2 through the given property_name.
+        """
+
+        # TODO: Add ontology and stakeholder checks.
+        
+#        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            q = """\
+            MATCH (r1:$label { uri : { uri1 }}), (r2:$label  { uri : { uri2 }})
+            CREATE (r1) -[:$property_name]-> (r2)
+            """
+            params = { "uri1" : resource1, "uri2" : resource2, "property_name" : property_name }
+            self.query(q, params)
+            return Response(json.dumps("Ok"))
+        else:
+            return Response("Invalid user token")
+
+
+    @endpoint("/get_datatype_property", ["GET", "POST"])
+    def get_datatype_property(self, user_id, token, resource, property_name):
+        """
+        Returns a value, for which there is a datatype property relation called property_name
+        from the provided resource. 
+        """
+
+        # TODO: Add ontology and stakeholder checks.
+        
+#        if self.is_stakeholder(user_id, case_id) and (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = token) or 
+#                                                      self.authentication_service_proxy.check_delegate_token(user_id = user_id, delegate_token = token, case_id = case_id)):
+        if (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = token)):
+            try:
+                q = """MATCH (r:$label { uri : { uri } }) RETURN r.$property_name AS value"""
+                params = { "uri": resource, "property_name": property_name }
+                query_result = self.query(q, params).single()["value"]
+                return Response(json.dumps(query_result))
+            except:
+                return Response(json.dumps(None))
+        else:
+            return Response("Invalid user or delegate token")
+        
+        
+    @endpoint("/get_object_properties", ["GET", "POST"])
+    def get_object_properties(self, user_id, user_token, resource, property_name):
+        """
+        Returns a list of resources, for which there is a datatype property relation called property_name
+        from the provided resource. property_name is not given as a full uri, but just as the name.
+        """
+
+        # TODO: Add ontology and stakeholder checks.
+        
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            q = """\
+            MATCH (r1:$label { uri : { uri1 } }) -[:$property_name]-> (r2:$label)
+            RETURN r2.uri AS uri2"""
+            params = { "uri1" : resource, "property_name" : property_name }
+            result = self.query(q, params)
+            if result:
+                return Response(json.dumps([res["uri2"] for res in result]))
+            else:
+                return Response(json.dumps([]))
+        else:
+            return Response("Invalid user token")
+
+
+    @endpoint("/remove_datatype_property", ["GET", "POST"])
+    def remove_datatype_property(self, user_id, user_token, resource, property_name):
+        """
+        Remove all properties called property_name from the resource.
+        """
+
+        # TODO: Add ontology and stakeholder checks.
+        
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            q = """MATCH (r:$label { uri : { uri } }) REMOVE r.$property_name"""
+            self.query(q, { "uri" : resource, "property_name" : property_name })
+            return Response("Ok")        
+        else:
+            return Response("Invalid user token")
+
+
+    @endpoint("/remove_object_property", ["GET", "POST"])
+    def remove_object_property(self, user_id, user_token, resource1, property_name, resource2):
+        """
+        Remove the object property relating resource1 to resource 2.
+        """
+
+        # TODO: Add ontology and stakeholder checks.
+        
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            q = """MATCH (r:$label { uri : {uri1} } ) -[p:$property_name]-> (:$label { uri : {uri2} }) DELETE p"""
+            params = { "uri1" : resource1, "property_name" : property_name, "uri2" : resource2 }
+            self.query(q, params)
+            return Response(json.dumps("Ok"))
+        else:
+            return Response("Invalid user token")
+
+
+    @endpoint("/toggle_object_property", ["GET", "POST"])
+    def toggle_object_property(self, user_id, user_token, resource1, property_name, resource2):
+        """
+        If the triple (resource1, property_name, resource2) exists, it is deleted and False is returned. 
+        Otherwise, it is added, and True is returned. The result thus reflects if the triple exists after the call.
+        """
+        
+        # Read value from database here, then invert it!
+        props = self.get_object_properties(user_id = user_id, user_token = user_token, 
+                                           resource = resource1, property_name = property_name)
+        if resource2 in json.loads(props.get_data(as_text = True)):
+            # Value is already set, so remove it
+            self.remove_object_property(user_id = user_id, user_token = user_token, 
+                                        resource1 = resource1, property_name = property_name, resource2 = resource2)
+            return Response(json.dumps(False))
+        else:
+            # Value is not set, so add id
+            self.add_object_property(user_id = user_id, user_token = user_token, 
+                                     resource1 = resource1, property_name = property_name, resource2 = resource2)
+            return Response(json.dumps(True))

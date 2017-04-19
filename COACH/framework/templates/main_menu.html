@@ -1,50 +1,162 @@
-<!DOCTYPE HTML>
-<HTML>
-<HEAD>
-<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static', filename='format.css') }}">
-<TITLE>COACH</TITLE>
-</HEAD>
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static', filename='format.css') }}">
+	<title>COACH decision support system</title>
+	<style>
+	
+		#menubar ul {
+		    list-style-type: none;
+		    margin: 0;
+		    padding: 0;
+		    overflow: hidden;
+		    background-color: #ffd213;
+		}
 
-<DIV id="menu">
-<IMG src="{{ url_for('static', filename='logotype.png') }}">
-<DIV id="main_menu">
-Version:<BR>
-{{ session["version"] }}
-Logged in as:<BR>
-{{ session["user_id"] }}
-<HR>
-{% if session["case_id"] is defined %}
-Working on case:<BR>
-{{ session["case_id"] }}
-<HR>
-{% endif %}
-<UL>
-<LI><STRONG>General</STRONG></LI>
-<LI><A HREF="/change_password"> Change password </A></LI>
-<LI><A HREF="/logout"> Logout </A></LI>
-<LI><STRONG>Case management</STRONG></LI>
-<LI><A HREF="/open_case_dialogue"> Open case </A></LI>
-<LI><A HREF="/create_case_dialogue"> Create case </A></LI>
-{% if session["case_id"] %}
-<LI><A HREF="/edit_case_description_dialogue"> Edit case description</A></LI>
-<LI><A HREF="/add_stakeholder_dialogue"> Add stakeholder </A></LI>
-<LI><A HREF="/change_decision_process_dialogue"> Change decision process</A></LI>
-<LI><A HREF="/add_alternative_dialogue"> Add decision alternative </A></LI>
-<LI><A HREF="/context_model_request?endpoint=edit_context_dialogue"> Edit context information</A></LI>
-<LI><A HREF="/export_case_to_knowledge_repository">Export case to knowledge repository</A></LI>
-{% endif %}
-{% if process_menu is defined %}
-<LI><STRONG>Decision process</STRONG></LI>
-{{ process_menu | safe }}
-{% endif %}
-</DIV>
-</DIV>
+		#menubar li {
+		    float: left;
+		    border-right: 1px solid white;
+		}
+		
+		#menubar li a, .dropbtn {
+		    display: inline-block;
+		    color: black;
+		    text-align: center;
+		    padding: 14px 16px;
+		    text-decoration: none;
+		}
+		
+		#menubar li a:hover, .dropdown:hover .dropbtn {
+		    background-color: #edead7;
+		}
+		
+		#menubar li.dropdown {
+		    display: inline-block;
+		}
+		
+		#menubar .dropdown-content {
+		    display: none;
+		    position: absolute;
+		    background-color: #f9f9f9;
+		    min-width: 160px;
+		    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+		    z-index: 1;
+		}
+		
+		#menubar .dropdown-content a {
+		    color: black;
+		    padding: 12px 16px;
+		    text-decoration: none;
+		    display: block;
+		    text-align: left;
+		}
+		
+		#menubar .dropdown-content a:hover {background-color: #f1f1f1}
+		
+		#menubar .dropdown:hover .dropdown-content {
+		    display: block;
+		}
+	</style>
+</head>
 
-<DIV id="heading">
-<H1>COACH Decision Support System</H1>
-</DIV>
+<body>
+<div id="menubar" style="position: fixed; width: 100%">
+<ul>
+	<li class="dropdown">
+    	<a href="javascript:void(0)" class="dropbtn">Case</a>
+	    <div class="dropdown-content">
+	      <a href="/open_case_dialogue">Open</a>
+	      <a href="/create_case_dialogue">New</a>
+	      {% if session["case_id"] is defined %}
+	      <a href="/edit_case_description_dialogue">Description</a>
+	      <a href="/export_case_to_knowledge_repository">Export to knowledge repository</a>
+		  {% endif %}
+	    </div>
+ 	</li>
+ 	
+	<li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Goal</a>
+    <div class="dropdown-content">
+      {% if session["case_id"] is defined %}
+      <a href="#" style="color: lightgray">General</a>
+      <a href="/goal_dialogue_transition?class_name=CustomerValue&property_name=customerValue">Customer value</a>
+      <a href="/goal_dialogue_transition?class_name=FinancialValue&property_name=financialValue">Financial value</a>
+      <a href="/goal_dialogue_transition?class_name=InternalBusinessValue&property_name=internalBusinessValue">Internal business value</a>
+      <a href="/goal_dialogue_transition?class_name=InnovationAndLearningValue&property_name=innovationAndLearningValue">Innovation and learning value</a>
+      <a href="/goal_dialogue_transition?class_name=MarketValue&property_name=marketValue">Market value</a>
+	  {% endif %}
+    </div>
+	</li>
+
+	<li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Context</a>
+    <div class="dropdown-content">
+      {% if session["case_id"] is defined %}
+      <a href="/context_model_request?endpoint=edit_context_dialogue">General</a>
+      <a href="#" style="color: lightgray">Organization</a>
+      <a href="#" style="color: lightgray">Product</a>
+      <a href="#" style="color: lightgray">Stakeholder</a>
+      <a href="#" style="color: lightgray">Development method and technology</a>
+      <a href="#" style="color: lightgray">Market and business</a>
+	  {% endif %}
+    </div>
+	</li>
+	
+	<li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Stakeholders</a>
+    <div class="dropdown-content">
+      {% if session["case_id"] is defined %}
+      <a href="/add_stakeholder_dialogue">Add</a>
+      <a href="#" style="color: lightgray">Modify</a>
+	  {% endif %}
+    </div>
+	</li>
+
+	<li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Alternatives</a>
+    <div class="dropdown-content">
+      {% if session["case_id"] is defined %}
+      <a href="/add_alternative_dialogue">Add</a>
+      <a href="#" style="color: lightgray">Modify</a>
+	  {% endif %}
+    </div>
+	</li>
+
+	<li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Decision process</a>
+    <div class="dropdown-content">
+      {% if session["case_id"] is defined %}
+      <a href="/change_decision_process_dialogue">Change process</a>
+		{% if process_menu is defined %}
+		<HR>
+		{{ process_menu | safe }}
+		{% endif %}
+	  {% endif %}
+    </div>
+	</li>
+	
+	<li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">About</a>
+    <div class="dropdown-content">
+      <a href="#">Version: {{ session["version"] }}</a>
+      <a href="/get_ontology?format=ttl">Ontology</a>
+    </div>
+	</li>
+
+	<li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">{{ session["user_id"] }}</a>
+    <div class="dropdown-content">
+      <a href="#" style="color: lightgray">Change password</a>
+      <a href="/logout">Logout</a>
+    </div>
+	</li>
+</div>
 
 <DIV id="main_dialogue">
+<BR>
+<BR>
+<BR>
+
 {% if message is defined %}
 {{ message | safe }}
 <BR><BR>
@@ -54,7 +166,6 @@ Working on case:<BR>
 {{ main_dialogue | safe }}
 {% endif %}
 </DIV>
+</body>
 
-<BODY>
-</BODY>
-</HTML>
+</html>

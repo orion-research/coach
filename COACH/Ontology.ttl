@@ -1,0 +1,1220 @@
+####### Machine-readable ontology based on ORION GRADE v1.0
+
+##### TODO / Open questions:
+
+# - Should we use term Asset or Alternative? I prefer Alternative on the top level, since it is more general,
+#    and that is how it is currently encoded in this ontology. However, Asset is provided as a subclass of Alternative.
+# - Should we use term Environment or Context? Currently, Context is used.
+# - Are multiple choices allowed for the different value categories (the SGRx)? Yes, and that is probably not an
+#   issue in RDF since you can have multiple links of the same name from a node, but could be problematic in Neo4j.
+#   The alternatives are either to store the attribute values in an array, or make a node and relation for each value.
+#   Since the values are finite, there will be a finite set of nodes which are reused between cases, so maybe the latter 
+#   is preferable. 
+# - SGR9, SGR15, SGR16, SGR17, SGR20, ESGR9, ESGR10, RP12, RP19, AT1-6, AT8 lack descriptions.
+# - RP16 should be renamed from "Process/Business Analyst" to "Process analyst", or split into two roles.
+# - How to handle "other" values in selection lists? Predefined categories can be instance nodes, but other values
+#   must be a special class, since different instances must be able to hold a description of what the "other" is
+#   in each case. So a specific class "Other", and then we need for each concrete instance say that it is
+#   both "Other" and the category to which it belongs (e.g. CustomerValue).
+# - The subcategory "Roles" of "Role" in GRADE should be renamed to something more specific. Suggestion: "Role title".
+# - The User class needs to be elaborated. Should it build on FOAF? What fields are relevant?
+# - RP20-RP22 are identical to RT1-RT3. Only RT1-RT3 are currently included in this ontology.
+# - Add suitable restrictions on relations (such as one-to-one, one-to-many, etc.)
+# - Asset origin options/suboption should be refined. They overlap now. In particular regarding "open source", but also
+#   for some other data.
+# - Why is AO4 mentioning "government contract" in the definition field?
+# - The properties part of Asset seems to be placed in a rather strange place. Shouldn't it be in Goals, or perhaps Decisions?
+# - The top level of GRADE is quite generic. Maybe there should be a subclass for each of the top elements, that are used
+#   for the specific decision problem of selecting software components? This is how Alternative vs. Asset are handled now,
+#   but the same principle could be applied for the other categories as well.
+# - The elements SGR15 and SGR16 appear as both "customer value" and "internal business value". This does not make much sense.
+#   It should be only "customer value".
+# - The different classes defined should have :title and :description fields.
+
+
+##### Missing parts:
+# - Asset properties, needs to clarified how properties should be handled in general, and how to align with the property model work.
+# - Decision, not started yet.
+# - Environment/Context. Started with the organization subcategory. Current idea is to use the Context model, since it is more mature,
+#   and skip the Environment part of GRADE.
+
+
+##### Namespaces
+
+# The default namespace prefix : is used for elements of the ORION ontology
+
+@prefix : <http://www.orion-research.se/ontology#> .
+
+
+# Standard namespace prefixes
+
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+
+##### Common attributes and classes
+
+# All Orion classes can have attributes gradeId, title and description
+
+:Class
+	rdfs:subclassOf owl:Class .
+
+:gradeId
+	a owl:DatatypeProperty ;
+	rdfs:domain :Class ;
+	rdfs:range xsd:positiveInteger .
+
+:title
+	a owl:DatatypeProperty ;
+	rdfs:domain :Class ;
+	rdfs:range xsd:string .
+
+:description
+	a owl:DatatypeProperty ;
+	rdfs:domain :Class ;
+	rdfs:range xsd:string .
+
+
+# The GRADE taxonomy contains a number of categories with predefined elements. However, the categories are 
+# intended to be open ended, where other elements can be added when needed. This is captured in this ontology
+# using the Other class. Instances of the Other class should also always be instances of a specific class
+# representing a certain category.
+
+:Other
+	rdfs:subClassOf :Class .
+
+
+# Certain properties are related to ordinal sets of three (low, medium, high) or
+# five (veryLow, low, medium, high, veryHigh) categories.
+
+:Ordinal
+	rdfs:subClassOf :Class .
+
+:rank
+	a owl:DatatypeProperty ;
+	rdfs:domain :Ordinal ;
+	rdfs:range xsd:positiveInteger .
+
+:Ordinal3
+	rdfs:subClassOf :Ordinal .
+		
+:Ordinal5
+	rdfs:subClassOf :Ordinal3 .
+		
+:veryLow
+	a :Ordinal5 ;
+	:rank 1 ;
+	:title "Very low" .
+
+:low
+	a :Ordinal3 ;
+	:rank 2 ;
+	:title "Low" .
+
+:medium
+	a :Ordinal3 ;
+	:rank 3 ;
+	:title "Medium" .
+
+:high
+	a :Ordinal3 ;
+	:rank 4 ;
+	:title "High" .
+
+:veryHigh
+	a :Ordinal5 ;
+	:rank 5 ; 
+	:title "Very high" .
+
+
+##### Decision case
+
+# A decision case includes one Goal element, multiple Role
+# Asset, and Decision elements, and one Context (Environment) element.
+
+:DecisionCase
+	rdfs:subClassOf :Class .
+
+:goal
+	a owl:ObjectProperty ;
+	rdfs:domain :DecisionCase ;
+	rdfs:range :Goal .
+	
+:role
+	a owl:ObjectProperty ;
+	rdfs:domain :DecisionCase ;
+	rdfs:range :Role .
+	
+:alternative
+	a owl:ObjectProperty ;
+	rdfs:domain :DecisionCase ;
+	rdfs:range :Alternative .
+	
+:decision
+	a owl:ObjectProperty ;
+	rdfs:domain :DecisionCase ;
+	rdfs:range :Decision .
+
+:environment
+	a owl:ObjectProperty ;
+	rdfs:domain :DecisionCase ;
+	rdfs:range :Context .
+
+
+##### Goals element
+
+# A Goal includes five different value perspectives, related to
+# customer, financial, internal business, innovation and
+# learning, and market values. 
+
+:Goal
+	rdfs:subClassOf :Class .
+
+
+### Customer value [GV1]
+
+# Customer value can be one of: extending a system;
+# improving/increasing quality; improving customer
+# satisfaction; increase robustness; increase safety; or other. 
+
+:customerValue
+	a owl:ObjectProperty ;
+	rdfs:domain :Goal ;
+	rdfs:range :CustomerValue .
+
+:CustomerValue
+	rdfs:subClassOf :Class ;
+	:title "Customer value" .
+	
+:extendASystem 
+	:gradeId "SGR1" ;
+	a :CustomerValue ;
+	:title "Extend a system (functional)" ;
+	:description "Cover some customer need by extending system functionality. Extensions can be through the addition of new functionality or through modification of existing functionality." .
+	
+:improveQuality 
+	:gradeId "SGR2" ;
+	a :CustomerValue ;
+	:title "Improve/increase quality" ;
+	:description "The quality of the system should be improved, this may relate to meeting the perceived fulfillment of needs by the customer with regard to functional and non-functional properties of the system. Non-functional properties are, for example, reliability, security, performance, etc." .
+
+:improveCustomerSatisfaction 
+	:gradeId "SGR3" ;
+	a :CustomerValue ;
+	:title "Improve customer satisfaction" ;
+	:description "In this case, the component selection aims at enhancing customer satisfaction by trying to anticipate customers' needs. In this respect, the decision could take into account characteristics of the available components and select the best suited for the application customers. It is worth noting that customer satisfaction could include timely available features, that is reduced time-to-market, as well as high quality/price ratio, and so on." .
+
+:increaseRobustness 
+	:gradeId "SGR15" ;
+	a :CustomerValue ;
+	:title "Increase robustness" ;
+	:description "" .
+
+:increaseSafety 
+	:gradeId "SGR16" ;
+	a :CustomerValue ;
+	:title "Increase safety" ;
+	:description "" .
+
+
+### Financial value [GV2]
+
+# Financial value can be one of: increasing profit; 
+# identifying potential for acquisition; other.
+
+:financialValue
+	a owl:ObjectProperty ;
+	rdfs:domain :Goal ;
+	rdfs:range :FinancialValue .
+
+:FinancialValue
+	rdfs:subClassOf :Class ;
+	:title "Financial value" .
+	
+:increaseProfit 
+	:gradeId "SGR4" ;
+	a :FinancialValue ;
+	:title "Increase profit" ;
+	:description "Financial gain obtained by the company, calculated as the difference between cost and gains." .
+
+:acquisitionPotential 
+	:gradeId "SGR5" ;
+	a :FinancialValue ;
+	:title "Identify potential for acquisition of companies" ;
+	:description "This goal leverages the decision about component selection for external environmental survey. In fact, the decision would prefer outsourcing, COTS, or services as component selection in order to concretely inspect the qualities of a certain subcontractor and possibly buy it." .
+
+
+### Internal business value [GV3]
+
+# Internal business value can be one of ten different 
+# alternatives, or other.
+
+:internalBusinessValue
+	a owl:ObjectProperty ;
+	rdfs:domain :Goal ;
+	rdfs:range :InternalBusinessValue .
+
+:InternalBusinessValue
+	rdfs:subClassOf :Class ;
+	:title "Internal business value" .
+	
+:replaceAnAsset 
+	:gradeId "SGR6" ;
+	a :InternalBusinessValue ;
+	:title "Replace an asset" ;
+	:description "An existing asset currently in use shall be replaced with another asset, a potential reason could be change in platforms, poor quality of existing assets, etc." .
+
+:increaseReuse 
+	:gradeId "SGR7" ;
+	a :InternalBusinessValue ;
+	:title "Increase reuse" ;
+	:description "The goal influences decision making aiming at selecting a component that could be reused in a variety of products by, for examle, providing more generic functionalities and high configurability." .
+
+:minimimzeTimeToMarket 
+	:gradeId "SGR8" ;
+	a :InternalBusinessValue ;
+	:title "Mimimize time to market" ;
+	:description "The goal drives the selection in that an option should be chosen that requires a short time to integrate and test into the system to minimize the duration needed to deliver to the market." .
+
+:increaseEffectiveness 
+	:gradeId "SGR9" ;
+	a :InternalBusinessValue ;
+	:title "Increase effectiveness" ;
+	:description "" .
+
+:costSavings 
+	:gradeId "SGR10" ;
+	a :InternalBusinessValue ;
+	:title "Cost savings" ;
+	:description "Different forms of cost (cost to develop, cost to maintain, etc.) should be reduced and the impact of the selection options on cost has to be evaluated." .
+
+:simplifySystem 
+	:gradeId "SGR11" ;
+	a :InternalBusinessValue ;
+	:title "Simplify the system" ;
+	:description "This goal impacts the decision about component selection by taking into account current system complexity with the aim of reducing it. As a consequence, the component selection decision might target a component grouping multiple existing features as well as services externalizing some of the system functionalities." .
+
+:increaseInternalCapacity 
+	:gradeId "SGR12" ;
+	a :InternalBusinessValue ;
+	:title "Extend internal owner development organization (increase capacity)" ;
+	:description "This goal aims at exploiting the component development need as a way to trigger organization extension and internal increase of capacity. The development of a new component might require the acquisition of new skills, expertise, personnel, and so forth. As a consequence, the decision will prefer internal component development." .
+
+:reduceTechnicalDept 
+	:gradeId "SGR13" ;
+	a :InternalBusinessValue ;
+	:title "Reduce technical debt" ;
+	:description "This goal aims at exploiting the component development need as a way to trigger organization extension and internal increase of capacity (internal environmental survey). The development of the new component might require the acquisition of new skills, expertise, personnel, and so forth, to reduce the technical debt uncovered by the component need. As a consequence, the decision will prefer internal component development (maybe also open source?)." .
+
+:buildAdvancedSystems 
+	:gradeId "SGR14" ;
+	a :InternalBusinessValue ;
+	:title "Built advanced systems (systems of systems)" ;
+	:description "The goal influences the decision to choose an alternative that enables the delivery of advanced functionality on a system level by integrating with other large-scale systems (hardware as well as software systems)." .
+
+# Note that :increaseRobustness and :increaseSafety defined above are also members of the InternalBusinessValue class.
+
+
+### Innovation & learning value [GV4]
+
+# Innovation and learning value can be one of six different 
+# alternatives, or other.
+
+:innovationAndLearningValue
+	a owl:ObjectProperty ;
+	rdfs:domain :Goal ;
+	rdfs:range :InnovationAndLearningValue .
+
+:InnovationAndLearningValue
+	rdfs:subClassOf :Class ;
+	:title "Innovation and learning value" .
+	
+:enterAnEcosystem 
+	:gradeId "SGR17" ;
+	a :InnovationAndLearningValue ;
+	:title "Enter an ecosystem" ;
+	:description "" .
+
+:establishNewBusinessRelations 
+	:gradeId "SGR18" ;
+	a :InnovationAndLearningValue ;
+	:title "Establish new relationships in a business" ;
+	:description "This goal influences the decision about component selection as it considers the potential to get access to new partners in business by making a contractual agreement on obtaining a component" .
+
+:reinforceRleations 
+	:gradeId "SGR19" ;
+	a :InnovationAndLearningValue ;
+	:title "Reinforce relations in partnerships" ;
+	:description "This goal influences the decision about component selection by taking into account partnership aspects (external environmental survey). It could be devoted to either extending the set of existing development partners or to reinforce the partnership relation with existing ones. As a consequence, the decision prefers outsourcing, COTS, or services as selection decision." .
+
+:participateInEvolvingCommunity 
+	:gradeId "SGR20" ;
+	a :InnovationAndLearningValue ;
+	:title "Participate in an evolving community" ;
+	:description "" .
+
+:leverageOnExternalCompetence 
+	:gradeId "SGR21" ;
+	a :InnovationAndLearningValue ;
+	:title "Leverage on external competence" ;
+	:description "This goal influences the decision about component selection by taking into account both internal and external factors (internal and external environmental survey). In fact, given the owned and required skills at the time of the decision, it might be opportunistically chosen to get components through external provision (i.e. sub- contracting, COTS, open source, service), where those skills would be less expensive if compared to the cost and time of educating internal personnel." .
+
+:benefitFromOtherExperience 
+	:gradeId "SGR22" ;
+	a :InnovationAndLearningValue ;
+	:title "Benefit from other experience" ;
+	:description "This goal aims at profiting from others? experience in component development when making a decision choice. The accumulated experience could be useful to reduce testing time and costs, to anticipate possible issues, to provide unplanned features, and so forth. Therefore, the decision will tend to promote the selection of sub- contracting, open source, COTS, or services as component of choice." .
+
+
+### Market value [GV5]
+
+# Innovation and learning value can be one of ten different 
+# alternatives, or other.
+
+:marketValue
+	a owl:ObjectProperty ;
+	rdfs:domain :Goal ;
+	rdfs:range :MarketValue .
+
+:MarketValue
+	rdfs:subClassOf :Class ;
+	:title "Market value" .
+	
+:reachDiversifiedCustomers 
+	:gradeId "ESGR5" ;
+	a :MarketValue ;
+	:title "Reach diversified customers (other than typical ones)" ;
+	:description "This goal aims at exploiting the component development need as a way to expand the plethora of potential customers. Such an aim could be reached by selecting a component with additional features, with specific properties/quality attributes, and so forth. Notably, the adoption of an open source component could disclose the opportunity of attracting open source communities, or a certified component might make the product appealing for safety-sensitive customers." .
+
+:addressLargerMarket 
+	:gradeId "ESGR6" ;
+	a :MarketValue ;
+	:title "Address a larger market (more variation in features)" ;
+	:description "The goal influences decision making with regard to the ability to customize the product to the specific needs of customers within a specific market segment (software product line approach), i.e. a system should be configurable to specific needs (a good example is the configuration of different products from a common platform for cars, which can be tailored through product instantiation." .
+
+:newMarket 
+	:gradeId "ESGR7" ;
+	a :MarketValue ;
+	:title "New market" ;
+	:description "The goal impacts decision making in enabling the entry into a new market, which could be a new market segment or domain, i.e. by targeting a new group/subset of customers that were not targeted before. The new segment should differ from the existing segments in their response to market strategies" .
+
+:raiseMarketEntranceBarriers 
+	:gradeId "ESGR8" ;
+	a :MarketValue ;
+	:title "Raise the barriers for entering the market" ;
+	:description "Introduce barriers to enter the market, barriers known in literature are economies of scale, product differentiation, capital/investment requirements to do what the company plans to do, introduce cost disadvantages for competitors, distribution channelges, and exploition of gouvernment policies." .
+
+:createBrandIdentity 
+	:gradeId "ESGR9" ;
+	a :MarketValue ;
+	:title "Create brand identity" ;
+	:description "" .
+
+:increaseSales 
+	:gradeId "ESGR10" ;
+	a :MarketValue ;
+	:title "Increase sales" ;
+	:description "" .
+
+:sustainMarketPosition 
+	:gradeId "ESGR11" ;
+	a :MarketValue ;
+	:title "Sustain/retain market position" ;
+	:description "The current market share (e.g. sales) should be retained." .
+
+:createCompetitiveAdvantage 
+	:gradeId "ESGR12" ;
+	a :MarketValue ;
+	:title "Create a competitive advantage" ;
+	:description "The selection of the component should increase the advantage over other customers, for example by creating barriers of market entry by utilizing economies of scale, exploit gouvernment policies, etc. that makes it challenging for a new competitor to enter the market" .
+
+:improveCorporateImage 
+	:gradeId "ESGR13" ;
+	a :MarketValue ;
+	:title "Improve the corporate image" ;
+	:description "This goal influences the decision about component selection by taking into account external factors (external environmental survey). Notably, depending on the decision scenario openness could be considered as an added value, or the conformance to standards, the environmental impact, and so forth. These added values will have a weight in the component selection decision." .
+
+:stayInGame 
+	:gradeId "ESGR14" ;
+	a :MarketValue ;
+	:title "Stay in the game, be competitive" ;
+	:description "This goal influences the decision about component selection by taking into account external factors (external environmental survey). Competitiveness might be kept/enhanced by reducing cost and/or time-to-market, by providing on-time features, by improving quality, by releasing (partially) open source systems, and so forth. These added values will have a weight in the component selection decision." .
+
+
+
+##### Roles element
+
+# A Role links a certain individual, represented in COACH as a User, to a DecisionCase, and specifies four different role perspectives:
+# The role type; role function; role level; and role title. 
+
+:Role
+	rdfs:subClassOf :Class .
+
+:user
+	a owl:ObjectProperty ;
+	rdfs:domain :Role ;
+	rdfs:range :User .
+
+:User
+	rdfs:subClassOf :Class .
+
+
+### Role type
+
+# Role types can be asset supplier; asset user; system end-user; or other.
+
+:roleType
+	a owl:ObjectProperty ;
+	rdfs:domain :Role ;
+	rdfs:range :RoleType .
+
+:RoleType
+	rdfs:subClassOf :Class .
+	
+:assetSupplier 
+	:gradeId "RT1" ;
+	a :RoleType ;
+	:title "Asset supplier" ;
+	:description "The organization providing the asset." .
+
+:assetUser
+	:gradeId "RT2" ;
+	a :RoleType ;
+	:title "Asset user" ;
+	:description "The organization using the asset." .
+
+:systemEndUser
+	:gradeId "RT3" ;
+	a :RoleType ;
+	:title "System end-user" ;
+	:description "The organization that is the user of the system in which the asset is utilized." .
+
+
+### Role function
+
+# Role functions can be initiator; leader; supporter; influencer; decider; or other.
+
+:roleFunction
+	a owl:ObjectProperty ;
+	rdfs:domain :Role ;
+	rdfs:range :RoleFunction .
+
+:RoleFunction
+	rdfs:subClassOf :Class .
+	
+:initiator
+	:gradeId "RF1" ;
+	a :RoleFunction ;
+	:title "Initiator" ;
+	:description "Initiator is a person who starts the whole process of decision-making, explicitly points out the need to make a decision." .
+
+:leader
+	:gradeId "RF2" ;
+	a :RoleFunction ;
+	:title "Leader" ;
+	:description "Leader is a person who leads the decision process, e.g. combines diverging contributions by relating them to a summarizing statement; if the discussion diverges, the person calls for an informal vote to reach consensus." .
+
+:supporter
+	:gradeId "RF3" ;
+	a :RoleFunction ;
+	:title "Supporter" ;
+	:description "Supporter is a person who supplies the information needed to make the decision." .
+
+:influencer
+	:gradeId "RF4" ;
+	a :RoleFunction ;
+	:title "Influencer" ;
+	:description "Infuencer is a person who influences the outcome of the decision making and hence has influence on the decision maker." .
+
+:decider
+	:gradeId "RF5" ;
+	a :RoleFunction ;
+	:title "Decider" ;
+	:description "Decider is a person who is responsible for taking the decision, actually reaches to the decision." .
+
+
+### Role level
+
+# Role level can be strategic; tactical; or operational.
+
+:roleLevel
+	a owl:ObjectProperty ;
+	rdfs:domain :Role ;
+	rdfs:range :RoleLevel .
+
+:RoleLevel
+	rdfs:subClassOf :Class .
+	
+:strategic
+	:gradeId "RL1" ;
+	a :RoleLevel ;
+	:title "Strategic" ;
+	:description "Policy decisions, long-term, complex, non-routine decision-making, typically made by Senior Management." .
+	
+:tactical
+	:gradeId "RL2" ;
+	a :RoleLevel ;
+	:title "Tactical" ;
+	:description "Relates to how to achieve policy, medium-term, less complex decision-making, typically made by Middle Management." .
+	
+:operational
+	:gradeId "RL3" ;
+	a :RoleLevel ;
+	:title "Operational" ;
+	:description "Day-to-day, simple, routine decision-making typically made by Junior Management." .
+
+
+### Role title
+
+# Role title can be one of 22 different pre-defined values, or other.
+
+:roleTitle
+	a owl:ObjectProperty ;
+	rdfs:domain :Role ;
+	rdfs:range :RoleTitle .
+
+:RoleTitle
+	rdfs:subClassOf :Class .
+	
+:productManager 
+	:gradeId "RP1" ;
+	a :RoleTitle ;
+	:title "Product Manager" ;
+	:description "Product Manager (PrM) is a business-owner in the small, representing the enterprise or business unit in strategy definition and operational execution. He governs a product (or solution or service) from its inception to the market/customer delivery in order to generate biggest possible value to the business." .
+	
+:lineManager
+	:gradeId "RP2" ;
+	a :RoleTitle ;
+	:title "Line Manager" ;
+	:description "Line Manager (LM) is a person who discretion over policy, appropriations, and operation in a unit such as subsidiary, factory, division, district, or minor function of a larger organization." .
+	
+:portfolioManager
+	:gradeId "RP3" ;
+	a :RoleTitle ;
+	:title "Portfolio manager" ;
+	:description "Portfolio Manager (PoM) is an executive responsible for the overall smooth running of portfolio management. The competences and skills this individual should possess are superior to those of project managers, as portfolio managers should take a helicopter view over all running projects." .
+	
+:projectManager
+	:gradeId "RP4" ;
+	a :RoleTitle ;
+	:title "Project Manager" ;
+	:description "Project Manager (PM) is a person who manage the projects and also responsible for overall quality management, staff development, and professional activities. The responsibilities may begin before project acquisition and continue beyond project close-out." .
+	
+:chiefTechnicalOfficer
+	:gradeId "RP5" ;
+	a :RoleTitle ;
+	:title "Chief Technical Officer (CTO)" ;
+	:description "Chief Technical Officer (CTO) is a person responsible for overall technical activities, including the management of client relations to ensure that service objective expectations are developed and managed in the operations areas." .
+	
+:developmentLead
+	:gradeId "RP6" ;
+	a :RoleTitle ;
+	:title "Development lead" ;
+	:description "Development Lead (DL) is person who being highly technical lead the development project and team, taking part in different activities from the initial stage to the successful delivery of projects." .
+	
+:developer
+	:gradeId "RP7" ;
+	a :RoleTitle ;
+	:title "Developer" ;
+	:description "Developer (Dev) is a person involved in the development of software, typically use the architecture as a reference for developing the system and/or assembling system components." .
+	
+:testLead
+	:gradeId "RP8" ;
+	a :RoleTitle ;
+	:title "Test lead" ;
+	:description "Test Leader (TL) is a person involved in the planning, monitoring, and control of the testing activities and tasks. TL is Responsible for management of all quality assurance functions including planning, strategy, testing execution and tools." .
+	
+:testAnalyst
+	:gradeId "RP9" ;
+	a :RoleTitle ;
+	:title "Test Analyst" ;
+	:description "Test Analyst (TA) is a person responsible for initially identifying and subsequently defining the required tests, monitoring the test coverage and evaluating the overall quality experienced when testing the target test Items. " .
+	
+:architect
+	:gradeId "RP10" ;
+	a :RoleTitle ;
+	:title "Architect" ;
+	:description "Architect is a person responsible for designing, developing, nurturing, and maintaining the architecture of the software systems he/she is involved with." .
+	
+:integrator
+	:gradeId "RP11" ;
+	a :RoleTitle ;
+	:title "Integrator" ;
+	:description "Integrator is person who is responsible to ensure that a system comes together by assembling the essential components and elements into a cohesive and fully functional system that satisfies the original user needs." .
+	
+:supportStaffForAssets
+	:gradeId "RP12" ;
+	a :RoleTitle ;
+	:title "Support staff for assets" ;
+	:description "" .
+	
+:chiefExecutiveOfficer 
+	:gradeId "RP13" ;
+	a :RoleTitle ;
+	:title "Chief Executive Officer (CEO)" ;
+	:description "Chief Executive Officer (CEO) is a person responsible for not only making decision by also executing the decisions." .
+	
+:certificationAuthority
+	:gradeId "RP14" ;
+	a :RoleTitle ;
+	:title "Certification Authority" ;
+	:description "Certification Authority (CA) attests the validity of bindings by issuing digitally signed certificates that specify these bindings and by providing a means for clients to check the validity of certificates." .
+	
+:configurationManager 
+	:gradeId "RP15" ;
+	a :RoleTitle ;
+	:title "Configuration Manager" ;
+	:description "Ensures that the change management process is implemented and proposed changes are reviewed and approved." .
+	
+:processAnalyst
+	:gradeId "RP16" ;
+	a :RoleTitle ;
+	:title "Process Analyst" ;
+	:description "Planning and conducting process improvement efforts in an organization." .
+	
+:dataProvider
+	:gradeId "RP17" ;
+	a :RoleTitle ;
+	:title "Data Provider" ;
+	:description "Provides and keeps data up-to-date to enable measurements." .
+	
+:measurementProgramPlanner
+	:gradeId "RP18" ;
+	a :RoleTitle ;
+	:title "Measurement program planner" ;
+	:description "Responsible for measurement planning with regard to goal definition, elicitation, and decision making of which metrics to collect." .
+	
+:softwareQualityManager
+	:gradeId "RP19" ;
+	a :RoleTitle ;
+	:title "Software quality manager" ;
+	:description "" .
+	
+	
+
+##### Alternative and Asset elements
+
+# An Alternative is specialized by Asset, which is the kind of alternatives considered in the ORION project.
+# An Asset links to asset usage; origin options and suboptions; and element types. 
+# In GRADE, there is also a link to properties, which is currently not represented in this ontology.
+
+:Alternative 
+	rdfs:subClassOf :Class .
+
+:Asset
+	rdfs:subClassOf :Alternative .
+
+
+### Asset usage
+
+# Asset usage can be reuse; adapt; buy; develop; or other.
+
+:assetUsage
+	a owl:ObjectProperty ;
+	rdfs:domain :Asset ;
+	rdfs:range :AssetUsage .
+
+:AssetUsage
+	rdfs:subClassOf :Class .
+	
+:reuse
+	:gradeId "AU1" ;
+	a :AssetUsage ;
+	:title "Reuse" ;
+	:description "An asset is reused with no change." .
+
+:adapt
+	:gradeId "AU2" ;
+	a :AssetUsage ;
+	:title "Adapt" ;
+	:description "An asset is used but tailored." .
+
+:buy 
+	:gradeId "AU3" ;
+	a :AssetUsage ;
+	:title "Buy" ;
+	:description "An asset is used after it is owned (bought)." .
+
+:develop
+	:gradeId "AU4" ;
+	a :AssetUsage ;
+	:title "Develop" ;
+	:description "An asset is developed by the company/individual." .
+
+
+### Origin options and suboptions
+
+# Origin options can be in-house; outsource; open source; COTS; or other. In-house has internal origin source,
+# the others have external origin source.
+# Origin suboptions are project-based; inner source; open source; subcontracting; crowdsource; or other.
+
+# Options
+
+:originOption
+	a owl:ObjectProperty ;
+	rdfs:domain :Asset ;
+	rdfs:range :OriginOption .
+
+:OriginOption
+	rdfs:subClassOf :Class .
+	
+:InternalOriginOption
+	rdfs:subClassOf :OriginOption .
+	
+:ExternalOriginOption
+	rdfs:subClassOf :OriginOption .
+	
+:originSource
+	a owl:DatatypeProperty ;
+	rdfs:domain :OriginOption ;
+	rdfs:range xsd:string .
+
+:inhouse
+	:gradeId "AO1" ;
+	a :InternalOriginOption ;
+	:title "In-house" ;
+	:description "This is the process whereby the company uses their own workers (in-house team) to develop or implement an IT system that fits the specific needs of the company." .
+
+:outsource
+	:gradeId "AO2" ;
+	a :ExternalOriginOption ;
+	:title "Outsource" ;
+	:description "Outsourcing is defined as a situation where a company (a client) contracts out all or part of its software development activities to another company (a vendor), who provides agreed services for remuneration." .
+
+# Note: :openSource contains more fields, that are defined below under origin suboptions.
+:openSource
+	:gradeId "AO3" ;
+	a :ExternalOriginOption ;
+	:title "Open source" ;
+	:description "Open source development refers to the case where the source code is available for modification or enhancement by anyone outside the boundaries of an organization or individual." .
+
+:cots
+	:gradeId "AO4" ;
+	a :ExternalOriginOption ;
+	:title "Commercial off-the-shelf (COTS)" ;
+	:description "Commercial items, including services, available in the commercial marketplace that can be bought and used under government contract." .
+
+
+# Suboptions
+
+:originSuboption
+	a owl:ObjectProperty ;
+	rdfs:domain :Asset ;
+	rdfs:range :OriginSuboption .
+
+:OriginSuboption
+	rdfs:subClassOf :Class .
+	
+:projectBased
+	:gradeId "AS1" ;
+	a :OriginSuboption ;
+	:title "Project-based" ;
+	:description "Source code is originated only from specific projects." .
+
+:innerSource
+	:gradeId "AS2" ;
+	a :OriginSuboption ;
+	:title "Inner source" ;
+	:description "Source code is available for modification as in open source, but applied to internal software development." .
+
+# Note: :openSource is also defined above under origin options, where the :title and :description fields can be found.
+:openSource
+	:gradeId "AS3" ;
+	a :OriginSuboption .
+
+:subcontracting
+	:gradeId "AS4" ;
+	a :OriginSuboption ;
+	:title "Subcontracting" ;
+	:description "Subcontracting refers to when establishing a contractual agreement with an outside person or company to perform the work." .
+
+:crowdsource
+	:gradeId "AS5" ;
+	a :OriginSuboption ;
+	:title "Crowdsource" ;
+	:description "Crowdsourcing is a new on-line distributed problem solving and production model in which networked people collaborate to complete a task." .
+
+
+### Asset element types
+
+# Asset elements can be of the following classes: hardware; information; service; software; system; or other elements.
+# For each of these classes, there are concrete element types.
+
+# Element classes
+
+:elementType
+	a owl:ObjectProperty ;
+	rdfs:domain :Asset ;
+	rdfs:range :ElementType .
+
+:ElementType
+	rdfs:subClassOf :Class .
+	
+:HardwareElement
+	rdfs:subClassOf :ElementType .
+	
+:InformationElement
+	rdfs:subClassOf :ElementType .
+	
+:ServiceElement
+	rdfs:subClassOf :ElementType .
+	
+:SoftwareElement
+	rdfs:subClassOf :ElementType .
+	
+:SystemElement
+	rdfs:subClassOf :ElementType .
+	
+# Concrete element types
+
+:processor
+	:gradeId "AT1" ;
+	a :HardwareElement ;
+	:title "Processor" ;
+	:description "" .
+
+:display
+	:gradeId "AT2" ;
+	a :HardwareElement ;
+	:title "Display" ;
+	:description "" .
+
+:sensor
+	:gradeId "AT3" ;
+	a :HardwareElement ;
+	:title "Sensor" ;
+	:description "" .
+
+:actuator
+	:gradeId "AT4" ;
+	a :HardwareElement ;
+	:title "Actuator" ;
+	:description "" .
+
+:circuit
+	:gradeId "AT5" ;
+	a :HardwareElement ;
+	:title "Circuit" ;
+	:description "" .
+
+:networkInfrastructure
+	:gradeId "AT6" ;
+	a :HardwareElement ;
+	:title "Network infrastructure" ;
+	:description "" .
+
+:designDocument
+	:gradeId "AT7" ;
+	a :InformationElement ;
+	:title "Design document (architecture)" ;
+	:description "The composite of the design architectures for products and their life cycle processes." .
+
+:modelAndMetamodel
+	:gradeId "AT8" ;
+	a :InformationElement ;
+	:title "Model and metamodel" ;
+	:description "" .
+
+:pattern
+	:gradeId "AT9" ;
+	a :InformationElement ;
+	:title "Pattern (Design)" ;
+	:description "A description of the problem and the essence of its solution to enable the solution to be reused in different settings." .
+
+:functionalService
+	:gradeId "AT10" ;
+	a :ServiceElement ;
+	:title "Service (funtional)" ;
+	:description "A service that must be implemented in the piece of software in order to fulfill functional user requirements." .
+
+:serviceOrComponentComposition
+	:gradeId "AT11" ;
+	a :ServiceElement ;
+	:title "Service/component composition" ;
+	:description "The combination of two or more software components yielding a new component behavior at a different level of abstraction. The characteristics of the new component behavior are determined by the components being combined and by the way they are combined." .
+
+:plugin
+	:gradeId "AT12" ;
+	a :SoftwareElement ;
+	:title "Plugin" ;
+	:description "A software that is installed into an existing application in order to enhance its capability. For example, plug-ins are widely used in image editing programs such as Photoshop to add some special effect. The term is widely used for software, but can also refer to a plug-in module for hardware." .
+
+:library
+	:gradeId "AT13" ;
+	a :SoftwareElement ;
+	:title "Library" ;
+	:description "A software library containing computer readable and human readable information relevant to a software development effort." .
+
+:functionalComponent
+	:gradeId "AT14" ;
+	a :SoftwareElement ;
+	:title "Functional component" ;
+	:description "A general term used to refer to a software system or an element, such as module, unit, data, or document." .
+
+:database
+	:gradeId "AT15" ;
+	a :SoftwareElement ;
+	:title "Database" ;
+	:description "1. It is a collection of interrelated data stored together in one or more computerized files. 2. It is a collection of data organized according to a conceptual structure describing the characteristics of the data and the relationships among their corresponding entities, supporting one or more application areas" .
+
+:middleware
+	:gradeId "AT16" ;
+	a :SoftwareElement ;
+	:title "Middleware" ;
+	:description "A middleware refers to the software that hides the complexity and heterogeneity of underlying hardware and network platforms,eases the management of system resources, and increases the predictability of application executions." .
+
+:operatingSystem
+	:gradeId "AT17" ;
+	a :SoftwareElement ;
+	:title "Operating system (OS)" ;
+	:description "A collection of software, firmware, and hardware elements that controls the execution of computer programs and provides such services as computer resource allocation, job control, input/output control, and file management in a computer system" .
+
+:server
+	:gradeId "AT18" ;
+	a :SoftwareElement ;
+	:title "Server" ;
+	:description "1. A hardware system or software program which provides a service to clients. 2. A process implementing one or more operations on one or more objects." .
+
+:userInterface
+	:gradeId "AT19" ;
+	a :SoftwareElement ;
+	:title "User interface" ;
+	:description "An interface that enables information to be passed between a human user and hardware or software components of a computer system." .
+
+:system
+	:gradeId "AT20" ;
+	a :SystemElement ;
+	:title "System" ;
+	:description "Computer System: A system containing one or more computers and associated software. Software System: Computer programs, procedures, and possibly associated documentation and data pertaining to the operation of a computer system." .
+
+:subsystem
+	:gradeId "AT21" ;
+	a :SystemElement ;
+	:title "Subsystem" ;
+	:description "Is a group of interconnected and interactive parts that performs an important job or task as a component of a larger system." .
+
+:systemOfSystems
+	:gradeId "AT22" ;
+	a :SystemElement ;
+	:title "System of systems" ;
+	:description "A large system that delivers unique capabilities, formed by integrating independently useful systems." .
+
+
+##### Decisions element
+
+:Decision
+	rdfs:subClassOf :Class .
+
+
+##### Context element (called Environment in GRADE)
+
+# A Context element has five perspectives: organization; product; stakeholder; development method and technology; 
+# and market and business.
+
+# (For all elements in the context, the :gradeId refers to the context model ids rather than GRADE ids.)
+ 
+:Context
+	rdfs:subClassOf :Class .
+
+### Organization context
+
+:organizationContext
+	a owl:ObjectProperty ;
+	rdfs:domain :Context ;
+	rdfs:range :OrganizationContext .
+
+:OrganizationContext
+	rdfs:subClassOf :Class .
+
+# Application domains (O1)
+
+:applicationDomain
+	a owl:ObjectProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range :ApplicationDomain .
+
+:ApplicationDomain
+	rdfs:subClassOf :Class .
+
+:accounting
+	a :ApplicationDomain ;
+	:title "Accounting" .
+
+:aerospaceOrAviation
+	a :ApplicationDomain ;
+	:title "Aerospace/Aviation" .
+
+:agricultureOrForestryOrFishing
+	a :ApplicationDomain ;
+	:title "Agriculture/Forestry/Fishing" .
+
+:automotive
+	a :ApplicationDomain ;
+	:title "Automotive" .
+
+:biotechnology
+	a :ApplicationDomain ;
+	:title "Biotechnology" .
+
+:businessOrProfessionalServices
+	a :ApplicationDomain ;
+	:title "Business/Professional Services" .
+
+:computerSoftware
+	a :ApplicationDomain ;
+	:title "Computer [Software]" .
+
+:computerHardware
+	a :ApplicationDomain ;
+	:title "Computer [Hardware]" .
+
+:constructionOrHomeImprovement
+	a :ApplicationDomain ;
+	:title "Construction/Home Improvement" .
+
+:consulting
+	a :ApplicationDomain ;
+	:title "Consulting" .
+
+:corporateCommunication
+	a :ApplicationDomain ;
+	:title "Corporate Communication" .
+
+:education
+	a :ApplicationDomain ;
+	:title "Education" .
+
+:engineeringOrArchitecture
+	a :ApplicationDomain ;
+	:title "Engineering/Architecture" .
+
+:entertainmentOrRecreation
+	a :ApplicationDomain ;
+	:title "Entertainment/Recreation" .
+
+:financeOrBankingOrInsurance
+	a :ApplicationDomain ;
+	:title "Finance/Banking/Insurance" .
+
+:governmentOrMilitary
+	a :ApplicationDomain ;
+	:title "Government/Military" .
+
+:healthcareOrMedical
+	a :ApplicationDomain ;
+	:title "Healthcare/Medical" .
+
+:internetOrECommerce
+	a :ApplicationDomain ;
+	:title "Internet/eCommerce" .
+
+:logisticsOrShipping
+	a :ApplicationDomain ;
+	:title "Logistics/Shipping" .
+
+:manufacturing
+	a :ApplicationDomain ;
+	:title "Manufacturing" .
+
+:mobileApplications
+	a :ApplicationDomain ;
+	:title "Mobile Applications" .
+
+:services
+	a :ApplicationDomain ;
+	:title "Services [Hotels, Lodging Places]" .
+
+:telecommunication
+	a :ApplicationDomain ;
+	:title "Telecommunication" .
+
+
+# Degree of distribution (O2)
+# This is a property with value Low, Medium, or High.
+
+:degreeOfDistribution
+	a owl:ObjectProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range :Ordinal3 .
+
+
+# Stability of the organization (O3)
+# This is a property with values Very low, Low, Medium, High, or Very high.
+
+:stabilityOfOrganization
+	a owl:ObjectProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range :Ordinal5 .
+
+
+# Business strategy or goal of the organization (O4)
+# This is a free text property.
+
+:strategyOrGoal
+	a owl:DatatypeProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range xsd:string .
+
+
+# Size of the organization (05.1)
+# This is a positive integer property.
+
+:organizationSize
+	a owl:DatatypeProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range xsd:nonNegativeInteger .
+
+
+# Size of the team (O5.2)
+# This is a positive integer property.
+
+:teamSize
+	a owl:DatatypeProperty ;
+	rdfs:domain :OrganizationContext ;
+	rdfs:range xsd:nonNegativeInteger .
+
+
+### Product context
+
+:productContext
+	a owl:ObjectProperty ;
+	rdfs:domain :Context ;
+	rdfs:range :ProductContext .
+
+:ProductContext
+	rdfs:subClassOf :Class .
+	
+	
+### Stakeholder context
+
+:stakeholderContext
+	a owl:ObjectProperty ;
+	rdfs:domain :Context ;
+	rdfs:range :StakeholderContext .
+
+:StakeholderContext
+	rdfs:subClassOf :Class .
+	
+	
+### Development method and technology context
+
+:developmentMethodAndTechnologyContext
+	a owl:ObjectProperty ;
+	rdfs:domain :Context ;
+	rdfs:range :DevelopmentMethodAndTechnologyContext .
+
+:DevelopmentMethodAndTechnologyContext
+	rdfs:subClassOf :Class .
+	
+	
+### Market and business context
+
+:marketAndBusinessContext
+	a owl:ObjectProperty ;
+	rdfs:domain :Context ;
+	rdfs:range :MarketAndBusinessContext .
+
+:MarketAndBusinessContext
+	rdfs:subClassOf :Class .
