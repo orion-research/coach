@@ -1,10 +1,10 @@
-﻿# COACH Installation
+# COACH Installation
 
 # Dependencies
 You will need to install the following software to be able to execute COACH:
 - Neo4j database (community edition, version 3.x)
 - Python 3.x programming language
-- Python libraries: flask, requests, neo4j-driver, and virtualenv (not needed for local development)
+- Python package manager (pip) and some libraries
 - Apache web server (for development/production on server, not needed for local development)
 
 
@@ -16,7 +16,7 @@ Neo4j Community Edition needs to be installed on your local machine, and be star
 Instructions are available here: http://neo4j.com/download/. Use version 3.x.
 
 ## Source code
-To execute or develop COACH, you need to get the source code.
+To execute or develop COACH, you need to get the source code, which assumes that you have Git installed.
 
 First, create the directory where you want to install the source code.
 Then, use the following git commands:
@@ -31,7 +31,6 @@ Having installed Python 3.x (whatever the latest version is), and the pip packag
 	$ pip install requests
 	$ pip install neo4j-driver==1.0.0
 	$ pip install rdflib
-	$ pip install rdflib-jsonld
 
 (In some installations, you have to use pip3 instead of pip in the above commands.)
 
@@ -48,16 +47,9 @@ On a Windows system, the corresponding command is:
 
 	$ mklink local_settings.json settings.json
 
-The file COACH/framework/settings/directory.json, where the directory information is stored, needs to be created.
-It should contain url paths to the different installed services, using this format:
-
-	[["decision_process", "Description of decision process", "url.to.decision.process"], 
-	 ["estimation_method", "Description of estimation method", "url.to.estimation.method"], ...]
-
-
 ## Secret data
 In order for COACH to access the database, and also to encrypt some data, a file needs to be created that stores this information. Since this data is secret, it is not on GitHub,
-but needs to be created. The file should be placed in the COACH/framework/settings directory, and be named root_secret_data.json. The contents of the file should look like this:
+but needs to be created locally for each installation. The file should be placed in the COACH/framework/settings directory, and be named root_secret_data.json. The contents of the file should look like this:
 
 	{
 		"neo4j_user_name": "your_neo4j_user_name",
@@ -69,17 +61,14 @@ but needs to be created. The file should be placed in the COACH/framework/settin
 	}
 
 ## Running COACH
-To start all the services, a small Python script has been created in the COACH folder, that starts all the services. It can be ran from inside Eclipse, or from the command line:
+To run COACH, you first need to start neo4j. Then, to start all the services, a small Python script has been created in the COACH folder. It can be ran from inside Eclipse, or from the command line:
 
-	$ python launch-local.py <neo4j user name> <neo4j password> <random string>
+	$ python launch_local.py
 
 (In some installations, you have to use python3 instead of python in the above command.)
 
-In the above command, <neo4j user name> and <neo4j password> should be replaced by whatever username and password you have selected for the database.
-The <random string> parameter is used for encrypting the user passwords in the authentication module. It can be any string, but what is important is that
-the same string is used on all invocations.
-
 To start interacting with COACH, open http://127.0.0.1:5000 in a web browser.
+
 
 
 # Development server
