@@ -11,6 +11,8 @@ import os
 import random
 import smtplib
 import string
+import datetime
+
 
 from COACH.framework.coach import Microservice, endpoint
 
@@ -179,11 +181,13 @@ class AuthenticationService(Microservice):
     def check_user_password(self, user_id, password):
         """
         Returns a random token if the hash of the given password matches the one stored in the database, 
-        and otherwise returns None. The token is also stored in the user database.
+        and otherwise returns None. The token is also stored in the user database, together with 
+        the date and time of the login.
         """
         if user_id in self.users and self.users[user_id]["password_hash"] == self.password_hash(password):
             user_token = self.get_random_token(20)
             self.users[user_id]["user_token"] = user_token
+            self.users[user_id]["login_time"] = datetime.datetime.now().isoformat()
             self.save_data()
             return json.dumps(user_token)
         else:
