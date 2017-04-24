@@ -24,12 +24,12 @@ from flask.templating import render_template
 
 class SimpleDecisionProcessService(coach.DecisionProcessService):
 
-    @endpoint("/process_menu", ["GET"])
+    @endpoint("/process_menu", ["GET"], "text/html")
     def process_menu(self):
         return render_template("process_menu.html")
 
 
-    @endpoint("/select_estimation_method_dialogue", ["GET"])
+    @endpoint("/select_estimation_method_dialogue", ["GET"], "text/html")
     def select_estimation_method_dialogue_transition(self, directories):
         """
         Endpoint which lets the user select which estimation method to use for this decision process.
@@ -48,7 +48,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         return render_template("select_estimation_method_dialogue.html", estimation_methods = options)
 
 
-    @endpoint("/perform_ranking_dialogue", ["GET"])
+    @endpoint("/perform_ranking_dialogue", ["GET"], "text/html")
     def perform_ranking_dialogue_transition(self, user_id, delegate_token, case_db, case_id, knowledge_repository):
         """
         Endpoint which lets the user rank each of the alternatives using the selected estimation method dialogue.
@@ -63,7 +63,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
             options = ["<OPTION value=\"%s\"> %s </A>" % (a[1], a[0]) for a in decision_alternatives]
         
             # Get the estimation method's dialogue
-            estimation_method_proxy = self.create_proxy(estimation_method, json_result = False)
+            estimation_method_proxy = self.create_proxy(estimation_method)
             estimation_dialogue = estimation_method_proxy.dialogue(knowledge_repository = knowledge_repository)
         
             return render_template("perform_ranking_dialogue.html", options = options, estimation_dialogue = estimation_dialogue, 
@@ -72,7 +72,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
             return "You need to select an estimation method before you can rank alternatives!"
         
 
-    @endpoint("/show_ranking_dialogue", ["GET"])
+    @endpoint("/show_ranking_dialogue", ["GET"], "text/html")
     def show_ranking_dialogue_transition(self, user_id, delegate_token, case_db, case_id):
         """
         Endpoint which shows the alternatives in rank order. Unranked alternatives are at the bottom.
@@ -96,7 +96,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         return render_template("show_ranking_dialogue.html", ranked = ranked_alternatives, unranked = unranked_alternatives)
 
 
-    @endpoint("/select_estimation_method", ["POST"])
+    @endpoint("/select_estimation_method", ["POST"], "text/html")
     def select_estimation_method(self, user_id, delegate_token, case_db, method, case_id):
         """
         This method is called using POST when the user presses the select button in the select_estimation_method_dialogue.
@@ -110,7 +110,7 @@ class SimpleDecisionProcessService(coach.DecisionProcessService):
         return "Estimation method changed to " + method
     
     
-    @endpoint("/perform_ranking", ["POST"])
+    @endpoint("/perform_ranking", ["POST"], "text/html")
     def perform_ranking(self, user_id, delegate_token, case_id, case_db, alternative, estimation_method, knowledge_repository):
         """
         This method is called using POST when the user presses the button in the estimation method dialogue as part of the ranking dialogue.

@@ -109,15 +109,15 @@ class AuthenticationService(Microservice):
         return hashlib.md5((self.password_hash_salt + password).encode("UTF-8")).hexdigest()
         
     
-    @endpoint("/user_exists", ["GET", "POST"])
+    @endpoint("/user_exists", ["GET", "POST"], "application/json")
     def user_exists(self, user_id):
         """
         Returns True if the user with the given id already exists and has been confirmed, and False otherwise.
         """
-        return json.dumps(user_id in self.users and not "confirmation_token" in self.users[user_id])
+        return user_id in self.users and not "confirmation_token" in self.users[user_id]
     
 
-    @endpoint("/create_user", ["POST"])
+    @endpoint("/create_user", ["POST"], "text/plain")
     def create_user(self, user_id, password, email, name):
         """
         Adds a user with the given id to the database. The password is stored as a hashed value.
@@ -133,10 +133,10 @@ class AuthenticationService(Microservice):
         message_body = "To validate your COACH user identity, please follow this link:\n\n{0}/confirm_account?user_id={1}&token={2}"
         print(message_body)
         self.send_email(email, "COACH account validation", message_body.format(self.authentication_service_url, user_id, token))
-        return json.dumps(None)
+        return "Ok"
     
 
-    @endpoint("/logout_user", ["POST"])
+    @endpoint("/logout_user", ["POST"], "application/json")
     def logout_user(self, user_id, user_token):
         """
         Revokes the user token associated with the current user, and return "Ok".
@@ -145,12 +145,12 @@ class AuthenticationService(Microservice):
         if self.confirm_user_token(user_id, user_token):
             self.users[user_id].pop("user_token")
             self.save_data()
-            return json.dumps("Ok")
+            return "Ok"
         else:
-            return json.dumps(None)
+            return None
         
         
-    @endpoint("/confirm_account", ["GET", "POST"])
+    @endpoint("/confirm_account", ["GET", "POST"], "text/plain")
     def confirm_account(self, user_id, token):
         """
         Tries to confirm the user_id with the provided token. If this was successful, i.e. if the token matches
@@ -177,7 +177,7 @@ class AuthenticationService(Microservice):
             return nok_message
         
         
-    @endpoint("/check_user_password", ["POST"])
+    @endpoint("/check_user_password", ["POST"], "application/json")
     def check_user_password(self, user_id, password):
         """
         Returns a random token if the hash of the given password matches the one stored in the database, 
@@ -189,28 +189,28 @@ class AuthenticationService(Microservice):
             self.users[user_id]["user_token"] = user_token
             self.users[user_id]["login_time"] = datetime.datetime.now().isoformat()
             self.save_data()
-            return json.dumps(user_token)
+            return user_token
         else:
-            return json.dumps(None) 
+            return None 
     
     
-    @endpoint("/get_user_email", ["GET", "POST"])
+    @endpoint("/get_user_email", ["GET", "POST"], "application/json")
     def get_user_email(self, user_id):
         """
         Returns the email of a user.
         """
-        return json.dumps(self.users[user_id]["email"])
+        return self.users[user_id]["email"]
     
     
-    @endpoint("/get_user_name", ["GET", "POST"])
+    @endpoint("/get_user_name", ["GET", "POST"], "application/json")
     def get_user_name(self, user_id):
         """
         Returns the name of a user.
         """
-        return json.dumps(self.users[user_id]["name"])
+        return self.users[user_id]["name"]
 
 
-    @endpoint("/get_delegate_token", ["POST"])
+    @endpoint("/get_delegate_token", ["POST"], "application/json")
     def get_delegate_token(self, user_id, case_id, user_token):
         """
         Returns a new delegate token, which is also stored in the user database and associated with a certain case.
@@ -220,12 +220,12 @@ class AuthenticationService(Microservice):
             delegate_token = self.get_random_token(20)
             self.users[user_id]["delegate"] = { "token": delegate_token, "case": case_id }
             self.save_data()
-            return json.dumps(delegate_token)
+            return delegate_token
         else:
-            return json.dumps(None)
+            return None
         
         
-    @endpoint("/revoke_delegate_token", ["POST"])
+    @endpoint("/revoke_delegate_token", ["POST"], "application/json")
     def revoke_delegate_token(self, user_id, user_token):
         """
         Revokes the delegate token associated with the current user, and return "Ok".
@@ -234,29 +234,28 @@ class AuthenticationService(Microservice):
         if self.confirm_user_token(user_id, user_token):
             self.users[user_id].pop("delegate")
             self.save_data()
-            return json.dumps("Ok")
+            return "Ok"
         else:
-            return json.dumps(None)
+            return None
         
         
-    @endpoint("/check_user_token", ["POST"])
+    @endpoint("/check_user_token", ["POST"], "application/json")
     def check_user_token(self, user_id, user_token):
         """
         Returns True if the current user token of user_id matches the provided.
         """
         if self.confirm_user_token(user_id, user_token):
-            return json.dumps(self.users[user_id]["user_token"] == user_token)
+            return self.users[user_id]["user_token"] == user_token
         else:
-            return json.dumps(False)
+            return False
     
     
-    @endpoint("/check_delegate_token", ["POST"])
+    @endpoint("/check_delegate_token", ["POST"], "application/json")
     def check_delegate_token(self, user_id, case_id, delegate_token):
         """
         Returns True if the current delegate token of user_id matches the provided, and the case_id matches the one associated with the delegate.
         """
         if user_id in self.users and "delegate" in self.users[user_id]:
-            return json.dumps(self.users[user_id]["delegate"]["token"] == delegate_token and 
-                              self.users[user_id]["delegate"]["case"] == case_id)
+            return self.users[user_id]["delegate"]["token"] == delegate_token and self.users[user_id]["delegate"]["case"] == case_id
         else:
-            return json.dumps(False)
+            return False

@@ -86,12 +86,12 @@ class PughService(coach.DecisionProcessService):
 
     # Endpoints
 
-    @endpoint("/process_menu", ["GET"])
+    @endpoint("/process_menu", ["GET"], "text/html")
     def process_menu(self):
         return render_template("process_menu.html")
 
 
-    @endpoint("/select_baseline_dialogue", ["GET"])
+    @endpoint("/select_baseline_dialogue", ["GET"], "text/html")
     def select_baseline_dialogue_transition(self, user_id, delegate_token, case_db, case_id):
         """
         Endpoint which lets the user select the baseline alternative.
@@ -105,7 +105,7 @@ class PughService(coach.DecisionProcessService):
         return render_template("select_baseline_dialogue.html", alternatives = options)
         
     
-    @endpoint("/select_baseline", ["POST"])
+    @endpoint("/select_baseline", ["POST"], "text/html")
     def select_baseline(self, user_id, delegate_token, case_db, baseline, case_id):
         """
         This method is called using POST when the user presses the select button in the select_baseline_dialogue.
@@ -118,7 +118,7 @@ class PughService(coach.DecisionProcessService):
         return self.matrix_dialogue_transition(user_id, delegate_token, case_db, case_id)    
     
     
-    @endpoint("/add_criterium_dialogue", ["GET"])
+    @endpoint("/add_criterium_dialogue", ["GET"], "text/html")
     def add_criterium_dialogue_transition(self):
         """
         Endpoint which shows the dialogue for adding criteria.
@@ -126,7 +126,7 @@ class PughService(coach.DecisionProcessService):
         return render_template("add_criterium_dialogue.html")
     
     
-    @endpoint("/add_criterium", ["POST"])
+    @endpoint("/add_criterium", ["POST"], "text/html")
     def add_criterium(self, user_id, delegate_token, case_db, case_id, criterium, weight):
         """
         This method is called using POST when the user presses the select button in the add_criterium_dialogue.
@@ -143,7 +143,7 @@ class PughService(coach.DecisionProcessService):
         return self.matrix_dialogue_transition(user_id, delegate_token, case_db, case_id)    
     
     
-    @endpoint("/change_criterium_dialogue", ["GET"])
+    @endpoint("/change_criterium_dialogue", ["GET"], "text/html")
     def change_criterium_dialogue_transition(self, user_id, delegate_token, case_db, case_id):
         """
         Endpoint which shows the dialogue for changing criteria.
@@ -154,7 +154,7 @@ class PughService(coach.DecisionProcessService):
         return render_template("change_criterium_dialogue.html", criteria = options)
     
     
-    @endpoint("/change_criterium", ["POST"])
+    @endpoint("/change_criterium", ["POST"], "text/html")
     def change_criterium(self, user_id, delegate_token, case_db, case_id, criterium, new_name, new_weight, action):
         """
         This method is called using POST when the user presses either the change criterium or delete criterium buttons in the 
@@ -199,7 +199,7 @@ class PughService(coach.DecisionProcessService):
         return "Changed criterium!"
     
     
-    @endpoint("/matrix_dialogue", ["GET"])
+    @endpoint("/matrix_dialogue", ["GET"], "text/html")
     def matrix_dialogue_transition(self, user_id, delegate_token, case_db, case_id):
         """
         Endpoint which shows the Pugh matrix dialogue.
@@ -233,7 +233,7 @@ class PughService(coach.DecisionProcessService):
                                criteria = criteria, weights = weights, ranking = ranking, sums = sums)
     
     
-    @endpoint("/change_rating", ["POST"])
+    @endpoint("/change_rating", ["POST"], "text/html")
     def change_rating(self, user_id, delegate_token, case_db, case_id):
         """
         This method is called using POST when the user presses the save button in the Pugh matrix dialogue. It updates the values

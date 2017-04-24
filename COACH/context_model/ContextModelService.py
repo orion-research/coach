@@ -615,7 +615,7 @@ class ContextModelService(coach.Microservice):
 
 
 
-    @endpoint("/edit_context_dialogue", ["GET"])
+    @endpoint("/edit_context_dialogue", ["GET"], "text/html")
     def edit_context_dialogue_transition(self, user_id, delegate_token, case_db, case_id):
         """
         Endpoint which lets the user edit context information.
@@ -658,7 +658,7 @@ class ContextModelService(coach.Microservice):
 
 
 
-    @endpoint("/edit_context", ["POST"])
+    @endpoint("/edit_context", ["POST"], "text/html")
     def edit_context(self, user_id, delegate_token, case_db, case_id):
         """
         This method is called using POST when the user presses the save button in the edit_context_dialogue_transition.

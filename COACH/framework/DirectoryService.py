@@ -58,7 +58,7 @@ class DirectoryService(coach.Microservice):
                 file.write(data)
                 
     
-    @endpoint("/get_services", ["GET"])
+    @endpoint("/get_services", ["GET"], "application/json")
     def get_services(self, service_type):
         """
         Returns a list of available services of the given type, in json format.
@@ -70,12 +70,12 @@ class DirectoryService(coach.Microservice):
             self.services = json.loads(data)
 
         if service_type:
-            return json.dumps([s for s in self.services if s[0] == service_type])
+            return [s for s in self.services if s[0] == service_type]
         else:
-            return json.dumps([s for s in self.services])
+            return [s for s in self.services]
 
 
-    @endpoint("/add_service", ["GET"])
+    @endpoint("/add_service", ["GET"], "application/json")
     def add_service(self, service_type, name, url):
         """
         Adds a new service, with type, name, and URL, and saves the services file.
@@ -84,10 +84,10 @@ class DirectoryService(coach.Microservice):
         self.services = [post for post in self.services if post[2] != url] + [(service_type, name, url)]
         with open(os.path.join(self.working_directory, self.file_name), "w") as file:
             json.dump(self.services, file, indent = 4)
-        return ""
+        return "Ok"
 
 
-    @endpoint("/remove_service", ["GET"])
+    @endpoint("/remove_service", ["GET"], "application/json")
     def remove_service(self, url):
         """
         Removes a service based on its URL.
@@ -95,4 +95,4 @@ class DirectoryService(coach.Microservice):
         self.services = [post for post in self.services if post[2] != url]
         with open(os.path.join(self.working_directory, self.file_name), "w") as file:
             json.dump(self.services, file)
-        return ""
+        return "Ok"

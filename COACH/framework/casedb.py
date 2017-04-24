@@ -9,8 +9,6 @@ import os
 import sys
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
-from flask import Response
-
 # Coach framework
 from COACH.framework import coach
 from COACH.framework.coach import endpoint
@@ -107,19 +105,19 @@ class CaseDatabase(coach.GraphDatabaseService):
         return int(case_id) in [result["id"] for result in self.query(q, params)]
 
 
-    @endpoint("/user_ids", ["POST"])
+    @endpoint("/user_ids", ["POST"], "application/json")
     def user_ids(self, user_id, user_token):
         """
         Queries the case database and returns an iterable of all user ids (the name the user uses to log in).
         """
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
             q = """MATCH (u:User:$label) RETURN u.user_id AS user_id"""
-            return Response(json.dumps([result["user_id"] for result in self.query(q)]))
+            return [result["user_id"] for result in self.query(q)]
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
          
     
-    @endpoint("/user_cases", ["GET"])
+    @endpoint("/user_cases", ["GET"], "application/json")
     def user_cases(self, user_id, user_token):
         """
         user_cases queries the case database and returns a list of the cases connected to the user.
@@ -130,12 +128,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             MATCH (case:Case:$label) -[:Stakeholder]-> (user:$label {user_id: {user_id}}) 
             RETURN id(case) AS id, case.title AS title"""
             params = { "user_id": user_id }
-            return Response(json.dumps([(result["id"], result["title"]) for result in self.query(q, params)]))
+            return [(result["id"], result["title"]) for result in self.query(q, params)]
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
         
     
-    @endpoint("/case_users", ["GET"])
+    @endpoint("/case_users", ["GET"], "application/json")
     def case_users(self, user_id, user_token, case_id):
         """
         Returns a list of ids of the users who are currently stakeholders in the case with case_id.
@@ -146,12 +144,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             WHERE id(case) = {case_id}
             RETURN user.user_id AS user_id"""
             params = { "case_id": int(case_id) }
-            return Response(json.dumps([result["user_id"] for result in self.query(q, params)]))
+            return [result["user_id"] for result in self.query(q, params)]
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
         
         
-    @endpoint("/create_user", ["POST"])
+    @endpoint("/create_user", ["POST"], "application/json")
     def create_user(self, user_id, user_token):
         """
         Creates a new user in the database, if it is not already there. 
@@ -160,12 +158,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             q = """MERGE (u:User:$label {user_id : {user_id}})"""
             params = { "user_id": user_id }
             self.query(q, params)
-            return Response(json.dumps("Ok"))
+            return "Ok"
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
         
 
-    @endpoint("/create_case", ["POST"])
+    @endpoint("/create_case", ["POST"], "application/json")
     def create_case(self, title, description, initiator, user_token):
         """
         Creates a new case in the database, with a relation to the initiating user (referenced by user_id). 
@@ -193,12 +191,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             params3 = { "case_id": case_id, "initiator": initiator }
             self.query(q3, params3, s)
             self.close_session(s)
-            return Response(json.dumps(case_id))        
+            return case_id        
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
         
     
-    @endpoint("/change_case_description", ["POST"])
+    @endpoint("/change_case_description", ["POST"], "application/json")
     def change_case_description(self, user_id, user_token, case_id, title, description):
         """
         Changes the title and description fields of the case with case_id.
@@ -207,12 +205,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} SET case.title = {title}, case.description = {description}"""
             params = { "case_id": int(case_id), "title": title, "description": description}
             self.query(q, params)
-            return Response(json.dumps("Ok"))
+            return "Ok"
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
            
     
-    @endpoint("/get_case_description", ["GET"])    
+    @endpoint("/get_case_description", ["GET"], "application/json")    
     def get_case_description(self, user_id, user_token, case_id):
         """
         Returns a tuple containing the case title and description for the case with case_id.
@@ -221,12 +219,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} RETURN case.title AS title, case.description AS description"""
             params = { "case_id": int(case_id) }
             result = self.query(q, params).single()
-            return Response(json.dumps((result["title"], result["description"])))
+            return (result["title"], result["description"])
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
         
 
-    @endpoint("/add_stakeholder", ["POST"])
+    @endpoint("/add_stakeholder", ["POST"], "application/json")
     def add_stakeholder(self, user_id, user_token, case_id, stakeholder, role):
         """
         Adds a user as a stakeholder with the provided role to the case. 
@@ -241,12 +239,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             """
             params = { "user_id": stakeholder, "case_id": int(case_id), "role": role}
             self.query(q, params)
-            return Response(json.dumps("Ok"))
+            return "Ok"
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
 
 
-    @endpoint("/add_alternative", ["POST"])    
+    @endpoint("/add_alternative", ["POST"], "application/json")    
     def add_alternative(self, user_id, user_token, title, description, case_id):
         """
         Adds a decision alternative and links it to the case.
@@ -268,12 +266,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             params2 = { "new_alternative": new_alternative, "case_id": int(case_id)}
             self.query(q2, params2, s)
             self.close_session(s)
-            return Response(str(case_id))        
+            return case_id        
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
 
 
-    @endpoint("/get_decision_process", ["GET"])    
+    @endpoint("/get_decision_process", ["GET"], "application/json")    
     def get_decision_process(self, user_id, user_token, case_id):
         """
         Returns the decision process url of the case, or None if no decision process has been selected.
@@ -282,14 +280,14 @@ class CaseDatabase(coach.GraphDatabaseService):
             try:
                 q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} RETURN case.decision_process AS process LIMIT 1"""
                 params = { "case_id": int(case_id)}
-                return Response(json.dumps(self.query(q, params).single()["process"]))
+                return self.query(q, params).single()["process"]
             except:
-                return Response(json.dumps(None))
+                return None
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
     
     
-    @endpoint("/change_decision_process", ["POST"])
+    @endpoint("/change_decision_process", ["POST"], "application/json")
     def change_decision_process(self, user_id, user_token, case_id, decision_process):
         """
         Changes the decision process url associated with a case.
@@ -298,12 +296,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} SET case.decision_process = {decision_process}"""
             params = { "case_id": int(case_id), "decision_process": decision_process}
             self.query(q, params)
-            return Response(json.dumps("Ok"))
+            return "Ok"
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
 
     
-    @endpoint("/change_case_property", ["POST"])
+    @endpoint("/change_case_property", ["POST"], "application/json")
     def change_case_property(self, user_id, token, case_id, name, value):
         """
         Changes the property name of the case_id node to become value.
@@ -313,12 +311,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} SET case.$name = {value}"""
             params = { "case_id": int(case_id), "value": value, "name": name}
             self.query(q, params)
-            return Response(json.dumps("Ok"))
+            return "Ok"
         else:
-            return Response("Invalid user or delegate token")
+            return "Invalid user or delegate token"
 
     
-    @endpoint("/get_case_property", ["GET"])
+    @endpoint("/get_case_property", ["GET"], "application/json")
     def get_case_property(self, user_id, token, case_id, name):
         """
         Gets the value of the property name of the case_id node, or None if it does not exist.
@@ -329,14 +327,14 @@ class CaseDatabase(coach.GraphDatabaseService):
                 q = """MATCH (case:Case:$label) WHERE id(case) = {case_id} RETURN case.$name AS name"""
                 params = { "case_id": int(case_id), "name": name }
                 query_result = self.query(q, params).single()["name"]
-                return Response(json.dumps(query_result))
+                return query_result
             except:
-                return Response(json.dumps(None))
+                return None
         else:
-            return Response("Invalid user or delegate token")
+            return "Invalid user or delegate token"
         
     
-    @endpoint("/get_decision_alternatives", ["GET"])
+    @endpoint("/get_decision_alternatives", ["GET"], "application/json")
     def get_decision_alternatives(self, user_id, token, case_id):
         """
         Gets the list of decision alternatives associated with the case_id node, returning both title and id.
@@ -349,12 +347,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             RETURN alt.title AS title, id(alt) AS alt_id"""
             params = { "case_id": int(case_id) }
             alternatives = [(result["title"], result["alt_id"]) for result in self.query(q, params)]
-            return Response(json.dumps(alternatives))
+            return alternatives
         else:
-            return Response("Invalid user or delegate token")
+            return "Invalid user or delegate token"
     
     
-    @endpoint("/change_alternative_property", ["POST"])
+    @endpoint("/change_alternative_property", ["POST"], "application/json")
     def change_alternative_property(self, user_id, token, case_id, alternative, name, value):
         """
         Changes the property name of the alternative node to become value.
@@ -364,12 +362,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             q = """MATCH (alt:Alternative:$label) WHERE id(alt) = {alternative} SET alt.$name = {value}"""
             params = { "alternative": int(alternative), "value": value, "name": name }
             self.query(q, params)
-            return Response(json.dumps("Ok"))
+            return "Ok"
         else:
-            return Response("Invalid user or delegate token")
+            return "Invalid user or delegate token"
 
     
-    @endpoint("/get_alternative_property", ["GET"])
+    @endpoint("/get_alternative_property", ["GET"], "application/json")
     def get_alternative_property(self, user_id, token, case_id, alternative, name):
         """
         Gets the value of the property name of the alternative node, or None if it does not exist.
@@ -380,14 +378,14 @@ class CaseDatabase(coach.GraphDatabaseService):
                 q = """MATCH (alt:Alternative:$label) WHERE id(alt) = {alternative} RETURN alt.$name AS name"""
                 params = { "alternative": int(alternative), "name": name }
                 query_result = self.query(q, params).single()["name"]
-                return Response(json.dumps(query_result))
+                return query_result
             except:
-                return Response(json.dumps(None))
+                return None
         else:
-            return Response("Invalid user or delegate token")
+            return "Invalid user or delegate token"
         
         
-    @endpoint("/get_ontology", ["GET", "POST"])
+    @endpoint("/get_ontology", ["GET", "POST"], "text/plain")
     def get_ontology(self, format):
         """
         Returns the base OWL ontology used by this case database. The base ontology may be extended by services.
@@ -443,10 +441,10 @@ class CaseDatabase(coach.GraphDatabaseService):
         # Serialize the ontology graph
         """
         
-        return Response(json.dumps(self.ontology.serialize(format = format).decode("utf-8")))
+        return self.ontology.serialize(format = format).decode("utf-8")
      
      
-    @endpoint("/export_case_data", ["GET"])
+    @endpoint("/export_case_data", ["GET"], "application/json")
     def export_case_data(self, user_id, user_token, case_id, format):
         """
         Returns all data stored in the database concerning a specific case, with sufficient information to be able to
@@ -485,7 +483,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             # Serialize the graph on an appropriate format
             if format == "json":
                 # Serialize graph as json
-                return Response(json.dumps(graph, indent = 4))
+                return json.dumps(graph, indent = 4)
             else:
                 # Serialize case data as RDF triples by transforming graph to an rdflib graph, and then serialize it using the formats provided in the rdflib.
                 (nodes, edges, properties, labels) = self.get_graph_starting_in_node(int(case_id))
@@ -536,9 +534,9 @@ class CaseDatabase(coach.GraphDatabaseService):
                         rdfgraph.add((ns.node + str(n1), orion[labels[e].lower()], ns.node + str(n2)))
                 
                 print(rdfgraph.serialize(format = format).decode("utf-8"))
-                return Response(json.dumps(rdfgraph.serialize(format = format).decode("utf-8")))
+                return rdfgraph.serialize(format = format).decode("utf-8")
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
     
         
     #### NEW API FOR LINKED DATA #########################################################################
@@ -561,15 +559,15 @@ class CaseDatabase(coach.GraphDatabaseService):
         return self.data_ns + str(resource_id)
     
     
-    @endpoint("/get_data_namespace", ["GET", "POST"])
+    @endpoint("/get_data_namespace", ["GET", "POST"], "application/json")
     def get_data_namespace(self):
         """
         Returns the namespace used for data in this case database.
         """
-        return Response(json.dumps(self.data_ns))
+        return self.data_ns
     
     
-    @endpoint("/add_resource", ["POST"])
+    @endpoint("/add_resource", ["POST"], "application/json")
     def add_resource(self, user_id, user_token, resource_class):
         """
         Adds a new resource of the given resource_class, and returns its generated URI.
@@ -591,9 +589,9 @@ class CaseDatabase(coach.GraphDatabaseService):
             params = { "r_id" : resource_id, "uri" : uri }
             self.query(q, params)
             self.close_session(s)
-            return Response(json.dumps(uri))        
+            return uri        
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
 
     
     def add_resource_with_uri(self, resource_class, uri):
@@ -608,7 +606,7 @@ class CaseDatabase(coach.GraphDatabaseService):
         self.query(q, { "class" : resource_class, "uri" : uri })
 
     
-    @endpoint("/remove_resource", ["GET", "POST"])
+    @endpoint("/remove_resource", ["GET", "POST"], "application/json")
     def remove_resource(self, user_id, user_token, resource):
         """
         Removes a resource, and all properties to and from it.
@@ -619,12 +617,12 @@ class CaseDatabase(coach.GraphDatabaseService):
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
             q = """MATCH (r:$label { uri: {uri} }) DETACH DELETE r"""
             self.query(q, { "uri" : resource })
-            return Response("Ok")        
+            return "Ok"        
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
 
     
-    @endpoint("/add_datatype_property", ["GET", "POST"])
+    @endpoint("/add_datatype_property", ["GET", "POST"], "application/json")
     def add_datatype_property(self, user_id, user_token, resource, property_name, value):
         """
         Adds value to resource under the given property_name.
@@ -638,12 +636,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             q = """MATCH (r:$label { uri : { uri } }) SET r.$property_name = {value}"""
             params = { "uri" : resource, "property_name" : property_name, "value" : value }
             self.query(q, params)
-            return Response(json.dumps("Ok"))
+            return "Ok"
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
         
         
-    @endpoint("/add_object_property", ["GET", "POST"])
+    @endpoint("/add_object_property", ["GET", "POST"], "application/json")
     def add_object_property(self, user_id, user_token, resource1, property_name, resource2):
         """
         Relates resource1 to resource2 through the given property_name.
@@ -659,12 +657,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             """
             params = { "uri1" : resource1, "uri2" : resource2, "property_name" : property_name }
             self.query(q, params)
-            return Response(json.dumps("Ok"))
+            return "Ok"
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
 
 
-    @endpoint("/get_datatype_property", ["GET", "POST"])
+    @endpoint("/get_datatype_property", ["GET", "POST"], "application/json")
     def get_datatype_property(self, user_id, token, resource, property_name):
         """
         Returns a value, for which there is a datatype property relation called property_name
@@ -680,14 +678,14 @@ class CaseDatabase(coach.GraphDatabaseService):
                 q = """MATCH (r:$label { uri : { uri } }) RETURN r.$property_name AS value"""
                 params = { "uri": resource, "property_name": property_name }
                 query_result = self.query(q, params).single()["value"]
-                return Response(json.dumps(query_result))
+                return query_result
             except:
-                return Response(json.dumps(None))
+                return None
         else:
-            return Response("Invalid user or delegate token")
+            return "Invalid user or delegate token"
         
         
-    @endpoint("/get_object_properties", ["GET", "POST"])
+    @endpoint("/get_object_properties", ["GET", "POST"], "application/json")
     def get_object_properties(self, user_id, user_token, resource, property_name):
         """
         Returns a list of resources, for which there is a datatype property relation called property_name
@@ -703,14 +701,14 @@ class CaseDatabase(coach.GraphDatabaseService):
             params = { "uri1" : resource, "property_name" : property_name }
             result = self.query(q, params)
             if result:
-                return Response(json.dumps([res["uri2"] for res in result]))
+                return [res["uri2"] for res in result]
             else:
-                return Response(json.dumps([]))
+                return []
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
 
 
-    @endpoint("/remove_datatype_property", ["GET", "POST"])
+    @endpoint("/remove_datatype_property", ["GET", "POST"], "application/json")
     def remove_datatype_property(self, user_id, user_token, resource, property_name):
         """
         Remove all properties called property_name from the resource.
@@ -721,12 +719,12 @@ class CaseDatabase(coach.GraphDatabaseService):
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
             q = """MATCH (r:$label { uri : { uri } }) REMOVE r.$property_name"""
             self.query(q, { "uri" : resource, "property_name" : property_name })
-            return Response("Ok")        
+            return "Ok"        
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
 
 
-    @endpoint("/remove_object_property", ["GET", "POST"])
+    @endpoint("/remove_object_property", ["GET", "POST"], "application/json")
     def remove_object_property(self, user_id, user_token, resource1, property_name, resource2):
         """
         Remove the object property relating resource1 to resource 2.
@@ -738,12 +736,12 @@ class CaseDatabase(coach.GraphDatabaseService):
             q = """MATCH (r:$label { uri : {uri1} } ) -[p:$property_name]-> (:$label { uri : {uri2} }) DELETE p"""
             params = { "uri1" : resource1, "property_name" : property_name, "uri2" : resource2 }
             self.query(q, params)
-            return Response(json.dumps("Ok"))
+            return "Ok"
         else:
-            return Response("Invalid user token")
+            return "Invalid user token"
 
 
-    @endpoint("/toggle_object_property", ["GET", "POST"])
+    @endpoint("/toggle_object_property", ["GET", "POST"], "application/json")
     def toggle_object_property(self, user_id, user_token, resource1, property_name, resource2):
         """
         If the triple (resource1, property_name, resource2) exists, it is deleted and False is returned. 
@@ -753,13 +751,13 @@ class CaseDatabase(coach.GraphDatabaseService):
         # Read value from database here, then invert it!
         props = self.get_object_properties(user_id = user_id, user_token = user_token, 
                                            resource = resource1, property_name = property_name)
-        if resource2 in json.loads(props.get_data(as_text = True)):
+        if resource2 in props:
             # Value is already set, so remove it
             self.remove_object_property(user_id = user_id, user_token = user_token, 
                                         resource1 = resource1, property_name = property_name, resource2 = resource2)
-            return Response(json.dumps(False))
+            return False
         else:
             # Value is not set, so add id
             self.add_object_property(user_id = user_id, user_token = user_token, 
                                      resource1 = resource1, property_name = property_name, resource2 = resource2)
-            return Response(json.dumps(True))
+            return True
