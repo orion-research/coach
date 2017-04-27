@@ -30,6 +30,8 @@
 # - The elements SGR15 and SGR16 appear as both "customer value" and "internal business value". This does not make much sense.
 #   It should be only "customer value".
 # - The different classes defined should have :title and :description fields.
+# - The class User should probably be called Person, and be a subclass of foaf:Person.
+# - Use FunctionalProperty to indicate properties that can only have one value for a certain subject.
 
 
 ##### Missing parts:
@@ -52,6 +54,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
 
 
 ##### Common attributes and classes
@@ -446,19 +449,19 @@
 
 ##### Roles element
 
-# A Role links a certain individual, represented in COACH as a User, to a DecisionCase, and specifies four different role perspectives:
+# A Role links a certain individual, represented in COACH as a foaf:Person, to a DecisionCase, and specifies four different role perspectives:
 # The role type; role function; role level; and role title. 
 
 :Role
 	rdfs:subClassOf :Class .
 
-:user
+:person
 	a owl:ObjectProperty ;
 	rdfs:domain :Role ;
 	rdfs:range :User .
 
 :User
-	rdfs:subClassOf :Class .
+	rdfs:subClassOf foaf:Person .
 
 
 ### Role type

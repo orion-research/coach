@@ -46,10 +46,11 @@ class CaseDatabase(coach.GraphDatabaseService):
         data_ns = rdflib.Namespace(self.data_ns)
 
         self.ontology = rdflib.ConjunctiveGraph()
-        self.ontology.bind("data", data_ns)
-        self.ontology.bind("orion", orion_ns)
         ontology_path = os.path.join(self.working_directory, os.pardir, "Ontology.ttl")
         self.ontology.parse(source = ontology_path, format = "ttl")
+        self.ontology.bind("data", data_ns)
+        self.ontology.bind("orion", orion_ns)
+        self.ontology.bind("foaf", rdflib.namespace.FOAF)
         
         # Populate the database by all instance elements in the ontology, ensuring to not duplicate data already there.
         for s, _, o in self.ontology.triples( (None, rdflib.RDF.type, None) ):
@@ -57,7 +58,6 @@ class CaseDatabase(coach.GraphDatabaseService):
             (_, ns2, r2) = self.ontology.compute_qname(o)
             # Only include triples where both subject and object are from the ORION ontology
             if str(ns1) == self.orion_ns and str(ns2) == self.orion_ns:
-                
                 # If this resource is not in the database, add it
                 self.add_resource_with_uri(r2, str(s))
 
@@ -79,6 +79,30 @@ class CaseDatabase(coach.GraphDatabaseService):
                     q = """MATCH (r:$label { uri : { uri } }) SET r.description = {value}"""
                     params = { "uri" : str(s), "value" : description }
                     self.query(q, params)
+
+        # Go through the database, to ensure that all nodes have a uri defined by their id.
+        # This is a fix, it should really be taken care of when nodes are created.
+        q = """\
+        MATCH (n:$label) 
+        WHERE NOT exists(n.uri) 
+        SET n.uri = {data_ns} + toString(id(n))"""
+        params = { "data_ns" : self.data_ns }
+        self.query(q, params)
+        
+    
+    @endpoint("/restore_users", ["GET", "POST"], "text/plain")
+    def restore_users(self):
+        """
+        Add all registered users to the database, if they are not already present. 
+        This is used to restore users if the case database was cleared.
+        """
+        for (user_id, email, name) in self.authentication_service_proxy.get_users():
+            q = """\
+            CREATE (n:User:$label { user_id: {user_id}, email: {email}, name: {name}, uri: {uri} })
+            """
+            params = { "user_id": user_id, "email": email, "name": name, "uri": self.id_to_uri(user_id) }
+            self.query(q, params)
+        return "Ok"
     
     
     def is_stakeholder(self, user_id, case_id):
@@ -86,7 +110,7 @@ class CaseDatabase(coach.GraphDatabaseService):
         Returns true if user_id is a stakeholder in case_id.
         """
         q = """\
-        MATCH (case:Case:$label) -[:Stakeholder]-> (user:User:$label {user_id: {user_id}}) 
+        MATCH (case:Case:$label) -[:role]-> (:Role:$label) -[:person]-> (user:User:$label {user_id: {user_id}})
         RETURN id(case) AS id"""
         params = { "user_id": user_id }
         return int(case_id) in [result["id"] for result in self.query(q, params)]
@@ -97,7 +121,7 @@ class CaseDatabase(coach.GraphDatabaseService):
         Returns true if alternative is linked to a case where the user_id is a stakeholder.
         """
         q = """\
-        MATCH (case:Case:$label) -[:Stakeholder]-> (user:User:$label {user_id: {user_id}}) 
+        MATCH (case:Case:$label) -[:role]-> (:Role:$label) -[:person]-> (user:User:$label {user_id: {user_id}})
         MATCH (case:Case:$label) -[:Alternative]-> (alt:Alternative:$label)
         WHERE id(alt) = {alt_id}
         RETURN id(case) AS id"""
@@ -125,7 +149,7 @@ class CaseDatabase(coach.GraphDatabaseService):
         """
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
             q = """\
-            MATCH (case:Case:$label) -[:Stakeholder]-> (user:$label {user_id: {user_id}}) 
+            MATCH (case:Case:$label) -[:role]-> (:Role:$label) -[:person]-> (user:User:$label {user_id: {user_id}})
             RETURN id(case) AS id, case.title AS title"""
             params = { "user_id": user_id }
             return [(result["id"], result["title"]) for result in self.query(q, params)]
@@ -140,7 +164,7 @@ class CaseDatabase(coach.GraphDatabaseService):
         """
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
             q = """\
-            MATCH (case:Case:$label) -[:Stakeholder]-> (user:$label) 
+            MATCH (case:Case:$label) -[:role]-> (:Role:$label) -[:person]-> (user:User:$label)
             WHERE id(case) = {case_id}
             RETURN user.user_id AS user_id"""
             params = { "case_id": int(case_id) }
@@ -155,8 +179,12 @@ class CaseDatabase(coach.GraphDatabaseService):
         Creates a new user in the database, if it is not already there. 
         """
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
-            q = """MERGE (u:User:$label {user_id : {user_id}})"""
-            params = { "user_id": user_id }
+            # Ensure that the user gets a uri (even users who were created before uris were introduced)
+            q = """
+            MERGE (u:User:$label {user_id : {user_id}})
+            ON MATCH SET u.uri = {uri}
+            """
+            params = { "user_id": user_id, "uri": self.id_to_uri(user_id) }
             self.query(q, params)
             return "Ok"
         else:
@@ -171,7 +199,21 @@ class CaseDatabase(coach.GraphDatabaseService):
         """
 
         if self.authentication_service_proxy.check_user_token(user_id = initiator, user_token = user_token):
+            # First, create the new case node and set its properties
+            case_uri = self.add_resource(initiator, user_token, "Case")
+            self.add_datatype_property(initiator, user_token, case_uri, "title", title)
+            self.add_datatype_property(initiator, user_token, case_uri, "description", description)
+ 
+            # Then create the relationships to an initial role with initiator as the person 
+            role_uri = self.add_resource(initiator, user_token, "Role")
+            self.add_object_property(initiator, user_token, case_uri, "role", role_uri)
+            self.add_object_property(initiator, user_token, role_uri, "person", self.id_to_uri(initiator))
+            
+            return self.uri_to_id(case_uri)
+        
+            # OLD STUFF:
             s = self.open_session()
+                      
             # First create the new case node, and get it's id
             q1 = """CREATE (c:Case:$label {title: {title}, description: {description}}) RETURN id(c) AS case_id"""
             params1 = { "title": title, "description": description }
@@ -186,7 +228,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             q3 = """\
             MATCH (c:Case:$label), (u:User:$label)
             WHERE id(c) = {case_id} AND u.user_id = {initiator}
-            CREATE (c) -[:Stakeholder {role: "initiator"}]-> (u)
+            CREATE (c) -[:role]-> (:Role:$label) -[:person]-> (u)
             """
             params3 = { "case_id": case_id, "initiator": initiator }
             self.query(q3, params3, s)
@@ -231,11 +273,17 @@ class CaseDatabase(coach.GraphDatabaseService):
         If the user is already a stakeholder, nothing is changed. 
         """
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            # Create the new role node for the stakeholder, and connect it to the case 
+            role_uri = self.add_resource(user_id, user_token, "Role")
+            self.add_object_property(user_id, user_token, self.id_to_uri(case_id), "role", role_uri)
+            self.add_object_property(user_id, user_token, role_uri, "person", self.id_to_uri(stakeholder))
+            return "Ok"
+            # OLD: 
+                
             q = """\
             MATCH (c:Case:$label), (u:User:$label)
             WHERE id(c) = {case_id} AND u.user_id = {user_id}
-            MERGE (c) -[r:Stakeholder]-> (u)
-            ON CREATE SET r.role = {role}
+            MERGE (c) -[:role]-> (:Role:$label) -[:person]-> (u)
             """
             params = { "user_id": stakeholder, "case_id": int(case_id), "role": role}
             self.query(q, params)
@@ -601,9 +649,8 @@ class CaseDatabase(coach.GraphDatabaseService):
         This is used to store relations to other namespaces in the database.
         It is only available internally in the CaseDB to set up elements from the ontology.
         """
-
-        q = """MERGE (r:$class:$label { uri : { uri } } )"""
-        self.query(q, { "class" : resource_class, "uri" : uri })
+        q = """MERGE (r:$class:$label { uri : { uri } } ) RETURN r"""
+        result = self.query(q, { "class" : resource_class, "uri" : uri })
 
     
     @endpoint("/remove_resource", ["GET", "POST"], "application/json")
@@ -663,7 +710,7 @@ class CaseDatabase(coach.GraphDatabaseService):
 
 
     @endpoint("/get_datatype_property", ["GET", "POST"], "application/json")
-    def get_datatype_property(self, user_id, token, resource, property_name):
+    def get_datatype_property(self, user_id, user_token, resource, property_name):
         """
         Returns a value, for which there is a datatype property relation called property_name
         from the provided resource. 
@@ -673,7 +720,7 @@ class CaseDatabase(coach.GraphDatabaseService):
         
 #        if self.is_stakeholder(user_id, case_id) and (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = token) or 
 #                                                      self.authentication_service_proxy.check_delegate_token(user_id = user_id, delegate_token = token, case_id = case_id)):
-        if (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = token)):
+        if (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token)):
             try:
                 q = """MATCH (r:$label { uri : { uri } }) RETURN r.$property_name AS value"""
                 params = { "uri": resource, "property_name": property_name }
@@ -694,6 +741,8 @@ class CaseDatabase(coach.GraphDatabaseService):
 
         # TODO: Add ontology and stakeholder checks.
         
+        # Normally, we would get the uri of the resulting nodes. However, since it cannot assured that
+        # all nodes have a uri, we get the node id instead and generate the uri from it.
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
             q = """\
             MATCH (r1:$label { uri : { uri1 } }) -[:$property_name]-> (r2:$label)
@@ -703,6 +752,85 @@ class CaseDatabase(coach.GraphDatabaseService):
             if result:
                 return [res["uri2"] for res in result]
             else:
+                return []
+        else:
+            return "Invalid user token"
+
+
+    @endpoint("/get_object_triples", ["GET", "POST"], "application/json")
+    def get_triples(self, user_id, user_token, pattern):
+        """
+        The provided pattern should be a list [subject, predicate, object]. The subject should be
+        specified as [uri, classes, properties], where uri is a string (an empty string indicates a wildcard);
+        classes is a list of strings; and properties is a (possibly non-empty) dictionary. The predicate is
+        a string (an empty string indicates a wildcard). Object can be either on the same form as subject,
+        in which case the predicate is a datatype property, or alternatively it can be a single string
+        in which case the object represents a literal (where an empty string is a wild card.
+        The result is a list of triples that match the pattern. 
+        
+        TODO: Check if the object is a string or a list, and if it is a string, match it as a literal.
+        """
+
+        # TODO: Add ontology and stakeholder checks.
+        
+        # Normally, we would get the uri of the resulting nodes. However, since it cannot assured that
+        # all nodes have a uri, we get the node id instead and generate the uri from it.
+
+        if True:
+#        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            if isinstance(pattern, str):
+                # If the method was called as an endpoint, the data was converted into a string
+                pattern = json.loads(pattern)
+
+            [subject_pattern, predicate_pattern, object_pattern] = pattern 
+            [subject_uri, subject_class, subject_properties] = subject_pattern 
+
+            props = "True"
+            for (prop, value) in subject_properties.items():
+                props += " AND m." + prop + " = \"" + value + "\""
+            if subject_uri:
+                props += " AND n.uri = \"" + subject_uri + "\""
+
+            if not isinstance(object_pattern, str):
+                # Match object property patterns
+                [object_uri, object_class, object_properties] = object_pattern
+                for (prop, value) in object_properties.items():
+                    props += " AND n." + prop + " = \"" + value + "\""
+                if object_uri:
+                    props += " AND n.uri = \"" + object_uri + "\""
+                predicate = " : " + predicate_pattern if predicate_pattern else predicate_pattern
+                # Generate a query based on the pattern
+                q = "MATCH (m:$label $subject_class) -[r" + predicate + "]-> (n:$label $object_class) WHERE " + props + " RETURN m.uri as s, TYPE(r) as p, n.uri as o"
+                params = {"subject_class" : ":" + subject_class if subject_class else "", 
+                          "object_class" : ":" + object_class if object_class else object_class,
+                          "props" : props }
+                
+                result = self.query(q, params)
+                if result:
+                    return [(res["s"], res["p"], res["o"]) for res in result]
+            else:
+                # Match datatype property patterns
+                object_uri = object_class = None
+                object_properties = dict()
+                params = {"subject_class" : ":" + subject_class if subject_class else "", 
+                          "props" : props }
+                if object_pattern and predicate_pattern:
+                    # A value for the literal has been provided, so do filtering on it
+                    props += " AND n." + predicate_pattern + " = \"" + object_pattern + "\""
+                    q = "MATCH (n:$label $subject_class) WHERE " + props + " RETURN n.uri as s"
+                    result = self.query(q, params)
+                    if result:
+                        return [(res["s"], predicate_pattern, object_pattern) for res in result]
+                elif predicate_pattern:
+                    # A wildcard for the literal has been provided, so return it as a result
+                    q = "MATCH (n:$label $subject_class) WHERE exists(n." + predicate_pattern + ") AND " + props + " RETURN n.uri as s, n." + predicate_pattern + " as o"
+                    result = self.query(q, params)
+                    if result:
+                        return [(res["s"], predicate_pattern, res["o"]) for res in result]
+                else:
+                    # Not matching is provided if there is no predicate_pattern
+                    result = []
+            if not result:
                 return []
         else:
             return "Invalid user token"
@@ -727,7 +855,7 @@ class CaseDatabase(coach.GraphDatabaseService):
     @endpoint("/remove_object_property", ["GET", "POST"], "application/json")
     def remove_object_property(self, user_id, user_token, resource1, property_name, resource2):
         """
-        Remove the object property relating resource1 to resource 2.
+        Remove the object property relating resource1 to resource2.
         """
 
         # TODO: Add ontology and stakeholder checks.

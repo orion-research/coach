@@ -1,20 +1,75 @@
-<H2>Select a stakeholder to add to the decision case</H2>
+<h1>Stakeholders</h1>
 
-<BR>
+<br>
 
-<H3>Current stakeholders:</H3>
-<UL>
-{% for u in case_users %}
-<LI> {{ u | safe }} </LI>
+<script>
+function add_stakeholder() {
+    var user_id = document.getElementById("select_new_stakeholder").value;
+	var xhttp = new XMLHttpRequest();
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			window.location.reload();
+		}
+	};
+	xhttp.open("POST", "/add_stakeholder", true);
+	xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhttp.send("stakeholder=" + user_id);
+}
+
+function change_stakeholder_role(role) {
+    var params = document.getElementById("change_stakeholder_" + role).value;
+	var xhttp = new XMLHttpRequest();
+	xhttp.onreadystatechange = function() {
+	};
+	xhttp.open("POST", "/change_stakeholder_role", true);
+	xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	xhttp.send(params);
+}
+</script>
+
+<table style="width:100%">
+
+<tr>
+<th>Person</th>
+<th>Type</th>
+<th>Function</th>
+<th>Level</th>
+<th>Title</th>
+</tr>
+
+{% for u in current_users %}
+<tr>
+<td> {{ u[1] | safe }} </td>
+
+{% for property in ["roleType", "roleFunction", "roleLevel", "roleTitle"] %}
+<td>
+<select id="change_stakeholder_{{ property | safe }}" onchange="change_stakeholder_role(&quot;{{ property | safe }}&quot;)">
+{% if not role_properties[u[0]]["{{ property | safe }}"] %}
+<option disabled selected value></option>
+{% endif %}
+{% for value in role_values[property] %}
+<option value="property={{ property | safe }}&stakeholder={{ u[0] | safe }}&value={{ value[0] | safe }}"
+{% if role_properties[u[0]][property] and role_properties[u[0]][property][0] == value[0] %}
+selected 
+{% endif %}
+> {{ value[2] | safe }} </option>
 {% endfor %}
-</UL>
+</select>
+</td>
+{% endfor %}
 
-<BR><BR>
+</tr>
+{% endfor %}
 
-<H3>Other users:</H3>
-<BR>
-<UL>
+<tr>
+<td>
+<select id="select_new_stakeholder" onchange="add_stakeholder()">
+<option disabled selected value>Add...</option>
 {% for u in new_users %}
-<LI> {{ u | safe }} </LI>
+<option value="{{ u[0] | safe }}"> {{ u[1] | safe }} </option>
 {% endfor %}
-</UL>
+</select>
+</td>
+</tr>
+
+</table>

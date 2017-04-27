@@ -136,6 +136,15 @@ class AuthenticationService(Microservice):
         return "Ok"
     
 
+    @endpoint("/get_users", ["POST"], "application/json")
+    def get_users(self):
+        """
+        Returns the list of all registered users, as a list of tuples (user_id, email, name).
+        The purpose is to be able to restore persons in the case database if it has been cleared.
+        """
+        return [(user_id, self.users[user_id]["email"], self.users[user_id]["name"]) for user_id in self.users.keys()]
+
+
     @endpoint("/logout_user", ["POST"], "application/json")
     def logout_user(self, user_id, user_token):
         """

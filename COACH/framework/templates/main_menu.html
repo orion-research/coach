@@ -63,13 +63,13 @@
 <div id="menubar" style="position: fixed; width: 100%">
 <ul>
 	<li class="dropdown">
-    	<a href="javascript:void(0)" class="dropbtn">Case</a>
+    	<a href="javascript:void(0)" class="dropbtn">File</a>
 	    <div class="dropdown-content">
-	      <a href="/open_case_dialogue">Open</a>
-	      <a href="/create_case_dialogue">New</a>
+	      <a href="/open_case_dialogue">Open case</a>
+	      <a href="/create_case_dialogue">New case</a>
 	      {% if session["case_id"] is defined %}
-	      <a href="/edit_case_description_dialogue">Description</a>
-	      <a href="/export_case_to_knowledge_repository">Export to knowledge repository</a>
+	      <a href="/edit_case_description_dialogue">Case description</a>
+	      <a href="/export_case_to_knowledge_repository">Export case to knowledge repository</a>
 		  {% endif %}
 	    </div>
  	</li>
@@ -106,8 +106,7 @@
     <a href="javascript:void(0)" class="dropbtn">Stakeholders</a>
     <div class="dropdown-content">
       {% if session["case_id"] is defined %}
-      <a href="/add_stakeholder_dialogue">Add</a>
-      <a href="#" style="color: lightgray">Modify</a>
+      <a href="/add_stakeholder_dialogue">Edit</a>
 	  {% endif %}
     </div>
 	</li>

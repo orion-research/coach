@@ -290,19 +290,21 @@ class Microservice:
         return result
     
     
-    def create_proxy(self, url, method_preference = ["POST", "GET"], cache = True):
+    def create_proxy(self, url, method_preference = ["POST", "GET"], cache = True, **kwargs):
         """
         Returns a Proxy object representing the given url, and with method preferences as provided.
         If cache is True, the proxy is also stored in a dictionary within the Microservice. This makes it
         possible to later query the Microservice for its proxies, to get a view of the architecture.
         An attempt to create an already existing proxy will just return the existing one.
+        
+        If any kwargs are provided, they are stored and submitted automatically with each proxy call.
         """
         if cache:
             if url not in self.proxies:
-                self.proxies[url] = Proxy(url, method_preference)
+                self.proxies[url] = Proxy(url, method_preference, **kwargs)
             return self.proxies[url]
         else:
-            return Proxy(url, method_preference)
+            return Proxy(url, method_preference, **kwargs)
 
 
 class MicroserviceException(Exception): pass
@@ -315,13 +317,14 @@ class Proxy():
     instance of the object. It is recommended that Proxy objects are created through the create_proxy method in Microservice.
     """
     
-    def __init__(self, url, method_preference):
+    def __init__(self, url, method_preference, **kwargs):
         """
         Creates the proxy object. The url argument is the service which it acts as a proxy for. The method preferences is used in case
         a service endpoint accepts several methods, in which case the first applicable in the list is used.
         """
         self.url = url
         self.method_preference = method_preference
+        self.default_kwargs = kwargs
         
         # The api of the service is fetched when the first endpoint call is made, to allow for asynchronous initiations of services.
         self.api = None
@@ -340,11 +343,16 @@ class Proxy():
 
             # Check if the endpoint exists, otherwise raise error
             if name in self.api:
+                # Add default_kwargs. Note that if the kwarg was provided in the call, it should override the default
+                data = dict()
+                data.update(self.default_kwargs)
+                data.update(kwargs)
+                
                 # Determine what http method to use, taking the first of the preferred method that the service supports.
                 http_method = next(m for m in self.method_preference if m in self.api[name]["methods"])
                 
                 # Make the endpoint request
-                result = requests.request(http_method, self.url + "/" + name, data = kwargs)
+                result = requests.request(http_method, self.url + "/" + name, data = data)
                 
                 # If there was an error in the response, raise an exception
                 if result.status_code != 200:
