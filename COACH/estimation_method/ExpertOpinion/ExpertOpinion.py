@@ -9,8 +9,6 @@ sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 import json
 
-from flask import Response
-
 from COACH.framework.coach import endpoint, EstimationMethodService
 
 
@@ -24,15 +22,15 @@ class ExpertOpinion(EstimationMethodService):
         return ["x"]
     
     
-    @endpoint("/info", ["GET", "POST"])
+    @endpoint("/info", ["GET", "POST"], "text/plain")
     def info(self):
-        return Response("This is an estimation method which takes one parameters (X), and returns it.")
+        return "This is an estimation method which takes one parameters (X), and returns it."
     
     
-    @endpoint("/evaluate", ["GET", "POST"])
+    @endpoint("/evaluate", ["GET", "POST"], "application/json")
     def evaluate(self, x):
         result = float(x)
-        return Response(json.dumps(result))
+        return json.dumps(result)
 
 
 if __name__ == '__main__':

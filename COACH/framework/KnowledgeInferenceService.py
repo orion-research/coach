@@ -13,7 +13,7 @@ sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 import json
 
 # Web service framework
-from flask import Response, request
+from flask import request
 
 # Coach framework
 from COACH.framework import coach
@@ -34,7 +34,7 @@ class KnowledgeInferenceService(coach.Microservice):
         self.graph = rdflib.Graph()
 
 
-    @endpoint("/load_data", ["GET", "POST"])
+    @endpoint("/load_data", ["GET", "POST"], "application/json")
     def load_data(self, url):
         """
         Loads data from the provided URL, and stores it in the graph.
@@ -45,29 +45,29 @@ class KnowledgeInferenceService(coach.Microservice):
         """
         self.graph.load(url)
         self.data_sources += { url }
-        return Response("Ok")
+        return "Ok"
     
 
-    @endpoint("/clear_data", ["GET", "POST"])
+    @endpoint("/clear_data", ["GET", "POST"], "application/json")
     def clear_data(self):
         """
         Clears the data in the graph.
         """
         self.graph = rdflib.Graph()
         self.data_sources = { }
-        return Response("Ok")
+        return "Ok"
         
         
-    @endpoint("/show_data", ["GET", "POST"])
+    @endpoint("/show_data", ["GET", "POST"], "text/plain")
     def show_data(self, format):
         """
         Returns the data in the current graph on the specified format (allowed values: json-ld, n3, nquads, nt, pretty-xml, trig, trix, turtle, xml).
         """
         result = self.graph.serialize(format = format)
-        return Response(result)
+        return result
     
     
-    @endpoint("/query", ["GET", "POST"])
+    @endpoint("/query", ["GET", "POST"], "application/json")
     def query_data(self, q):
         """
         Runs a query on the current graph. The query is expressed in SparQL.
@@ -80,12 +80,12 @@ class KnowledgeInferenceService(coach.Microservice):
             print("Number of triples in result: " + str(len(result)))
             for triple in result:
                 print(triple)
-            return Response(json.dumps(list(result)))
+            return list(result)
         except Exception as e:
-            return Response("Error: " + str(e))
+            return "Error: " + str(e)
         
         
-    @endpoint("/test_dialogue", ["POST"])
+    @endpoint("/test_dialogue", ["POST"], "text/html")
     def test_dialogue(self, user_id, user_token):
         """
         Returns a test dialogue that can be used to try out queries. It has fields for the data sources, the query, and the results.
@@ -166,4 +166,4 @@ WHERE {
         # Transform the result into a string
         result_text = " <BR> ".join([str(x) for x in result])
         
-        return Response(dialogue.format(data_sources = data_sources, query = q, result = result_text))
+        return dialogue.format(data_sources = data_sources, query = q, result = result_text)

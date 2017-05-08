@@ -47,6 +47,8 @@ On a Windows system, the corresponding command is:
 
 	$ mklink local_settings.json settings.json
 
+Note that you need full elevated rights to run this command on a Windows system. Run cmd.exe as an Administrator by pressing and holding Ctrl+Shift while opening the program.
+
 ## Secret data
 In order for COACH to access the database, and also to encrypt some data, a file needs to be created that stores this information. Since this data is secret, it is not on GitHub,
 but needs to be created locally for each installation. The file should be placed in the COACH/framework/settings directory, and be named root_secret_data.json. The contents of the file should look like this:

@@ -192,7 +192,7 @@ class KnowledgeRepositoryService(Microservice):
             self.ms.logger.error("Fatal error: Knowledge repository cannot be accessed. Make sure that Neo4j is running!")
 
             
-    @endpoint("/add_case", ["POST"])    
+    @endpoint("/add_case", ["POST"], "application/json")    
     def add_case(self, description):
         """
         Endpoint for handling the addition of a new case to the KR.

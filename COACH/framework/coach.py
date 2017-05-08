@@ -14,6 +14,7 @@ import os
 from string import Template
 import sys
 import threading
+import traceback
 
 # Web server framework
 from flask import Flask, Response, request
@@ -25,23 +26,37 @@ from neo4j.v1 import GraphDatabase, basic_auth
 
 # Auxiliary functions
         
-def endpoint(url_path, http_methods):
+def endpoint(url_path = None, http_methods = ["POST", "GET"], content = "text/plain"):
     """
     endpoint is intended to be used as a decorator for the methods of a service class that should be used
     as endpoints. The function takes two arguments, a url path and a list of methods to be used with it.
     These arguments are added as attributes to the decorated method. This attributes are inspected by
     the create_endpoints method, and used to set up the method as an appropriate flask endpoint.
 
-    Instead of just returning a function, a callable class is created. This is because Flask seems to 
-    require that all endpoints are implemented by different function objects.
+    If the url_path argument is not provided, the path is set to "/" + the function mane.
+    If the http_methods are not provided, the default is ["POST", "GET"].
+    If the content argument is not provided, it is set to "text/plain".
     """
 
     def decorator(f):
-        f.url_path = url_path
-        f.http_methods = http_methods
+        if url_path:
+            f.endpoint_url_path = url_path
+        else:
+            f.endpoint_url_path = "/" + f.__name__
+        f.endpoint_http_methods = http_methods
+        f.endpoint_content = content
         return f
     
     return decorator
+
+
+# Endpoint content conversion defines a pair of functions that relates to a particular content type.
+# The first function converts an object of the given type to a string, and the second does the inverse.
+endpoint_content_conversion = {
+    "text/plain" : (lambda x: x, lambda x: x),
+    "text/html" : (lambda x: x, lambda x: x),
+    "application/json" : (json.dumps, json.loads)
+    }
 
 
 class Microservice:
@@ -184,11 +199,11 @@ class Microservice:
         # Get a list of all methods for this class.
         print("Creating endpoints for " + self.__class__.__name__ + "(" + self.host + ":" + str(self.port) + ")")
         for (_, m) in inspect.getmembers(self):
-            # All endpoint methods are given the attribute url_path by the @endpoint decorator, which contains the url path,
-            # and the attribute http_methods, which contains a list of the http methods that it can be used with.
-            if hasattr(m, "url_path"):
-                self.ms.add_url_rule(m.url_path, view_func = self.endpoint_wrapper(m), endpoint = m.__name__,
-                                     methods = m.http_methods)
+            # All endpoint methods are given the attribute endpoint_url_path by the @endpoint decorator, which contains the url path,
+            # and the attribute endpoint_http_methods, which contains a list of the http methods that it can be used with.
+            if hasattr(m, "endpoint_url_path"):
+                self.ms.add_url_rule(m.endpoint_url_path, view_func = self.endpoint_wrapper(m, m.endpoint_content), endpoint = m.__name__,
+                                     methods = m.endpoint_http_methods)
                 print("   - " + m.__name__ + " created")
 
 
@@ -196,7 +211,7 @@ class Microservice:
     trace = True
     trace_indent = 0
 
-    def endpoint_wrapper(self, m):
+    def endpoint_wrapper(self, m, content):
         
         def highlight_text(s):
             """
@@ -208,22 +223,28 @@ class Microservice:
             """
             The endpoint wrapping fetches the request values supplied for each of the method's parameter names
             and adds them as arguments to the method. Trace output to the console can be obtained by setting
-            the class variable trace to True.
+            the class variable trace to True. The result from the method call is returned as a Response object.
             """
             args = [request.values[p.name] for (_, p) in inspect.signature(m).parameters.items()]
             if self.trace: 
                 print(highlight_text(self.trace_indent * "    " + m.__name__ + "(" + ", ".join(args) + ")"))
                 self.trace_indent += 1
-            result = m(*args)
-            if self.trace: 
-                self.trace_indent -= 1
-                print(highlight_text(self.trace_indent * "    " + "result from " + m.__name__ + ": " + (str(result).split("\n", 1)[0])))
-            return result
+            try:
+                result = m(*args)
+                if self.trace: 
+                    self.trace_indent -= 1
+                    print(highlight_text(self.trace_indent * "    " + "result from " + m.__name__ + ": " + (str(result).split("\n", 1)[0])))
+                response = Response(endpoint_content_conversion[content][0](result), status = 200, content_type = content)
+            except Exception as _:
+                message = "An error occured while processing the endpoint " + m.__name__ + " in the service " + self.__class__.__name__
+                message += " running at " + self.host + ":" + str(self.port) + ":\n\n" + traceback.format_exc() + "\n\n"
+                response = Response(message, status = 500, content_type = "text/plain")
+            return response
         
         return wrapping
     
     
-    @endpoint("/test_ui", ["GET", "POST"])
+    @endpoint("/test_ui", ["GET", "POST"], "text/html")
     def test_ui(self):
         """
         Returns an automatically generated html page which allows testing of individual endpoints manually through 
@@ -232,12 +253,12 @@ class Microservice:
         result = "<HTML>\n<H1>Endpoints of the microservice " + type(self).__name__ + "</H1>\n"
         result += "<P>NOTE: references to services should include the protocol and a trailing / (e.g. http://127.0.0.1:5002/)</P>"
         for (_, m) in inspect.getmembers(self):
-            if hasattr(m, "url_path") and isinstance(m.url_path, str):
-                result += "<FORM action=\"" + m.url_path + "\""
-                result += " method=\"" + m.http_methods[0] + "\">\n"
+            if hasattr(m, "endpoint_url_path") and isinstance(m.endpoint_url_path, str):
+                result += "<FORM action=\"" + m.endpoint_url_path + "\""
+                result += " method=\"" + m.endpoint_http_methods[0] + "\">\n"
                 result += "<FIELDSET>\n"
-                result += "<LEGEND><H2>" + m.url_path + "</H2></LEGEND>\n"
-                result += "<H3>HTTP method(s):</H3>" + ", ".join(m.http_methods) + "<BR>\n"
+                result += "<LEGEND><H2>" + m.endpoint_url_path + "</H2></LEGEND>\n"
+                result += "<H3>HTTP method(s):</H3>" + ", ".join(m.endpoint_http_methods) + "<BR>\n"
                 if m.__doc__:
                     result += "<H3>Description:</H3>\n" + m.__doc__ + "<BR><BR>\n"
                 else:
@@ -251,37 +272,42 @@ class Microservice:
         return result
     
     
-    @endpoint("/get_api", ["GET", "POST"])
+    @endpoint("/get_api", ["GET", "POST"], "application/json")
     def get_api(self):
         """
         Returns the API of the Microservice as json data.
         """
         result = {}
         for (_, m) in inspect.getmembers(self):
-            # To test if an attribute is part of the api, it must have the attribute url_path bound to a string.
-            # All proxy objects will return that it has url_path bound to a function, which is why it also has to be checked for being a string.
-            if hasattr(m, "url_path") and isinstance(m.url_path, str) and m.url_path != "/":
+            # To test if an attribute is part of the api, it must have the attribute endpoint_url_path bound to a string.
+            # All proxy objects will return that it has endpoint_url_path bound to a function, which is why it also has to be checked for being a string.
+            if hasattr(m, "endpoint_url_path") and isinstance(m.endpoint_url_path, str) and m.endpoint_url_path != "/":
                 record = {}
-                record["methods"] = m.http_methods
+                record["methods"] = m.endpoint_http_methods
                 record["description"] = m.__doc__
                 record["params"] = [p.name for (_, p) in inspect.signature(m).parameters.items()]
-                result[m.url_path[1:]] = record
-        return json.dumps(result)
+                result[m.endpoint_url_path[1:]] = record
+        return result
     
     
-    def create_proxy(self, url, method_preference = ["POST", "GET"], json_result = True, cache = True):
+    def create_proxy(self, url, method_preference = ["POST", "GET"], cache = True, **kwargs):
         """
         Returns a Proxy object representing the given url, and with method preferences as provided.
         If cache is True, the proxy is also stored in a dictionary within the Microservice. This makes it
         possible to later query the Microservice for its proxies, to get a view of the architecture.
         An attempt to create an already existing proxy will just return the existing one.
+        
+        If any kwargs are provided, they are stored and submitted automatically with each proxy call.
         """
         if cache:
             if url not in self.proxies:
-                self.proxies[url] = Proxy(url, method_preference, json_result = json_result)
+                self.proxies[url] = Proxy(url, method_preference, **kwargs)
             return self.proxies[url]
         else:
-            return Proxy(url, method_preference, json_result = json_result)
+            return Proxy(url, method_preference, **kwargs)
+
+
+class MicroserviceException(Exception): pass
 
 
 class Proxy():
@@ -291,14 +317,14 @@ class Proxy():
     instance of the object. It is recommended that Proxy objects are created through the create_proxy method in Microservice.
     """
     
-    def __init__(self, url, method_preference, json_result):
+    def __init__(self, url, method_preference, **kwargs):
         """
         Creates the proxy object. The url argument is the service which it acts as a proxy for. The method preferences is used in case
         a service endpoint accepts several methods, in which case the first applicable in the list is used.
         """
         self.url = url
         self.method_preference = method_preference
-        self.json_result = json_result
+        self.default_kwargs = kwargs
         
         # The api of the service is fetched when the first endpoint call is made, to allow for asynchronous initiations of services.
         self.api = None
@@ -317,18 +343,26 @@ class Proxy():
 
             # Check if the endpoint exists, otherwise raise error
             if name in self.api:
+                # Add default_kwargs. Note that if the kwarg was provided in the call, it should override the default
+                data = dict()
+                data.update(self.default_kwargs)
+                data.update(kwargs)
+                
                 # Determine what http method to use, taking the first of the preferred method that the service supports.
                 http_method = next(m for m in self.method_preference if m in self.api[name]["methods"])
                 
                 # Make the endpoint request
-                result = requests.request(http_method, self.url + "/" + name, data = kwargs)
+                result = requests.request(http_method, self.url + "/" + name, data = data)
                 
                 # If there was an error in the response, raise an exception
-                result.raise_for_status()
+                if result.status_code != 200:
+                    raise MicroserviceException(result.text)
                 
                 # Return result, decoded as json if desired, and otherwise as text      
-                if self.json_result:
-                    return result.json()
+#                response = Response(endpoint_content_conversion[content][0](result), status = 200, content_type = content)
+                # Convert result to a Python object, depending on the content type
+                if "Content-Type" in result.headers:
+                    return endpoint_content_conversion[result.headers["Content-Type"]][1](result.text)
                 else:
                     return result.text
             else:
@@ -498,7 +532,7 @@ class EstimationMethodService(Microservice):
         return []
     
 
-    @endpoint("/dialogue", ["GET", "POST"])
+    @endpoint("/dialogue", ["GET", "POST"], "text/html")
     def dialogue(self):
         """
         Returns a HTML snippet with one text box for each parameter, which can be inserted into a web page.
@@ -507,4 +541,4 @@ class EstimationMethodService(Microservice):
         entries = ""
         for n in self.parameter_names():
             entries = entries + n + ": <INPUT TYPE=\"text\" name=\"" + n + "\"><BR>"
-        return Response(entries)
+        return entries

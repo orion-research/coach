@@ -9,7 +9,6 @@ sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 import json
 
-from flask import Response
 
 from COACH.framework.coach import endpoint, EstimationMethodService
 
@@ -23,16 +22,16 @@ class AverageOfTwo(EstimationMethodService):
         return ["x", "y"]
     
     
-    @endpoint("/info", ["GET", "PUT"])
+    @endpoint("/info", ["GET", "PUT"], "text/plain")
     def info(self):
-        return Response("This is an estimation method which takes two parameters (X, Y), and returns the average of the result.")
+        return "This is an estimation method which takes two parameters (X, Y), and returns the average of the result."
     
     
-    @endpoint("/evaluate", ["GET", "PUT"])
+    @endpoint("/evaluate", ["GET", "PUT"], "application/json")
     def evaluate(self, x, y):
         result = (float(x) + float(y)) / 2.0
         print("** evaluate( x = " + str(x) + ", y = " + str(y) + ") = " + str(result))
-        return Response(json.dumps(result))
+        return json.dumps(result)
 
 
 if __name__ == '__main__':
