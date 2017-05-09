@@ -134,8 +134,28 @@ class AuthenticationService(Microservice):
         print(message_body)
         self.send_email(email, "COACH account validation", message_body.format(self.authentication_service_url, user_id, token))
         return "Ok"
-    
 
+
+    @endpoint("/reset_password", ["POST"], "text/plain")
+    def reset_password(self, email):
+        """
+        Resets the password and sends an email to the user.
+        """ 
+        for (user_id,user_data) in self.users.items():
+             
+            if user_data["email"] == email:    
+                new_password = self.get_random_token(20)
+                self.users[user_id]["password_hash"] = self.password_hash(new_password)
+                self.save_data()
+                
+                message_body = "Your COACH password has been reset to: " + new_password
+                print(message_body)
+                self.send_email(email, "COACH password reset", message_body)
+                return "Ok"
+        
+        return "Email not found"
+        
+        
     @endpoint("/get_users", ["POST"], "application/json")
     def get_users(self):
         """
