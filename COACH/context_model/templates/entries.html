@@ -11,7 +11,7 @@
 </select>
 {% elif e["type"] == "multi" %}
 <span style="color:red">Note: Currently only supports selection of one alternative!</span><br>
-<select name="{{e["id"]}}-multi" multiple="multiple" {% if e["alternatives"]|length > 5 %}size=5{% else %}size={{e["alternatives"]|length}}{% endif %}>
+<select name="{{e["id"]}}-multi" id="{{e["id"]}}-multi" multiple="multiple" {% if e["alternatives"]|length > 5 %}size=5{% else %}size={{e["alternatives"]|length}}{% endif %}>
 {% for a in e["alternatives"] %}
   <option value="{{a}}" {% if a == values[e['id']] %}selected{% endif %}>{{a}}</option>
 {% endfor %}

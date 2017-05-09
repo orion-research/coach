@@ -22,8 +22,6 @@ input[type=submit] {
 
 - Some selections should also have a text field (treat as a separate type "multiother")?
 
-- Protection against "no value" also for radio buttons, similar to selections (if there is no value, the parameter will not be included in the request at all, so the lookup will fail  
-
 - Should be possible to have a "no answer" value also in the radio buttons.
 
 - Now each contaxt entry is saved as a separate case fact. Is it better to save the whole context as a single fact?
@@ -668,8 +666,19 @@ class ContextModelService(coach.Microservice):
         It writes the new context information to the database, and then returns a status message to be shown in the main dialogue window.
         """
         # DEBUGGING
+        print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
         print("XXXX str(request.values)) XXX")
         print(str(request.values))
+        print("XXXX request.form XXX")
+        print(request.form)
+        print("XXXX request.args XXX")
+        print(request.args)
+        print("XXXX request.data XXX")
+        print(request.data)
+        print("XXXX request.headers XXX")
+        print(request.headers)
+        print("XXXX request.method XXX")
+        print(request.method)
         print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
         
         
