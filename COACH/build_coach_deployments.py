@@ -61,7 +61,7 @@ knowledge_inference = KnowledgeInferenceService("KnowledgeInferenceService",
 # Interaction service
 root = InteractionService("InteractionService", "COACH interaction microservice for ORION project", "framework",
                           database, [directory], authentication,
-                          knowledge_repository, context_model)
+                          knowledge_repository, context_model, property_model)
 
 
 all_services = [services_listed_in_directory] + [root, directory, context_model, property_model]
