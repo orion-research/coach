@@ -105,6 +105,17 @@ class InteractionService(coach.Microservice):
     def create_user_dialogue_transition(self):
         return render_template("create_user_dialogue.html")
 
+
+    @endpoint("/reset_password_dialogue", ["GET"], "text/html")
+    def reset_password_dialogue_transition(self):
+        return render_template("reset_password_dialogue.html")
+    
+    
+    @endpoint("/reset_password", ["POST"], "text/html")
+    def reset_password(self, email):
+        self.authentication_service_proxy.reset_password(email = email)
+        return render_template("initial_dialogue.html")
+    
     
     @endpoint("/main_menu", ["GET", "POST"], "text/html")
     def main_menu_endpoint(self):
