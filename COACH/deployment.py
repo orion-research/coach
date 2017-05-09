@@ -132,7 +132,7 @@ application = {application}
     
 class InteractionService(Service):
     
-    def __init__(self, name, description, path, database, directory_services, authentication, knowledge_repository_service, context_model_service):
+    def __init__(self, name, description, path, database, directory_services, authentication, knowledge_repository_service, context_model_service, property_model_service):
         """
         Creates an InteractionService object. In addition to the Service, it has the following parameter:
         - database: the url to the database used for storing cases.
@@ -140,6 +140,7 @@ class InteractionService(Service):
         - authentication: an AuthenticationService.
         - knowledge_repository_service: a KnowledgeRepositoryService used by the root service.
         - context_model_service: a ContextModelService used by the root service.
+        - property_model_service: a PropertyModelService used by the root service.
         """
         super().__init__(name, description, path)
         self.database = database
@@ -147,6 +148,7 @@ class InteractionService(Service):
         self.authentication = authentication
         self.knowledge_repository_service = knowledge_repository_service
         self.context_model_service = context_model_service
+        self.property_model_service = property_model_service
 
 
     def settings(self, configuration):
@@ -162,6 +164,7 @@ class InteractionService(Service):
                 "authentication_service": configuration.service_url(self.authentication),
                 "knowledge_repository": configuration.service_url(self.knowledge_repository_service),
                 "context_service": configuration.service_url(self.context_model_service),
+                "property_service": configuration.service_url(self.property_model_service),
                 "secret_data_file_name": "settings/root_secret_data.json"
                 }
 
@@ -404,6 +407,39 @@ class ContextModelService(Service):
         """
         template = """ContextModelService.ContextModelService().ms"""
         return template.format(file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
+
+
+class PropertyModelService(Service):
+
+    def settings(self, configuration):
+        """
+        Returns the settings for a PropertyModelService object in the given configuration.
+        """
+        return {"description": "Settings for " + self.name,
+                "name": self.description,
+                "port": configuration.service_port(self),
+                "logfile": "PropertyModel.log",
+                }
+
+    
+    def launch_statement(self, configuration):
+        """
+        Returns a Python statement that launches this service in a given configuration.
+        """
+
+        result = """    
+    PropertyModelService.PropertyModelService().run()
+"""
+        return result.format(settings_file_name = configuration.settings_file_name)
+
+    
+    def wsgi_application(self, configuration):
+        """
+        Returns the wsgi application call for this service.
+        """
+        template = """PropertyModelService.PropertyModelService().ms"""
+        return template.format(file_path = "/".join(self.path.split(".")), settings_file_name = configuration.settings_file_name)
+
 
 
 class KnowledgeRepositoryService(Service):

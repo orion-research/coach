@@ -47,7 +47,7 @@ settings file. On a Linux system the command for a local installation is (assumi
 
 On a Windows system, the corresponding command is:
 
-	$ mklink local_settings.json settings.json
+	$ mklink settings.json local_settings.json 
 
 Note that you need full elevated rights to run this command on a Windows system. Run cmd.exe as an Administrator by pressing and holding Ctrl+Shift while opening the program.
 

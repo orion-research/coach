@@ -31,6 +31,10 @@ authentication = AuthenticationService("AuthenticationService", "Authentication 
 context_model = ContextModelService("ContextModelService", "A context model service for COACH",
                                     "context_model")
 
+# Property model services
+property_model = PropertyModelService("PropertyModelService", "A property model service for COACH",
+                                    "property_model")
+
 # Knowledge repository services
 knowledge_repository = KnowledgeRepositoryService("KnowledgeRepositoryService", 
                                                   "Knowledge repository microservice for the ORION project", 
@@ -57,15 +61,16 @@ knowledge_inference = KnowledgeInferenceService("KnowledgeInferenceService",
 # Interaction service
 root = InteractionService("InteractionService", "COACH interaction microservice for ORION project", "framework",
                           database, [directory], authentication,
-                          knowledge_repository, context_model)
+                          knowledge_repository, context_model, property_model)
 
 
-all_services = [services_listed_in_directory] + [root, directory, context_model]
+all_services = [services_listed_in_directory] + [root, directory, context_model, property_model]
 
 # Configurations on which the services will be deployed
 
 services_with_ports = {directory : 5003,
                        context_model : 5006,
+                       property_model : 5011,
                        knowledge_repository : 5005,
                        simple : 5002,
                        pugh : 5007,
