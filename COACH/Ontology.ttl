@@ -474,7 +474,8 @@
 	rdfs:range :RoleType .
 
 :RoleType
-	rdfs:subClassOf :Class .
+	rdfs:subClassOf :Class ;
+	:title "Role type" .
 	
 :assetSupplier 
 	:gradeId "RT1" ;
@@ -505,7 +506,8 @@
 	rdfs:range :RoleFunction .
 
 :RoleFunction
-	rdfs:subClassOf :Class .
+	rdfs:subClassOf :Class ;
+	:title "Role function" .
 	
 :initiator
 	:gradeId "RF1" ;
@@ -548,7 +550,8 @@
 	rdfs:range :RoleLevel .
 
 :RoleLevel
-	rdfs:subClassOf :Class .
+	rdfs:subClassOf :Class ;
+	:title "Role level" .
 	
 :strategic
 	:gradeId "RL1" ;
@@ -579,7 +582,8 @@
 	rdfs:range :RoleTitle .
 
 :RoleTitle
-	rdfs:subClassOf :Class .
+	rdfs:subClassOf :Class ;
+	:title "Role title" .
 	
 :productManager 
 	:gradeId "RP1" ;

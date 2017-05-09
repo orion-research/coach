@@ -3,73 +3,74 @@
 <br>
 
 <script>
-function add_stakeholder() {
-    var user_id = document.getElementById("select_new_stakeholder").value;
-	var xhttp = new XMLHttpRequest();
-	xhttp.onreadystatechange = function() {
-		if (this.readyState == 4 && this.status == 200) {
-			window.location.reload();
-		}
-	};
-	xhttp.open("POST", "/add_stakeholder", true);
-	xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-	xhttp.send("stakeholder=" + user_id);
-}
-
-function change_stakeholder_role(role) {
-    var params = document.getElementById("change_stakeholder_" + role).value;
-	var xhttp = new XMLHttpRequest();
-	xhttp.onreadystatechange = function() {
-	};
-	xhttp.open("POST", "/change_stakeholder_role", true);
-	xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-	xhttp.send(params);
-}
+	function add_stakeholder() {
+	    var user_id = document.getElementById("select_new_stakeholder").value;
+		var xhttp = new XMLHttpRequest();
+		xhttp.onreadystatechange = function() {
+			if (this.readyState == 4 && this.status == 200) {
+				window.location.reload();
+			}
+		};
+		xhttp.open("POST", "/add_stakeholder", true);
+		xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+		xhttp.send("stakeholder=" + user_id);
+	}
+	
+	function change_stakeholder_role(role) {
+	    var params = document.getElementById("change_stakeholder_" + role).value;
+		var xhttp = new XMLHttpRequest();
+		xhttp.onreadystatechange = function() {
+		};
+		xhttp.open("POST", "/change_stakeholder_role", true);
+		xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+		xhttp.send(params);
+	}
 </script>
 
 <table style="width:100%">
 
-<tr>
-<th>Person</th>
-<th>Type</th>
-<th>Function</th>
-<th>Level</th>
-<th>Title</th>
-</tr>
+	<tr>
+		<th>Person</th>
+		{% for category in column_labels %}
+			<th>{{ category[0] | safe }}</th>
+		{% endfor %}
+	</tr>
+	
+	{% for user in row_labels %}
+	<tr>
+		<td> {{ user[0] | safe }} </td>
+		
+		{% for property in column_labels %}
+		<td>
+			<select id="change_stakeholder_{{ property[1] | safe }}" 
+				    onchange="change_stakeholder_role(&quot;{{ property[1] | safe }}&quot;)">
+				{% if not current_cell_values[user[1]][property[1]] %}
+					<option disabled selected value></option>
+				{% endif %}
 
-{% for u in current_users %}
-<tr>
-<td> {{ u[1] | safe }} </td>
-
-{% for property in ["roleType", "roleFunction", "roleLevel", "roleTitle"] %}
-<td>
-<select id="change_stakeholder_{{ property | safe }}" onchange="change_stakeholder_role(&quot;{{ property | safe }}&quot;)">
-{% if not role_properties[u[0]]["{{ property | safe }}"] %}
-<option disabled selected value></option>
-{% endif %}
-{% for value in role_values[property] %}
-<option value="property={{ property | safe }}&stakeholder={{ u[0] | safe }}&value={{ value[0] | safe }}"
-{% if role_properties[u[0]][property] and role_properties[u[0]][property][0] == value[0] %}
-selected 
-{% endif %}
-> {{ value[2] | safe }} </option>
-{% endfor %}
-</select>
-</td>
-{% endfor %}
-
-</tr>
-{% endfor %}
-
-<tr>
-<td>
-<select id="select_new_stakeholder" onchange="add_stakeholder()">
-<option disabled selected value>Add...</option>
-{% for u in new_users %}
-<option value="{{ u[0] | safe }}"> {{ u[1] | safe }} </option>
-{% endfor %}
-</select>
-</td>
-</tr>
-
+				{% for possible_value in possible_column_values[property[1]] %}
+					<option value="property={{ property[1] | safe }}&stakeholder={{ user[1] | safe }}&value={{ possible_value[1] | safe }}"
+					{% if current_cell_values[user[1]][property[1]] and current_cell_values[user[1]][property[1]][0] == possible_value[1] %}
+						selected 
+					{% endif %}
+					> {{ possible_value[0] | safe }} </option>
+				{% endfor %}
+			</select>
+		</td>
+		{% endfor %}
+		
+	</tr>
+	{% endfor %}
+	
+	<tr>
+		<td>
+			<select id="select_new_stakeholder" onchange="add_stakeholder()">
+				<option disabled selected value>Add...</option>
+				{% for u in new_users %}
+					<option value="{{ u[2] | safe }}"> {{ u[1] | safe }} </option>
+				{% endfor %}
+			</select>
+		</td>
+	</tr>
+	
 </table>

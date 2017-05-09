@@ -31,6 +31,8 @@ Having installed Python 3.x (whatever the latest version is), and the pip packag
 	$ pip install requests
 	$ pip install neo4j-driver==1.0.0
 	$ pip install rdflib
+	$ pip install sqlalchemy
+	$ pip install rdflib-sqlalchemy
 
 (In some installations, you have to use pip3 instead of pip in the above commands.)
 
@@ -150,7 +152,8 @@ Having installed Python 3.x (whatever the latest version is), and the pip packag
 	$ sudo pip install requests
 	$ sudo pip install neo4j-driver==1.0.0
 	$ sudo pip install rdflib
-	$ sudo pip install rdflib-jsonld
+	$ sudo pip install sqlalchemy
+	$ sudo pip install rdflib-sqlalchemy
 
 
 ## COACH source code
@@ -165,6 +168,11 @@ Then, use the following git commands:
 	$ sudo git init
 	$ sudo git pull https://github.com/orion-research/coach.git
 
+
+The system needs to be able to create a file for the database, which requires changing file permissions for the corresponding directory:
+
+	$ sudo chmod 777 /var/www/COACH/COACH/framework/settings
+	
 
 ## Configuration settings
 Depending on where and how COACH is installed, the settings in the file COACH/development_settings.json need to be updated.

@@ -71,6 +71,7 @@ class InteractionService(coach.Microservice):
         # This is because it cannot be assumed that the case database is up and running at this point.
         # Instead, the ontology is loaded upon the first call to the method self.get_ontolog(), which should be used for accessing it.
         self.ontology = None
+        self.orion_ns = "http://www.orion-research.se/ontology#"
 
                             
     def get_version(self):
@@ -191,9 +192,7 @@ class InteractionService(coach.Microservice):
     def open_case_dialogue_transition(self):
         # Create links to the user's cases
         user_cases = self.case_db_proxy.user_cases()
-        links = ["<A HREF=\"/open_case?case_id=%s\">%s</A>" % tuple(pair) for pair in user_cases]
-
-        dialogue = render_template("open_case_dialogue.html", user_cases = links)
+        dialogue = render_template("open_case_dialogue.html", user_cases = user_cases)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
@@ -210,72 +209,123 @@ class InteractionService(coach.Microservice):
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
-    def get_ontology_instances(self, class_name, property_name, resource = None):
+    def get_ontology_instances(self, class_name):
         """
         Returns a list containing all the instances of the given class in the ontology.
-        The result is a list of tuples, where the tuple elements are the instances' uri, gradeID, title, and description,
-        and a boolean indicating if there is an object property from resource by the property name in the case database.
+        The result is a list of tuples, where the tuple elements are the instances' uri, gradeID, title, and description.
         The list is sorted according to gradeId.
         """
-        orion_ns = rdflib.Namespace("http://www.orion-research.se/ontology#")
-        result = []
-        for s, _, _ in self.get_ontology().triples( (None,  rdflib.RDF.type, orion_ns[class_name]) ):
-            tup = (str(s),  # The URI
-                   self.get_ontology().value(s, orion_ns.gradeId, None), 
-                   self.get_ontology().value(s, orion_ns.title, None),
-                   self.get_ontology().value(s, orion_ns.description, None))
-            if resource:
-                tup += (str(s) in self.case_db_proxy.get_object_properties(resource = resource, property_name = property_name), )
-            result += [tup]
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        q = """\
+        SELECT ?inst ?grade_id ?title ?description
+        WHERE {
+            ?inst a ?class_name .
+            ?inst orion:gradeId ?grade_id .
+            ?inst orion:title ?title .
+            ?inst orion:description ?description .
+        }
+        ORDER BY ?grade_id
+        """
+        result = self.get_ontology().query(q, initNs = { "orion": orion_ns }, initBindings = { "?class_name": class_name })
+        return list(result)
 
-        # Sort the items according to gradeId
-        result.sort(key = lambda p: p[1])
-        return result
-    
     
     @endpoint("/add_stakeholder_dialogue", ["GET"], "text/html")
     def add_stakeholder_dialogue_transition(self):
 
-        # Get the users who are currently stakeholders in the case
-        case_users = self.case_db_proxy.case_users(case_id = session["case_id"])
-
-        # Get all users who exist both in the authentication list and in the case DB but are not stakeholders already
-        user_ids = [u for u in self.case_db_proxy.user_ids() 
-                    if self.authentication_service_proxy.user_exists(user_id = u)]
-        current_users = [(u, self.authentication_service_proxy.get_user_name(user_id = u)) for u in user_ids if u in case_users]
-        new_users = [(u, self.authentication_service_proxy.get_user_name(user_id = u)) for u in user_ids if u not in case_users]
+        case_id = session["case_id"]
 
         # Define the relevant ontology namespaces
-        orion_ns = rdflib.Namespace("http://www.orion-research.se/ontology#")
+        orion_ns = rdflib.Namespace(self.orion_ns)
         data_ns = rdflib.Namespace(self.case_db_proxy.get_data_namespace())
-        case_uri = data_ns[str(session["case_id"])]
+        user_ns = rdflib.Namespace(self.authentication_service_proxy.get_user_namespace())
+        
+        # Get the uris of the users who are currently stakeholders in the case
+        case_users = self.case_db_proxy.case_users(case_id = case_id)
+        
+        # Get all user ids of the users who exist both in the authentication list
+        user_ids = [u for u in self.case_db_proxy.user_ids()]
+
+        # Separate all existing users into those that are in the case, and those that are not. 
+        # Create a list of each, consisting of (user_id, user name, uri).
+        current_users = [(u, self.authentication_service_proxy.get_user_name(user_id = u),
+                          user_ns[u].replace("#", "%23")) 
+                         for u in user_ids if str(user_ns[u]) in case_users]
+        new_users = [(u, self.authentication_service_proxy.get_user_name(user_id = u), 
+                     user_ns[u].replace("#", "%23")) 
+                     for u in user_ids if str(user_ns[u]) not in case_users]
         
         # From the ontology, get all the options for orion:RoleType, orion:RoleFunction, orion:RoleLevel and orion:RoleTitle.
         # The lists include tuples with uri, gradeId, title, description.
+
+        # Get the different categories of roles from the ontology, excluding orion:person..
+        q = """\
+        SELECT ?role_property ?role_class ?role_title
+        WHERE {
+            ?role_property a owl:ObjectProperty .
+            ?role_property rdfs:domain orion:Role .
+            ?role_property rdfs:range ?role_class .
+            ?role_class  orion:title ?role_title .
+            FILTER (?role_property != orion:person)
+        }
+        """
+        role_categories = self.get_ontology().query(q, initNs = { "orion": orion_ns, "owl": rdflib.OWL })
+
         role_values = dict()
-        role_values["roleType"] = self.get_ontology_instances("RoleType", "roleType")
-        role_values["roleFunction"] = self.get_ontology_instances("RoleFunction", "roleFunction")
-        role_values["roleLevel"] = self.get_ontology_instances("RoleLevel", "roleLevel")
-        role_values["roleTitle"] = self.get_ontology_instances("RoleTitle", "roleTitle")
+        for (role_property, role_class, _) in role_categories:
+            role_values[str(role_property)] = self.get_ontology_instances(role_class)
+        print("role_values = " + str(role_values))
         
         # Create the entries in the matrix, based on the selected value for each property and person
         # Get all the role nodes linked to the case node with case_id.
-        roles = self.case_db_proxy.get_object_properties(resource = case_uri, property_name = "role")
+        roles = self.case_db_proxy.get_object_properties(case_id = case_id, resource = case_id, property_name = orion_ns.role)
         # For each role node, go through all the properties
         role_properties = dict()
         for role in roles:
             # Find the person of the role and get the user_id
-            person = self.case_db_proxy.get_object_properties(resource = role, property_name = "person")[0]
-            person_user_id = self.case_db_proxy.get_datatype_property(resource = person, property_name = "user_id")
+            role_person = self.case_db_proxy.get_object_properties(case_id = case_id, resource = role, property_name = orion_ns.person)[0]
+            person_user_id = role_person.replace("#", "%23")
             # Create a matrix where for each person and property name, the selected property value (if any) is stored
             role_properties[person_user_id] = dict()
             for property_name in role_values.keys():
                 # The matrix value is a list of uri:s, where an empty list means that no value was found
-                role_properties[person_user_id][property_name] = self.case_db_proxy.get_object_properties(resource = role, property_name = property_name)
+                ps = self.case_db_proxy.get_object_properties(case_id = case_id, resource = role, property_name = property_name)
+                role_properties[person_user_id][property_name.replace("#", "%23")] = [p.replace("#", "%23") for p in ps] 
+        
+        print("role_properties = " + str(role_properties))
+
+        ##### New principles for dialogue rendering
+
+        def fix_uri(uri): return str(uri).replace("#", "%23")
+
+        # Row labels consist of the role category title and uri
+        row_labels = [(u[1], fix_uri(u[2])) for u in current_users]
+        
+        # Column labels consist of user name and uri
+        column_labels = [(rc[2], fix_uri(rc[0])) for rc in role_categories]
+        
+        # Possible column values consists of a mapping from column label uri to a list of option title and uri
+        possible_column_values = dict()
+        for (role_property, role_class, _) in role_categories:
+            values = [(str(rv[2]), fix_uri(rv[0])) for rv in self.get_ontology_instances(role_class)]
+            possible_column_values[fix_uri(role_property)] = values
+        print("possible_column_values = " + str(possible_column_values))
+            
+        # Current cell values consists of a mapping from a row uri to a column uri to a list of value title and uri
+        current_cell_values = dict()
+        for row in row_labels:
+            current_cell_values[fix_uri(row[1])] = dict()
+            for col in column_labels:
+                value = role_properties[fix_uri(row[1])][fix_uri(col[1])]
+                current_cell_values[fix_uri(row[1])][fix_uri(col[1])] = value
+        print("current_cell_values = " + str(current_cell_values))
+
          
         # Render the dialogue
         dialogue = render_template("add_stakeholder_dialogue.html", current_users = current_users, new_users = new_users,
-                                   role_values = role_values, role_properties = role_properties)
+                                   role_values = role_values, role_properties = role_properties,
+                                   row_labels = row_labels, column_labels = column_labels, 
+                                   possible_column_values = possible_column_values, current_cell_values = current_cell_values)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
@@ -294,23 +344,21 @@ class InteractionService(coach.Microservice):
         Changes a role property of a stakeholder.
         """
         # Define the relevant ontology namespaces
-        orion_ns = rdflib.Namespace("http://www.orion-research.se/ontology#")
-        data_ns = rdflib.Namespace(self.case_db_proxy.get_data_namespace())
-        case_uri = data_ns[str(session["case_id"])]
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        case_id = session["case_id"]
 
         # Find the appropriate role node for the case_id and stakeholder.
         # Get all the role nodes linked to the case node with case_id.
-        roles = self.case_db_proxy.get_object_properties(resource = case_uri, property_name = "role")
+        roles = self.case_db_proxy.get_object_properties(case_id = case_id, resource = case_id, property_name = orion_ns.role)
         # Now filter the list of roles for nodes which are linked to a person with the right id
         for r in roles:
-            person = self.case_db_proxy.get_object_properties(resource = r, property_name = "person")[0]
-            user_id = self.case_db_proxy.get_datatype_property(resource = person, property_name = "user_id")
-            if user_id == stakeholder:
+            role_person = self.case_db_proxy.get_object_properties(case_id = case_id, resource = r, property_name = orion_ns.person)[0]
+            if role_person == stakeholder:
                 # Right role found, so remove previous property values and add the new one
-                previous_values = self.case_db_proxy.get_object_properties(resource = r, property_name = property)
+                previous_values = self.case_db_proxy.get_object_properties(case_id = case_id, resource = r, property_name = property)
                 for p in previous_values:
-                    self.case_db_proxy.remove_object_property(resource1 = r, property_name = property, resource2 = p)
-                self.case_db_proxy.add_object_property(resource1 = r, property_name = property, resource2 = value)
+                    self.case_db_proxy.remove_object_property(case_id = case_id, resource1 = r, property_name = property, resource2 = p)
+                self.case_db_proxy.add_object_property(case_id = case_id, resource1 = r, property_name = property, resource2 = value)
                 return "Ok"
         return "Ok"
     
@@ -448,10 +496,15 @@ class InteractionService(coach.Microservice):
         """
         Exports the current case to the knowledge repository.
         """
-        description = self.case_db_proxy.export_case_data(case_id = session["case_id"], format = "json")
+        description = self.case_db_proxy.export_case_data(case_id = session["case_id"], format = "ttl")
         requests.post(self.get_setting("knowledge_repository") + "/add_case", data = {"description": json.dumps(description)})
         print(description)
-        return self.main_menu_transition(main_dialogue = "Exported case to knowledge repository!")
+        description = description.replace("&", "&amp;")
+        description = description.replace("<", "&lt;")
+        description = description.replace(">", "&gt;")
+        message = "Exported case to knowledge repository, with the following data:\n\n"
+        message += "<DIV style=\"white-space: pre-wrap;\"><CODE>" + description + "</CODE></DIV>"
+        return self.main_menu_transition(main_dialogue = message)
         
 
     @endpoint("/get_service_directories", ["GET"], "text/html")
@@ -467,40 +520,51 @@ class InteractionService(coach.Microservice):
         """
         Shows the base OWL ontology used by the core services in the service specified by the format parameter.
         """
-        result = "<DIV style=\"\white-space: pre-wrap;\">" + self.case_db_proxy.get_ontology(format = format) + "</DIV>"
-        return self.main_menu_transition(main_dialogue = result)
+        description = self.case_db_proxy.get_ontology(format = format)
+        description = description.replace("&", "&amp;")
+        description = description.replace("<", "&lt;")
+        description = description.replace(">", "&gt;")
+        message = "Exported case to knowledge repository, with the following data:\n\n"
+        message += "<DIV style=\"white-space: pre-wrap;\"><CODE>" + description + "</CODE></DIV>"
+        return self.main_menu_transition(main_dialogue = message)
     
     
     @endpoint("/goal_dialogue_transition", ["GET", "POST"], "text/html")
     def goal_dialogue_transition(self, class_name, property_name):
         """
         Transition to the dialogue for the goal category customer value.
+        Class name is a subcategory of Goal, and property name the property linking to that subcategory.
         """
-        
-        orion_ns = rdflib.Namespace("http://www.orion-research.se/ontology#")
-        data_ns = rdflib.Namespace(self.case_db_proxy.get_data_namespace())
-        case_uri = data_ns[str(session["case_id"])]
+        case_id = session["case_id"]
+        orion_ns = rdflib.Namespace(self.orion_ns)
         
         # Does the case already have a Goal element? If not, create it, and bind its url to goal_url.
-        goals = self.case_db_proxy.get_object_properties(resource = case_uri, property_name = "goal")
+        goals = self.case_db_proxy.get_objects(case_id = case_id, subject = case_id, predicate = orion_ns.goal)
         if goals:
             goal_uri = goals[0]
         else:
-            goal_uri = self.case_db_proxy.add_resource(resource_class = "Goal")
-            self.case_db_proxy.add_object_property(resource1 = case_uri, property_name = "goal", resource2 = goal_uri)
+            goal_uri = self.case_db_proxy.add_resource(case_id = case_id, resource_class = orion_ns.Goal)
+            self.case_db_proxy.add_object_property(case_id = case_id, resource1 = case_id, property_name = orion_ns.goal, resource2 = goal_uri)
         
-        # Get all predefined resources of type CustomerValue from the ORION ontology, as a list of uri, gradeId, title, description
-        # and a boolean indicating if it is currently selected or not.
-        instances = self.get_ontology_instances(class_name, property_name, goal_uri)
+        class_title = self.get_ontology().value(orion_ns[class_name], orion_ns.title, None)
+
+        # Which goal subcategories are selected?
+        checked = self.case_db_proxy.get_objects(case_id = case_id, subject = goal_uri, predicate = orion_ns[property_name])
+
+        # Instances contains all uri:s in the ontology that are linked from a subject of class class_name with the predicate property_name.
+        # The gradeId, title and description are also provided. The last field indicates if the item has been selected.
+        instances = [(uri.replace("#", "%23"), gradeId, title, description, str(uri) in checked) 
+                     for (uri, gradeId, title, description) in 
+                     self.get_ontology_instances(orion_ns[class_name])]
         
-        result = "".join(["<INPUT type=\"checkbox\" onclick='window.location.assign(\"/toggle_goal_value?goal_uri=" + 
-                          goal_uri.replace("#", "%23") + "&value_uri=" + uri.replace("#", "%23") + 
-                          "&class_name=" + class_name + "&property_name=" + property_name + "\")' " + 
-                          ("checked" if checked else "") + "/>" + str(title) + "<BR>" + str(description) + "</BR>" 
-                          for (uri, _, title, description, checked) in instances])
-        result = "<FORM><FIELDSET><LEGEND><H2>Goal: " + self.get_ontology().value(orion_ns[class_name], orion_ns.title, None) + "</H2></LEGEND>" + result + "</FIELDSET></FORM>"
-        
-        return self.main_menu_transition(main_dialogue = str(result))
+        # Render the dialogue and display it
+        result = render_template("goal_dialogue.html", 
+                                 class_title = class_title,
+                                 instances = instances,
+                                 goal_uri = goal_uri.replace("#", "%23"),
+                                 class_name = class_name,
+                                 property_name = property_name)
+        return self.main_menu_transition(main_dialogue = result)
     
     
     @endpoint("/toggle_goal_value", ["GET", "POST"], "text/html")
@@ -509,7 +573,9 @@ class InteractionService(coach.Microservice):
         This method is called when the user ticks a checkbox in one of the goal dialogues.
         It updates the database, and then displays the goal dialogue again.
         """
-        self.case_db_proxy.toggle_object_property(resource1 = goal_uri, property_name = property_name, resource2 = value_uri)
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        self.case_db_proxy.toggle_object_property(case_id = session["case_id"], resource1 = goal_uri, 
+                                                  property_name = orion_ns[property_name], resource2 = value_uri)
         return self.goal_dialogue_transition(class_name = class_name, property_name = property_name)
     
     
