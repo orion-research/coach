@@ -474,10 +474,16 @@ class InteractionService(coach.Microservice):
             pass
         return render_template("initial_dialogue.html")
 
+    
+    @endpoint("/change_password_dialogue", ["GET"], "text/html")
+    def change_password_dialogue_transition(self):
+        return render_template("change_password_dialogue.html")
+        
 
     @endpoint("/change_password", ["GET"], "text/html")
     def change_password(self):
-        return self.main_menu_transition(main_dialogue = "Not yet implemented!")
+        self.authentication_service_proxy.change_password(user_id)
+        return render_template(main_dialogue = "Password changed!")
 
 
     @endpoint("/user_profile_dialogue", ["GET"], "text/html")
@@ -495,6 +501,7 @@ class InteractionService(coach.Microservice):
         self.authentication_service_proxy.set_user_profile(user_id = session["user_id"], user_name = user_name, company_name = company_name, email = email)
         return self.main_menu_transition(main_dialogue = "User profile details changed!")
 
+        
     @endpoint("/change_case_description", ["POST"], "text/html")
     def change_case_description(self, title, description):
         self.case_db_proxy.change_case_description(case_id = session["case_id"], title = title, description = description)
