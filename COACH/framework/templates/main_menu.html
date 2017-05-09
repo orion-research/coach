@@ -94,11 +94,11 @@
     <div class="dropdown-content">
       {% if session["case_id"] is defined %}
       <a href="/context_model_request?endpoint=edit_context_dialogue">General</a>
-      <a href="#" style="color: lightgray">Organization</a>
-      <a href="#" style="color: lightgray">Product</a>
-      <a href="#" style="color: lightgray">Stakeholder</a>
-      <a href="#" style="color: lightgray">Development method and technology</a>
-      <a href="#" style="color: lightgray">Market and business</a>
+      <a href="/context_model_request?endpoint=context_organization_dialogue">Organization</a>
+      <a href="/context_model_request?endpoint=context_product_dialogue">Product</a>
+      <a href="/context_model_request?endpoint=context_stakeholder_dialogue">Stakeholder</a>
+      <a href="/context_model_request?endpoint=context_methods_dialogue">Development methods and technology</a>
+      <a href="/context_model_request?endpoint=context_business_dialogue">Market and business</a>
 	  {% endif %}
     </div>
 	</li>
