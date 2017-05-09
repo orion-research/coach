@@ -2,6 +2,6 @@
 
 <UL>
 {% for c in user_cases %}
-<LI> {{ c | safe }} </LI>
+<LI> <A HREF= {{ url_for("open_case", case_id = c[0]) }}> {{ c[1] | safe }}</A></LI>
 {% endfor %}
 </UL>

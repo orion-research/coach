@@ -236,8 +236,10 @@ class Microservice:
                     print(highlight_text(self.trace_indent * "    " + "result from " + m.__name__ + ": " + (str(result).split("\n", 1)[0])))
                 response = Response(endpoint_content_conversion[content][0](result), status = 200, content_type = content)
             except Exception as _:
-                message = "An error occured while processing the endpoint " + m.__name__ + " in the service " + self.__class__.__name__
-                message += " running at " + self.host + ":" + str(self.port) + ":\n\n" + traceback.format_exc() + "\n\n"
+                message = "An error occured while processing the endpoint " + m.__name__ + ":\n"
+                message += "Service: " + self.__class__.__name__ + " running at " + self.host + ":" + str(self.port) + "\n"
+                message += "Arguments: " + str([(p.name, request.values[p.name]) for (_, p) in inspect.signature(m).parameters.items()]) + "\n"
+                message += traceback.format_exc() + "\n\n"
                 response = Response(message, status = 500, content_type = "text/plain")
             return response
         
@@ -356,7 +358,10 @@ class Proxy():
                 
                 # If there was an error in the response, raise an exception
                 if result.status_code != 200:
-                    raise MicroserviceException(result.text)
+                    message = "An error occured while processing the endpoint " + name + ":\n"
+                    message += "Service: " + self.url + "\n"
+                    message += "Arguments: " + str(data) + "\n\n"
+                    raise MicroserviceException(message + result.text)
                 
                 # Return result, decoded as json if desired, and otherwise as text      
 #                response = Response(endpoint_content_conversion[content][0](result), status = 200, content_type = content)
