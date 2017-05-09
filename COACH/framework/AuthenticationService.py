@@ -201,7 +201,16 @@ class AuthenticationService(Microservice):
             return user_token
         else:
             return None 
-    
+
+    @endpoint("/set_user_profile", ["GET", "POST"], "application/json")
+    def set_user_profile(self, user_id, user_name, company_name, email):
+        """
+        Saves the profile of a user.
+        """
+        self.users[user_id]["name"] = user_name
+        self.users[user_id]["company_name"] = company_name
+        self.users[user_id]["email"] = email
+        self.save_data()
     
     @endpoint("/get_user_email", ["GET", "POST"], "application/json")
     def get_user_email(self, user_id):
@@ -217,6 +226,13 @@ class AuthenticationService(Microservice):
         Returns the name of a user.
         """
         return self.users[user_id]["name"]
+
+    @endpoint("/get_company_name", ["GET", "POST"], "application/json")
+    def get_company_name(self, user_id):
+        """
+        Returns the company name of a user.
+        """
+        return self.users[user_id]["company_name"] if "company_name" in self.users[user_id] else ""
 
 
     @endpoint("/get_user_uri", ["GET", "POST"], "application/json")
@@ -246,7 +262,7 @@ class AuthenticationService(Microservice):
         Returns the namespace for user uri:s.
         """
         return self.authentication_service_url + "/user#"
-    
+
     
     @endpoint("/get_delegate_token", ["POST"], "application/json")
     def get_delegate_token(self, user_id, case_id, user_token):

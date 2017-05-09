@@ -469,6 +469,21 @@ class InteractionService(coach.Microservice):
         return self.main_menu_transition(main_dialogue = "Not yet implemented!")
 
 
+    @endpoint("/user_profile_dialogue", ["GET"], "text/html")
+    def user_profile_dialogue_transition(self):
+        # Create links to the user's profile
+        user_profile = {'user_name': self.authentication_service_proxy.get_user_name(user_id = session["user_id"]), 
+                        'email': self.authentication_service_proxy.get_user_email(user_id = session["user_id"]),
+                        'company_name': self.authentication_service_proxy.get_company_name(user_id = session["user_id"])}
+        dialogue = render_template("user_profile_dialogue.html", user_profile = user_profile)
+        return self.main_menu_transition(main_dialogue = dialogue)
+
+
+    @endpoint("/edit_user_profile", ["POST"], "text/html")
+    def edit_user_profile(self, user_name, company_name, email):
+        self.authentication_service_proxy.set_user_profile(user_id = session["user_id"], user_name = user_name, company_name = company_name, email = email)
+        return self.main_menu_transition(main_dialogue = "User profile details changed!")
+
     @endpoint("/change_case_description", ["POST"], "text/html")
     def change_case_description(self, title, description):
         self.case_db_proxy.change_case_description(case_id = session["case_id"], title = title, description = description)
