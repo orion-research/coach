@@ -1,6 +1,6 @@
 <H2>Select a decision process</H2>
 
-<FORM action="/change_decision_process" method="post">
+<FORM action="/change_decision_process" method="post" accept-charset="UTF-8">
 <SELECT name="url">
 {% for p in decision_processes %}
 {{ p | safe }}

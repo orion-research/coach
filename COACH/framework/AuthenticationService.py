@@ -127,7 +127,7 @@ class AuthenticationService(Microservice):
         """ 
         token = self.get_random_token(20)
         self.users[user_id] = {"password_hash": self.password_hash(password), "email": email, "name": name, 
-                              "confirmation_token": token}
+                              "confirmation_token": token, "uri": self.authentication_service_url + "/user#" + user_id }
         self.save_data()
         
         message_body = "To validate your COACH user identity, please follow this link:\n\n{0}/confirm_account?user_id={1}&token={2}"
@@ -139,10 +139,10 @@ class AuthenticationService(Microservice):
     @endpoint("/get_users", ["POST"], "application/json")
     def get_users(self):
         """
-        Returns the list of all registered users, as a list of tuples (user_id, email, name).
-        The purpose is to be able to restore persons in the case database if it has been cleared.
+        Returns the list of all registered users, as a list of tuples (user_id, uri, email, name).
         """
-        return [(user_id, self.users[user_id]["email"], self.users[user_id]["name"]) for user_id in self.users.keys()]
+        return [(user_id, self.get_user_uri(user_id), self.users[user_id]["email"], self.users[user_id]["name"]) 
+                for user_id in self.users.keys()]
 
 
     @endpoint("/logout_user", ["POST"], "application/json")
@@ -219,6 +219,35 @@ class AuthenticationService(Microservice):
         return self.users[user_id]["name"]
 
 
+    @endpoint("/get_user_uri", ["GET", "POST"], "application/json")
+    def get_user_uri(self, user_id):
+        """
+        Returns the uri of a user.
+        """
+        return self.authentication_service_url + "/user#" + user_id
+    
+
+#    @endpoint("/get_user_uri", ["GET", "POST"], "application/json")
+#    def get_user_uri(self, user_id):
+#        """
+#        Returns the uri of a user.
+#        """
+#        if user_id not in self.users.keys():
+#            return None
+#        elif "uri" not in self.users[user_id].keys():
+#            self.users[user_id]["uri"] = self.authentication_service_url + "/user#" + user_id
+#            self.save_data()
+#        return self.users[user_id]["uri"]
+
+
+    @endpoint("/get_user_namespace", ["GET", "POST"], "application/json")
+    def get_user_namespace(self):
+        """
+        Returns the namespace for user uri:s.
+        """
+        return self.authentication_service_url + "/user#"
+    
+    
     @endpoint("/get_delegate_token", ["POST"], "application/json")
     def get_delegate_token(self, user_id, case_id, user_token):
         """

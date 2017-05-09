@@ -1,6 +1,6 @@
 <H2>Select an estimation method</H2>
 
-<FORM action="/decision_process_request?endpoint=select_estimation_method" method="post">
+<FORM action="/decision_process_request?endpoint=select_estimation_method" method="post" accept-charset="UTF-8">
 <SELECT name="method">
 {% for e in estimation_methods %}
 {{ e | safe }}
