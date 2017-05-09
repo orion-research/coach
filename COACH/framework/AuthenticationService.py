@@ -161,8 +161,9 @@ class AuthenticationService(Microservice):
         """
         Changes the password.
         """       
+        print("¤¤¤¤¤¤¤ change_password called")
         if self.confirm_user_token(user_id, user_token):
-            print("Let's make a password for you!")                           
+            print("¤¤¤¤¤¤¤ Let's make a password for you!")                           
             return "Ok"
         else:
             return None

@@ -501,10 +501,11 @@ class InteractionService(coach.Microservice):
         return render_template("change_password_dialogue.html")
         
 
-    @endpoint("/change_password", ["GET"], "text/html")
+    @endpoint("/change_password", ["POST"], "text/html")
     def change_password(self):
-        self.authentication_service_proxy.change_password(user_id)
-        return render_template(main_dialogue = "Password changed!")
+        print("¤¤¤¤¤¤¤ InteractionService:change_password()")
+        self.authentication_service_proxy.change_password(user_id = session["user_id"], user_token = session["user_token"])
+        return self.main_menu_transition(main_dialogue = "Password changed!")
 
 
     @endpoint("/user_profile_dialogue", ["GET"], "text/html")
