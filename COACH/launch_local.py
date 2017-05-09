@@ -10,6 +10,7 @@ from COACH.framework.casedb import CaseDatabase
 from COACH.decision_process.SimpleDecisionProcessService import SimpleDecisionProcessService
 from COACH.estimation_method.AverageOfTwo import AverageOfTwo
 from COACH.context_model import ContextModelService
+from COACH.property_model import PropertyModelService
 from COACH.framework.InteractionService import InteractionService
 from COACH.framework.DirectoryService import DirectoryService
 from COACH.framework.AuthenticationService import AuthenticationService
@@ -28,6 +29,8 @@ if __name__ == '__main__':
     AverageOfTwo.AverageOfTwo().run()
     
     ContextModelService.ContextModelService().run()
+
+    PropertyModelService.PropertyModelService().run()
 
     InteractionService().run()
     

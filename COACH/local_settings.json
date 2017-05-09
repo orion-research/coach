@@ -22,6 +22,12 @@
         "description": "Settings for ContextModelService",
         "name": "A context model service for COACH"
     },
+    "PropertyModelService": {
+        "port": 5011,
+        "logfile": "PropertyModel.log",
+        "description": "Settings for PropertyModelService",
+        "name": "A property model service for COACH"
+    },
     "CaseDatabase": {
         "port": 5008,
         "label": "CaseDB",
