@@ -157,13 +157,14 @@ class AuthenticationService(Microservice):
         
         
     @endpoint("/change_password", ["POST"], "text/plain")
-    def change_password(self, user_id, user_token):
+    def change_password(self, user_id, user_token, password):
         """
         Changes the password.
         """       
-        print("¤¤¤¤¤¤¤ change_password called")
         if self.confirm_user_token(user_id, user_token):
-            print("¤¤¤¤¤¤¤ Let's make a password for you!")                           
+            self.password_hash(password)
+            self.users[user_id] = {"password_hash": self.password_hash(password)}
+            self.save_data()                     
             return "Ok"
         else:
             return None

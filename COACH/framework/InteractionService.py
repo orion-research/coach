@@ -502,11 +502,13 @@ class InteractionService(coach.Microservice):
         
 
     @endpoint("/change_password", ["POST"], "text/html")
-    def change_password(self):
-        print("¤¤¤¤¤¤¤ InteractionService:change_password()")
-        self.authentication_service_proxy.change_password(user_id = session["user_id"], user_token = session["user_token"])
-        return self.main_menu_transition(main_dialogue = "Password changed!")
-
+    def change_password(self, password1, password2):
+        if password1 == password2:
+            self.authentication_service_proxy.change_password(user_id = session["user_id"], user_token = session["user_token"], password = password1)
+            return self.main_menu_transition(main_dialogue = "Password changed!")
+        else:
+            return render_template("change_password_dialogue.html", error = "PasswordsNotEqual")
+        
 
     @endpoint("/user_profile_dialogue", ["GET"], "text/html")
     def user_profile_dialogue_transition(self):
