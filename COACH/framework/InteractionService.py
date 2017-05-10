@@ -527,8 +527,9 @@ class InteractionService(coach.Microservice):
     
     @endpoint("/change_password_dialogue", ["GET"], "text/html")
     def change_password_dialogue_transition(self):
-        return render_template("change_password_dialogue.html")
-        
+        dialogue = render_template("change_password_dialogue.html")
+        return self.main_menu_transition(main_dialogue = dialogue)
+
 
     @endpoint("/change_password", ["POST"], "text/html")
     def change_password(self, password1, password2):
@@ -614,7 +615,60 @@ class InteractionService(coach.Microservice):
         message += "<DIV style=\"white-space: pre-wrap;\"><CODE>" + description + "</CODE></DIV>"
         return self.main_menu_transition(main_dialogue = message)
     
-    
+
+    @endpoint("/edit_goal_description_dialogue", ["GET", "POST"], "text/html")
+    def edit_goal_description_dialogue(self):
+        """
+        Transition to the dialogue for providing a textual description for a goal. 
+        """
+        case_id = session["case_id"]
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        description = ""
+
+        # If a goal exists, fetch its description
+        goals = self.case_db_proxy.get_objects(user_id=session["user_id"], user_token=session["user_token"],
+                                               case_id=case_id, subject=case_id, predicate=orion_ns.goal)
+        if goals:
+            goal_uri = goals[0]
+            descriptions = self.case_db_proxy.get_objects(user_id=session["user_id"], user_token=session["user_token"],
+                                                          case_id=case_id,
+                                                          subject=goal_uri, predicate=orion_ns.description)
+            if descriptions:
+                description = descriptions[0]
+
+        dialogue = render_template("edit_goal_description_dialogue.html", description = description)
+        return self.main_menu_transition(main_dialogue = dialogue)
+
+
+    @endpoint("/change_goal_description", ["POST"], "text/html")
+    def change_goal_description(self, description):
+        """
+        Update the goal description with a new text.
+        """
+        case_id = session["case_id"]
+        orion_ns = rdflib.Namespace(self.orion_ns)
+
+        # Does the case already have a Goal element? If not, create it, and bind its url to goal_url.
+        goals = self.case_db_proxy.get_objects(user_id=session["user_id"], user_token=session["user_token"],
+                                               case_id=case_id, subject=case_id, predicate=orion_ns.goal)
+        if goals:
+            goal_uri = goals[0]
+        else:
+            goal_uri = self.case_db_proxy.add_resource(user_id=session["user_id"], user_token=session["user_token"],
+                                                       case_id=case_id, resource_class=orion_ns.Goal)
+            self.case_db_proxy.add_object_property(user_id=session["user_id"], user_token=session["user_token"],
+                                                   case_id=case_id, resource1=case_id, property_name=orion_ns.goal,
+                                                   resource2=goal_uri)
+
+        # Add the description
+        self.case_db_proxy.add_datatype_property(user_id = session["user_id"], user_token = session["user_token"],
+                                                 case_id = case_id,
+                                                 resource = goal_uri,
+                                                 property_name = orion_ns.description,
+                                                 value = rdflib.Literal(description))
+        return self.main_menu_transition(main_dialogue = "Goal description changed!")
+
+
     @endpoint("/goal_dialogue_transition", ["GET", "POST"], "text/html")
     def goal_dialogue_transition(self, class_name, property_name):
         """
