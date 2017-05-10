@@ -25,9 +25,10 @@ class TestCreateUser(unittest.TestCase):
         self.assertNotEqual(self.int_service_proxy.get_version(), "No version information available", "Invalid version number")
 
         
-    def test_create_user(self):
-        a = 3
-   
+    def test_create_user_wrong_repeated_password(self):
+        http_response = self.int_service_proxy.create_user(user_id = "Test", password1 = "pw1", password2 = "pw2", name = "Full Name", email = "markus.borg@ri.se")
+        self.assertIn("Error: Password and repeated password not equal!", http_response, "COACH did not notice wrong repeated password")
+
         
     def tearDown(self):
         print("Tear down")
