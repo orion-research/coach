@@ -739,8 +739,78 @@ class CaseDatabase(coach.GraphDatabaseService):
 
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             if not self.neo4j:
+
+                # Namespace objects cannot be stored as object attributes, since they collide with the microservice mechanisms
+                #orion_ns = rdflib.Namespace(self.orion_ns)
+                #data_ns = rdflib.Namespace(self.data_ns)
+
                 case_id = rdflib.URIRef(case_id)
                 case_graph = self.graph.get_context(case_id)
+                #case_graph.bind("data", data_ns)
+                #case_graph.bind("orion", orion_ns)
+                
+                
+                for s, p, o in case_graph.triples( (None, None, None) ):
+                    print('Subject: %s predicate: %s object: %s'%(s, p, o)) 
+                # Storage into the knowledge repository
+    
+                    qs = """MERGE (dcs: CASE_DATA_NODE { name : { case_subject } } ) RETURN dcs"""
+                    params = { "case_subject" :  str(s) }
+                    subject_node = self.query(qs, params)
+                 
+                    qo = """MERGE (dcs: CASE_DATA_NODE { name : { case_object } } ) RETURN dcs"""
+                    params = { "case_object" :  str(o) }
+                    object_node = self.query(qo, params)
+                 
+                    qp = """MATCH (dcs1: CASE_DATA_NODE), (dcs2: CASE_DATA_NODE) WHERE dcs1.name= { case_subject } AND dcs2.name= { case_object } CREATE (dcs1)-[p: PREDICATE {name: { case_predicate } }]->(dcs2)"""
+                    params = { "case_subject" :  str(s), "case_object" :  str(o), "case_predicate" :  str(p) }
+                    predicate_relation = self.query(qp, params)
+                 
+                # Populate the database by all instance elements in the current ontology graph
+                #for s, _, o in case_graph.triples( (None, rdflib.RDF.type, None) ):
+                 #   (_, ns1, _) = case_graph.compute_qname(s)
+                #    (_, ns2, r2) = case_graph.compute_qname(o)
+                    # Only include triples where both subject and object are from the ORION ontology
+                #    if str(ns1) == self.orion_ns and str(ns2) == self.orion_ns:
+                    # If this resource is not in the database, add it
+                    #self.add_resource_with_uri(r2, str(s))
+                #       print(str(s) + str(r2) + str(o) + str(ns1) + str(ns2))
+                
+                print('Here ends the reading of the current case') 
+    
+                    # Update the properties gradeId, title and description (if they exist), to ensure that the latest ontology data is used.
+                    #gradeId = self.ontology.value(s, orion_ns.gradeId, None)
+                    #if gradeId:
+                    #    q = """MATCH (r:$label { uri : { uri } }) SET r.gradeId = {value}"""
+                    #    params = { "uri" : str(s), "value" : gradeId }
+                    #    self.query(q, params)
+    
+                    #title = self.ontology.value(s, orion_ns.title, None)
+                    #if title:
+                    #    q = """MATCH (r:$label { uri : { uri } }) SET r.title = {value}"""
+                    #    params = { "uri" : str(s), "value" : title }
+                    #    self.query(q, params)
+   # 
+                    #description = self.ontology.value(s, orion_ns.description, None)
+                    #if description:
+                    #    q = """MATCH (r:$label { uri : { uri } }) SET r.description = {value}"""
+                    #    params = { "uri" : str(s), "value" : description }
+                    #    self.query(q, params)
+    
+            # Go through the database, to ensure that all nodes have a uri defined by their id.
+            # This is a fix, it should really be taken care of when nodes are created.
+            #q = """\
+            #MATCH (n:$label) 
+            #WHERE NOT exists(n.uri) 
+            #SET n.uri = {data_ns} + toString(id(n))"""
+            #params = { "data_ns" : self.data_ns }
+            #self.query(q, params)
+
+                #q = """MERGE (dc:DECISION_CASE {name:{case_name}}) RETURN dc"""
+                #case_name = "This is a test case for the dump function"
+                #params = { "case_name": case_name}
+                #case_node = self.query(q, params)
+                
                 return case_graph.serialize(format = format).decode("utf-8")
             else:
                 # Build the graph as a dictionary based tree
