@@ -238,7 +238,7 @@ class InteractionService(coach.Microservice):
             "link" : "/edit_case_description_dialogue",
             "name" : "Describe case",
             "status" : "Not started"}
-        result = self.case_db_proxy.get_case_description(user_id = session["user_id"], token = session["user_token"], case_id = session["case_id"])
+        result = self.case_db_proxy.get_case_description(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
         if result[1]:
             activities["case_description"]["status"] = "Started"
 
@@ -246,7 +246,7 @@ class InteractionService(coach.Microservice):
             "link" : "/add_stakeholder_dialogue",
             "name" : "Add stakeholders",
             "status" : "Not started"}
-        result = self.case_db_proxy.case_users(user_id = session["user_id"], token = session["user_token"], case_id = session["case_id"])
+        result = self.case_db_proxy.case_users(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
         if len(result) > 1:
             activities["stakeholders"]["status"] = "Started"
         # TODO: add the case where the users' own role as stakeholder have been defined
@@ -499,6 +499,9 @@ class InteractionService(coach.Microservice):
                 session["user_id"] = user_id
                 session["user_token"] = user_token
 
+                # To make sure that the cache is cleared and no case is selected, delete cookie information about case id.
+                session.pop("case_id", None)
+
                 # Add the user to the case db if it is not already there
                 self.case_db_proxy.create_user(user_id = session["user_id"], user_token = session["user_token"])
                 return self.main_menu_transition()
@@ -537,14 +540,14 @@ class InteractionService(coach.Microservice):
         As a transition action, it creates the new case in the database, and connects the current user to it.
         """
         session["case_id"] = self.case_db_proxy.create_case(user_id = session["user_id"], user_token = session["user_token"], title = title, description = description)
-        return self.main_menu_transition()
+        return self.case_status_dialogue_transition()
 
 
     @endpoint("/open_case", ["GET"], "text/html")
     def open_case(self, case_id):
         # TODO: Instead of showing case id on screen, it should be the case name + id
         session["case_id"] = case_id
-        return self.main_menu_transition()
+        return self.case_status_dialogue_transition()
         
 
     @endpoint("/logout", ["GET"], "text/html")

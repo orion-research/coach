@@ -805,12 +805,18 @@ from COACH.framework import coach
             launch_local += s.import_statement()
 
         launch_local += """
-if __name__ == '__main__':
+def run_all():
     # Start all the services
 """
 
         for s in self.services_with_ports.keys():
             launch_local += s.launch_statement(self)
+
+        launch_local += """
+if __name__ == '__main__':
+    run_all()
+"""
+
         self.generate_file(script_name, "launch_local.py", launch_local)
         
 
