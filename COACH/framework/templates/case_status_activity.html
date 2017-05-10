@@ -1,0 +1,1 @@
+<li>{% if activity["status"] != "Unavailable" %}<a href="{{activity["link"]}}">{{activity["name"]}}</a>{% else %}{{activity["name"]}}{% endif %} {% if activity["status"] == "Started" %}(started){% else %}(not started){% endif %}</li>
