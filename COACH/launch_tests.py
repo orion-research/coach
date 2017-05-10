@@ -15,13 +15,16 @@ from COACH.framework import coach
 
 class TestCreateUser(unittest.TestCase):
     int_service_proxy = None
-    dummyUser = None
-    url = "http://127.0.0.1:5000" #use 127.0.0.1:443 for remote server
+    auth_service_proxy = None
+    localhost = "http://127.0.0.1"
+    int_port = ":5000" #:443 for remote server
+    auth_port = ":5009"
 
 
     def setUp(self):
         launch_local.run_all()
-        self.int_service_proxy = coach.Proxy(self.url, ["POST", "GET"])
+        self.int_service_proxy = coach.Proxy(self.localhost + self.int_port, ["POST", "GET"])
+        self.auth_service_proxy = coach.Proxy(self.localhost + self.auth_port, ["POST", "GET"])
 
 
     def test_get_version(self):
@@ -29,8 +32,13 @@ class TestCreateUser(unittest.TestCase):
 
 
     def test_create_user_wrong_repeated_password(self):
-        http_response = self.int_service_proxy.create_user(user_id = "Test", password1 = "pw1", password2 = "pw2", name = "Full Name", email = "orion@ri.se")
-        self.assertIn("Error: Password and repeated password not equal!", http_response, "COACH did not notice wrong repeated password")
+        http_response = self.int_service_proxy.create_user(user_id = "Test",
+                                                           password1 = "pw1",
+                                                           password2 = "pw2",
+                                                           name = "Full Name",
+                                                           email = "orion@ri.se")
+        self.assertIn("Error: Password and repeated password not equal!", http_response,
+                      "COACH did not notice wrong repeated password")
 
 
     def test_create_random_user(self):
@@ -40,7 +48,7 @@ class TestCreateUser(unittest.TestCase):
                                                            password2 = password,
                                                            name = self.get_random_string(10),
                                                            email = self.get_random_string(5) + "@ri.se")
-        self.assertIn("To validate your COACH user identity", http_response, "COACH did accept creation of new user")
+        self.assertIsNotNone(http_response, "No HTTP response when creating new user")
 
 
     def tearDown(self):
