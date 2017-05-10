@@ -340,6 +340,9 @@ class Proxy():
         """
         def service_call(*args, **kwargs):
             # On first service request, get the api of the service.
+            if args:
+                raise TypeError("Proxies can only be called with keyword parameters, position arguments are not yet supported")
+
             if not self.api:
                 self.api = requests.get(self.url + "/get_api").json()
 
