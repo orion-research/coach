@@ -42,13 +42,21 @@ class TestCreateUser(unittest.TestCase):
 
 
     def test_create_random_user(self):
+        # TODO: could we make this a session somehow?
+
+        tmp_user = self.get_random_string(6)
         password = self.get_random_string(8)
-        http_response = self.int_service_proxy.create_user(user_id = self.get_random_string(6),
+        http_response = self.int_service_proxy.create_user(user_id = tmp_user,
                                                            password1 = password,
                                                            password2 = password,
                                                            name = self.get_random_string(10),
                                                            email = self.get_random_string(5) + "@ri.se")
         self.assertIsNotNone(http_response, "No HTTP response when creating new user")
+
+        # TODO: Get the token from the session
+
+        # TODO: Verify the account using the token in the session
+        #self.auth_service_proxy.confirm_account(tmp_user, THETOKEN)
 
 
     def tearDown(self):
