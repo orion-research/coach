@@ -227,6 +227,12 @@ class InteractionService(coach.Microservice):
         dialogue = render_template("open_case_dialogue.html", user_cases = user_cases)
         return self.main_menu_transition(main_dialogue = dialogue)
 
+    @endpoint("/case_status_dialogue", ["GET"], "text/html")
+    def case_status_dialogue_transition(self):
+        # Shows the case status
+        dialogue = render_template("case_status_dialogue.html")
+        return self.main_menu_transition(main_dialogue = dialogue)
+
     
     @endpoint("/change_decision_process_dialogue", ["GET"], "text/html")
     def change_decision_process_dialogue_transition(self):
