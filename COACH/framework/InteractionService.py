@@ -237,7 +237,7 @@ class InteractionService(coach.Microservice):
             "link" : "/edit_case_description_dialogue",
             "name" : "Describe case",
             "status" : "Not started"}
-        result = self.case_db_proxy.get_case_description(user_id = session["user_id"], token = session["user_token"], case_id = session["case_id"])
+        result = self.case_db_proxy.get_case_description(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
         if result[1]:
             activities["case_description"]["status"] = "Started"
 
@@ -245,7 +245,7 @@ class InteractionService(coach.Microservice):
             "link" : "/add_stakeholder_dialogue",
             "name" : "Add stakeholders",
             "status" : "Not started"}
-        result = self.case_db_proxy.case_users(user_id = session["user_id"], token = session["user_token"], case_id = session["case_id"])
+        result = self.case_db_proxy.case_users(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
         if len(result) > 1:
             activities["stakeholders"]["status"] = "Started"
         # TODO: add the case where the users' own role as stakeholder have been defined
