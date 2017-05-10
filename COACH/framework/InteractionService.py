@@ -228,35 +228,74 @@ class InteractionService(coach.Microservice):
     def case_status_dialogue_transition(self):
         # Shows the case status
         status = {}
+        activities = {}
         """
          Get case description
         """  
-        result = self.case_db_proxy.get_case_description(case_id = session["case_id"])
-        if not result[1]:
-            status["case_description"] = "Not started"
-        else:
-            status["case_description"] = "Started"
+        
+        activities["case_description"] = {
+            "link" : "/edit_case_description_dialogue",
+            "name" : "Describe case",
+            "status" : "Not started"}
+        result = self.case_db_proxy.get_case_description(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
+        if result[1]:
+            activities["case_description"]["status"] = "Started"
 
-        result = self.case_db_proxy.case_users(case_id = session["case_id"])
+        activities["stakeholders"] = {
+            "link" : "/add_stakeholder_dialogue",
+            "name" : "Add stakeholders",
+            "status" : "Not started"}
+        result = self.case_db_proxy.case_users(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
         if len(result) > 1:
-            status["stakeholders"] = "Started"
-        else:
-            # TODO: add the case where the users' own role as stakeholder have been defined
-            status["stakeholders"] = "Not started"
+            activities["stakeholders"]["status"] = "Started"
+        # TODO: add the case where the users' own role as stakeholder have been defined
+           
+            
+        activities["goal"] = {
+            "link" : "#",
+            "name" : "Describe goal",
+            "status" : "Not started"}  
+        # TODO: Add a check if started
 
-        result = self.case_db_proxy.get_decision_alternatives(case_id = session["case_id"])
+        activities["context"] = {
+            "link" : "/context_model_request?endpoint=edit_context_dialogue",
+            "name" : "Describe context",
+            "status" : "Not started"}   
+        # TODO: Add a check if started
+            
+        activities["alternatives"] = {
+            "link" : "/add_alternative_dialogue",
+            "name" : "Add alternatives",
+            "status" : "Not started"}                        
+        result = self.case_db_proxy.get_decision_alternatives(user_id = session["user_id"], token = session["user_token"], case_id = session["case_id"])
         if len(result) > 0:
-            status["alternatives"] = "Started"
-        else:
-            status["alternatives"] = "Not started"
-    
-        if len(result) == 0:
-            status["properties"] = "Unavailable"
-        else:
-            # TODO: check if there are any properties defined to set their status to started or Not started
-            status["properties"] = "Not started"
+            activities["alternatives"]["status"] = "Started"
 
-        dialogue = render_template("case_status_dialogue.html", status = status)
+
+        activities["properties"] = {
+            "link" : "/property_model_request?endpoint=properties_dialogue",
+            "name" : "Set properties",
+            "status" : "Not started"}   
+        if len(result) == 0:
+            activities["properties"]["status"] = "Unavailable"
+        # TODO: check if there are any properties defined to set their status to started or Not started
+
+        activities["tradeoff"] = {
+            "link" : "/change_decision_process_dialogue",
+            "name" : "Trade-off analysis",
+            "status" : "Not started"}  
+        if len(result) < 2:
+            activities["tradeoff"]["status"] = "Unavailable"
+        # TODO: Add a check if started
+
+        activities["close"] = {
+            "link" : "#",
+            "name" : "Decide and close case",
+            "status" : "Not started"}   
+        # TODO: Add a check if started
+
+
+        dialogue = render_template("case_status_dialogue.html", activities = activities)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
