@@ -148,7 +148,10 @@
 	
 
 	<li class="dropdown" style="float:right; min-width:180px">
+	<div class="dropbtn">
+	<img src="/static/orion_user.png" height="20">
     <a href="javascript:void(0)" class="dropbtn">{{ session["user_id"] }}</a>
+    </div>
     <div class="dropdown-content">
       <a href="/user_profile_dialogue">Profile</a>
       <a href="/change_password_dialogue">Change password</a>
@@ -164,6 +167,7 @@
       <a href="/show_ontology?format=ttl">Ontology</a>
     </div>
 	</li>
+
 
 
 </div>
