@@ -76,84 +76,78 @@
 	    </div>
  	</li>
  	
+ 	{% if session["case_id"] is defined %}
 	<li class="dropdown">
     <a href="javascript:void(0)" class="dropbtn">Goal</a>
     <div class="dropdown-content">
-      {% if session["case_id"] is defined %}
       <a href="/edit_goal_description_dialogue">Description</a>
       <a href="/goal_dialogue_transition?class_name=CustomerValue&property_name=customerValue">Customer value</a>
       <a href="/goal_dialogue_transition?class_name=FinancialValue&property_name=financialValue">Financial value</a>
       <a href="/goal_dialogue_transition?class_name=InternalBusinessValue&property_name=internalBusinessValue">Internal business value</a>
       <a href="/goal_dialogue_transition?class_name=InnovationAndLearningValue&property_name=innovationAndLearningValue">Innovation and learning value</a>
       <a href="/goal_dialogue_transition?class_name=MarketValue&property_name=marketValue">Market value</a>
-	  {% endif %}
-    </div>
+	</div>
 	</li>
+	{% endif %}
 
+	{% if session["case_id"] is defined %}
 	<li class="dropdown">
     <a href="javascript:void(0)" class="dropbtn">Context</a>
     <div class="dropdown-content">
-      {% if session["case_id"] is defined %}
       <a href="/context_model_request?endpoint=edit_context_dialogue">General</a>
       <a href="/context_model_request?endpoint=context_organization_dialogue">Organization</a>
       <a href="/context_model_request?endpoint=context_product_dialogue">Product</a>
       <a href="/context_model_request?endpoint=context_stakeholder_dialogue">Stakeholder</a>
       <a href="/context_model_request?endpoint=context_methods_dialogue">Development methods and technology</a>
       <a href="/context_model_request?endpoint=context_business_dialogue">Market and business</a>
-	  {% endif %}
-    </div>
+	</div>
 	</li>
+	 {% endif %}
 	
+	{% if session["case_id"] is defined %}
 	<li class="dropdown">
     <a href="javascript:void(0)" class="dropbtn">Stakeholders</a>
     <div class="dropdown-content">
-      {% if session["case_id"] is defined %}
       <a href="/add_stakeholder_dialogue">Edit</a>
-	  {% endif %}
-    </div>
+	</div>
 	</li>
+	{% endif %}
 
+	{% if session["case_id"] is defined %}
 	<li class="dropdown">
     <a href="javascript:void(0)" class="dropbtn">Alternatives</a>
     <div class="dropdown-content">
-      {% if session["case_id"] is defined %}
       <a href="/add_alternative_dialogue">Add</a>
       <a href="#" style="color: lightgray">Modify</a>
-	  {% endif %}
-    </div>
+	</div>
 	</li>
+	{% endif %}
 
+	
+	{% if session["case_id"] is defined %}
 	<li class="dropdown">
     <a href="javascript:void(0)" class="dropbtn">Properties</a>
     <div class="dropdown-content">
-      {% if session["case_id"] is defined %}
       <a href="/property_model_request?endpoint=properties_dialogue">Manage</a>
-      {% endif %}
     </div>
 	</li>
+	{% endif %}
 
+	{% if session["case_id"] is defined %}
 	<li class="dropdown">
     <a href="javascript:void(0)" class="dropbtn">Trade-off</a>
     <div class="dropdown-content">
-      {% if session["case_id"] is defined %}
       <a href="/change_decision_process_dialogue">Change method</a>
 		{% if process_menu is defined %}
 		<HR>
 		{{ process_menu | safe }}
 		{% endif %}
-	  {% endif %}
     </div>
 	</li>
+	{% endif %}
 	
-	<li class="dropdown">
-    <a href="javascript:void(0)" class="dropbtn">About</a>
-    <div class="dropdown-content">
-      <a href="#">Version: {{ session["version"] }}</a>
-      <a href="/show_ontology?format=ttl">Ontology</a>
-    </div>
-	</li>
 
-	<li class="dropdown">
+	<li class="dropdown" style="float:right; min-width:180px">
     <a href="javascript:void(0)" class="dropbtn">{{ session["user_id"] }}</a>
     <div class="dropdown-content">
       <a href="/user_profile_dialogue">Profile</a>
@@ -161,6 +155,17 @@
       <a href="/logout">Logout</a>
     </div>
 	</li>
+
+
+	<li class="dropdown" style="float:right">
+    <a href="javascript:void(0)" class="dropbtn">About</a>
+    <div class="dropdown-content">
+      <a href="#">Version: {{ session["version"] }}</a>
+      <a href="/show_ontology?format=ttl">Ontology</a>
+    </div>
+	</li>
+
+
 </div>
 
 <DIV id="main_dialogue">
