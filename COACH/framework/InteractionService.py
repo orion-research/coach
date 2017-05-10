@@ -73,7 +73,8 @@ class InteractionService(coach.Microservice):
         self.ontology = None
         self.orion_ns = "http://www.orion-research.se/ontology#"
 
-                            
+
+    @endpoint("/get_version", ["GET"], "text/html")
     def get_version(self):
         """
         Returns the version of the software running. It fetches this information from git.
@@ -83,7 +84,7 @@ class InteractionService(coach.Microservice):
         except:
             return "No version information available"
 
-    
+
     def get_ontology(self):
         """
         Returns the ontology used by the interaction service. If the ontology has not been loaded yet, it is loaded and stored before being returned.

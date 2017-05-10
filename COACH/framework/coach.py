@@ -541,9 +541,10 @@ class EstimationMethodService(Microservice):
     
 
     @endpoint("/dialogue", ["GET", "POST"], "text/html")
-    def dialogue(self):
+    def dialogue(self, knowledge_repository):
         """
         Returns a HTML snippet with one text box for each parameter, which can be inserted into a web page.
+        The URL for the knowledge repository is included as a parameter.
         """
         
         entries = ""
