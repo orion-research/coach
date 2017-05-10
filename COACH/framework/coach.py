@@ -326,8 +326,7 @@ class Proxy():
         """
         self.url = url
         self.method_preference = method_preference
-        self.default_kwargs = kwargs
-        
+
         # The api of the service is fetched when the first endpoint call is made, to allow for asynchronous initiations of services.
         self.api = None
         
@@ -348,22 +347,23 @@ class Proxy():
 
             # Check if the endpoint exists, otherwise raise error
             if name in self.api:
-                # Add default_kwargs. Note that if the kwarg was provided in the call, it should override the default
-                data = dict()
-                data.update(self.default_kwargs)
-                data.update(kwargs)
-                
                 # Determine what http method to use, taking the first of the preferred method that the service supports.
                 http_method = next(m for m in self.method_preference if m in self.api[name]["methods"])
-                
+
+                # Check that the parameter names used are in the api
+                for p in kwargs.keys():
+                    if p not in self.api[name]["params"]:
+                        raise TypeError("Parameter " + p + " is not defined for proxy method " + name + ". " +
+                                        "Allowed parameters are " + ", ".join(kwargs.keys()) + ".")
+
                 # Make the endpoint request
-                result = requests.request(http_method, self.url + "/" + name, data = data)
+                result = requests.request(http_method, self.url + "/" + name, data = kwargs)
                 
                 # If there was an error in the response, raise an exception
                 if result.status_code != 200:
                     message = "An error occured while processing the endpoint " + name + ":\n"
                     message += "Service: " + self.url + "\n"
-                    message += "Arguments: " + str(data) + "\n\n"
+                    message += "Arguments: " + str(kwargs) + "\n\n"
                     raise MicroserviceException(message + result.text)
                 
                 # Return result, decoded as json if desired, and otherwise as text      

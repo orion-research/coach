@@ -80,7 +80,7 @@
     <a href="javascript:void(0)" class="dropbtn">Goal</a>
     <div class="dropdown-content">
       {% if session["case_id"] is defined %}
-      <a href="#" style="color: lightgray">General</a>
+      <a href="/edit_goal_description_dialogue">Description</a>
       <a href="/goal_dialogue_transition?class_name=CustomerValue&property_name=customerValue">Customer value</a>
       <a href="/goal_dialogue_transition?class_name=FinancialValue&property_name=financialValue">Financial value</a>
       <a href="/goal_dialogue_transition?class_name=InternalBusinessValue&property_name=internalBusinessValue">Internal business value</a>

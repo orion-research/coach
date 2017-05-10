@@ -305,13 +305,13 @@ class CaseDatabase(coach.GraphDatabaseService):
         
 
     @endpoint("/create_case", ["POST"], "application/json")
-    def create_case(self, title, description, initiator, user_token):
+    def create_case(self, title, description, user_id, user_token):
         """
         Creates a new case in the database, with a relation to the initiating user (referenced by user_id). 
         It returns the database id of the new case.
         """
 
-        if self.authentication_service_proxy.check_user_token(user_id = initiator, user_token = user_token):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
             if not self.neo4j:
                 # Generate a new uri for the new case by finding the largest current uri and adding 1 to it
                 orion_ns = rdflib.Namespace(self.orion_ns)
@@ -329,7 +329,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                 # Create the relationships to an initial role with initiator as the person 
                 case_graph.add((case_id, orion_ns.role, role))
                 case_graph.add((role, rdflib.RDF.type, orion_ns.Role))
-                case_graph.add((role, orion_ns.person, rdflib.URIRef(self.authentication_service_proxy.get_user_uri(user_id = initiator))))
+                case_graph.add((role, orion_ns.person, rdflib.URIRef(self.authentication_service_proxy.get_user_uri(user_id = user_id))))
                 case_graph.commit()
                 
                 for t in case_graph:
@@ -337,14 +337,14 @@ class CaseDatabase(coach.GraphDatabaseService):
                 return str(case_id)
             else:
                 # First, create the new case node and set its properties
-                case_uri = self.add_resource(initiator, user_token, "Case")
-                self.add_datatype_property(initiator, user_token, case_uri, "title", title)
-                self.add_datatype_property(initiator, user_token, case_uri, "description", description)
+                case_uri = self.add_resource(user_id, user_token, "Case")
+                self.add_datatype_property(user_id, user_token, case_uri, "title", title)
+                self.add_datatype_property(user_id, user_token, case_uri, "description", description)
      
                 # Then create the relationships to an initial role with initiator as the person 
-                role_uri = self.add_resource(initiator, user_token, "Role")
-                self.add_object_property(initiator, user_token, case_uri, "role", role_uri)
-                self.add_object_property(initiator, user_token, role_uri, "person", self.id_to_uri(initiator))
+                role_uri = self.add_resource(user_id, user_token, "Role")
+                self.add_object_property(user_id, user_token, case_uri, "role", role_uri)
+                self.add_object_property(user_id, user_token, role_uri, "person", self.id_to_uri(user_id))
                 
                 return self.uri_to_id(case_uri)
             

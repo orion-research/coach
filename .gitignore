@@ -33,3 +33,6 @@ COACH/framework/settings/coach_case_db.db
 
 # Symbolic link files
 settings.json
+
+# PyCharm project management files
+.idea
