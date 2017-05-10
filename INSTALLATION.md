@@ -9,7 +9,10 @@ You will need to install the following software to be able to execute COACH:
 
 
 # Local development
-These instructions assume you will be running COACH on your local PC. It is convenient to use Eclipse as an IDE, but not a requirement. It is also convenient to use source code analysis tools to improve quality, such as PyLint (see https://codeyarns.com/2015/01/02/how-to-use-pylint-for-eclipse/ on how to combine this with Eclipse).
+These instructions assume you will be running COACH on your local PC.
+It is convenient to use an IDE for Python, such as PyCharm or Eclipse with the PyDev extension, but it is not a requirement.
+It is also convenient to use source code analysis tools to improve quality, such as
+PyLint (see https://codeyarns.com/2015/01/02/how-to-use-pylint-for-eclipse/ on how to combine this with Eclipse).
 
 ## Neo4j
 Neo4j Community Edition needs to be installed on your local machine, and be started.
@@ -47,7 +50,7 @@ settings file. On a Linux system the command for a local installation is (assumi
 
 On a Windows system, the corresponding command is:
 
-	$ mklink local_settings.json settings.json
+	$ mklink settings.json local_settings.json 
 
 Note that you need full elevated rights to run this command on a Windows system. Run cmd.exe as an Administrator by pressing and holding Ctrl+Shift while opening the program.
 

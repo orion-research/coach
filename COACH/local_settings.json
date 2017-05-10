@@ -1,98 +1,98 @@
 {
-    "ContextModelService": {
-        "port": 5006,
-        "logfile": "ContextModel.log",
-        "description": "Settings for ContextModelService",
-        "name": "A context model service for COACH"
-    },
-    "object": {
-        "mode": "local",
-        "protocol": "http",
-        "host": "127.0.0.1",
-        "description": "Common settings for all classes"
-    },
-    "KnowledgeRepositoryService": {
-        "port": 5005,
-        "database": "http://127.0.0.1:7474/db/data/",
-        "description": "Settings for KnowledgeRepositoryService",
-        "name": "Knowledge repository microservice for the ORION project",
-        "secret_data_file_name": "../framework/settings/root_secret_data.json"
-    },
-    "AuthenticationService": {
-        "email": {
-            "sender": "noreply@orion-research.se",
-            "port": 587,
-            "server": "send.one.com"
-        },
-        "secret_data_file_name": "settings/root_secret_data.json",
-        "name": "Authentication service for COACH",
-        "logfile": "root.log",
-        "authentication_database": "settings/authentication.json",
-        "description": "Settings for AuthenticationService",
-        "port": 5009
-    },
-    "KnowledgeInferenceService": {
-        "port": 5010,
-        "database": "http://127.0.0.1:5008",
-        "directory": "http://127.0.0.1:5003",
-        "description": "Settings for KnowledgeInferenceService",
-        "name": "Knowledge inference microservice for the ORION project"
-    },
-    "InteractionService": {
-        "knowledge_repository": "http://127.0.0.1:5005",
-        "property_service": "http://127.0.0.1:5011",
-        "service_directories": [
-            "http://127.0.0.1:5003"
-        ],
-        "name": "COACH interaction microservice for ORION project",
-        "context_service": "http://127.0.0.1:5006",
-        "database": "http://127.0.0.1:5008",
-        "logfile": "root.log",
-        "secret_data_file_name": "settings/root_secret_data.json",
-        "description": "Settings for InteractionService",
-        "port": 5000,
-        "authentication_service": "http://127.0.0.1:5009"
-    },
     "AverageOfTwo": {
         "port": 5004,
-        "description": "Settings for AverageOfTwo",
-        "name": "Average of two estimation method"
+        "name": "Average of two estimation method",
+        "description": "Settings for AverageOfTwo"
     },
-    "SimpleDecisionProcessService": {
-        "port": 5002,
-        "logfile": "SimpleDecisionProcessService.log",
-        "description": "Settings for SimpleDecisionProcessService",
-        "name": "A decision process service"
+    "KnowledgeInferenceService": {
+        "database": "http://127.0.0.1:5008",
+        "port": 5010,
+        "name": "Knowledge inference microservice for the ORION project",
+        "description": "Settings for KnowledgeInferenceService",
+        "directory": "http://127.0.0.1:5003"
     },
-    "PropertyModelService": {
-        "port": 5011,
-        "logfile": "PropertyModel.log",
-        "description": "Settings for PropertyModelService",
-        "name": "A property model service for COACH"
+    "object": {
+        "host": "127.0.0.1",
+        "protocol": "http",
+        "description": "Common settings for all classes",
+        "mode": "local"
     },
-    "DirectoryService": {
-        "port": 5003,
-        "directory_file_name": "settings/local_directory.json",
-        "description": "Settings for DirectoryService",
-        "name": "Directory service for COACH"
-    },
-    "CaseDatabase": {
-        "authentication_service": "http://127.0.0.1:5009",
-        "name": "COACH case database service",
+    "AuthenticationService": {
+        "authentication_database": "settings/authentication.json",
         "secret_data_file_name": "settings/root_secret_data.json",
-        "description": "Settings for CaseDatabase",
-        "port": 5008,
-        "label": "CaseDB"
-    },
-    "PughService": {
-        "port": 5007,
-        "logfile": "PughService.log",
-        "description": "Settings for PughService",
-        "name": "Pugh analysis"
+        "email": {
+            "sender": "noreply@orion-research.se",
+            "server": "send.one.com",
+            "port": 587
+        },
+        "description": "Settings for AuthenticationService",
+        "logfile": "root.log",
+        "name": "Authentication service for COACH",
+        "port": 5009
     },
     "ExpertOpinion": {
         "port": 5001,
-        "description": "Settings for ExpertOpinion",
-        "name": "Expert opinion estimation method"
+        "name": "Expert opinion estimation method",
+        "description": "Settings for ExpertOpinion"
+    },
+    "PughService": {
+        "logfile": "PughService.log",
+        "port": 5007,
+        "name": "Pugh analysis",
+        "description": "Settings for PughService"
+    },
+    "CaseDatabase": {
+        "authentication_service": "http://127.0.0.1:5009",
+        "secret_data_file_name": "settings/root_secret_data.json",
+        "label": "CaseDB",
+        "description": "Settings for CaseDatabase",
+        "name": "COACH case database service",
+        "port": 5008
+    },
+    "SimpleDecisionProcessService": {
+        "logfile": "SimpleDecisionProcessService.log",
+        "port": 5002,
+        "name": "A decision process service",
+        "description": "Settings for SimpleDecisionProcessService"
+    },
+    "DirectoryService": {
+        "directory_file_name": "settings/local_directory.json",
+        "port": 5003,
+        "name": "Directory service for COACH",
+        "description": "Settings for DirectoryService"
+    },
+    "InteractionService": {
+        "database": "http://127.0.0.1:5008",
+        "authentication_service": "http://127.0.0.1:5009",
+        "knowledge_repository": "http://127.0.0.1:5005",
+        "secret_data_file_name": "settings/root_secret_data.json",
+        "description": "Settings for InteractionService",
+        "service_directories": [
+            "http://127.0.0.1:5003"
+        ],
+        "property_service": "http://127.0.0.1:5011",
+        "logfile": "root.log",
+        "context_service": "http://127.0.0.1:5006",
+        "name": "COACH interaction microservice for ORION project",
+        "port": 5000
+    },
+    "PropertyModelService": {
+        "logfile": "PropertyModel.log",
+        "port": 5011,
+        "name": "A property model service for COACH",
+        "description": "Settings for PropertyModelService"
+    },
+    "ContextModelService": {
+        "logfile": "ContextModel.log",
+        "port": 5006,
+        "name": "A context model service for COACH",
+        "description": "Settings for ContextModelService"
+    },
+    "KnowledgeRepositoryService": {
+        "database": "http://127.0.0.1:7474/db/data/",
+        "port": 5005,
+        "secret_data_file_name": "../framework/settings/root_secret_data.json",
+        "name": "Knowledge repository microservice for the ORION project",
+        "description": "Settings for KnowledgeRepositoryService"
     }
 }

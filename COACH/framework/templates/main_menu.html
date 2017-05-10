@@ -69,6 +69,7 @@
 	      <a href="/open_case_dialogue">Open case</a>
 	      <a href="/create_case_dialogue">New case</a>
 	      {% if session["case_id"] is defined %}
+	       <a href="/case_status_dialogue">Case status</a>
 	      <a href="/edit_case_description_dialogue">Case description</a>
 	      <a href="/export_case_to_knowledge_repository">Export case to knowledge repository</a>
 		  {% endif %}
@@ -79,7 +80,7 @@
     <a href="javascript:void(0)" class="dropbtn">Goal</a>
     <div class="dropdown-content">
       {% if session["case_id"] is defined %}
-      <a href="#" style="color: lightgray">General</a>
+      <a href="/edit_goal_description_dialogue">Description</a>
       <a href="/goal_dialogue_transition?class_name=CustomerValue&property_name=customerValue">Customer value</a>
       <a href="/goal_dialogue_transition?class_name=FinancialValue&property_name=financialValue">Financial value</a>
       <a href="/goal_dialogue_transition?class_name=InternalBusinessValue&property_name=internalBusinessValue">Internal business value</a>
@@ -94,11 +95,11 @@
     <div class="dropdown-content">
       {% if session["case_id"] is defined %}
       <a href="/context_model_request?endpoint=edit_context_dialogue">General</a>
-      <a href="#" style="color: lightgray">Organization</a>
-      <a href="#" style="color: lightgray">Product</a>
-      <a href="#" style="color: lightgray">Stakeholder</a>
-      <a href="#" style="color: lightgray">Development method and technology</a>
-      <a href="#" style="color: lightgray">Market and business</a>
+      <a href="/context_model_request?endpoint=context_organization_dialogue">Organization</a>
+      <a href="/context_model_request?endpoint=context_product_dialogue">Product</a>
+      <a href="/context_model_request?endpoint=context_stakeholder_dialogue">Stakeholder</a>
+      <a href="/context_model_request?endpoint=context_methods_dialogue">Development methods and technology</a>
+      <a href="/context_model_request?endpoint=context_business_dialogue">Market and business</a>
 	  {% endif %}
     </div>
 	</li>
@@ -156,7 +157,7 @@
     <a href="javascript:void(0)" class="dropbtn">{{ session["user_id"] }}</a>
     <div class="dropdown-content">
       <a href="/user_profile_dialogue">Profile</a>
-      <a href="#" style="color: lightgray">Change password</a>
+      <a href="/change_password_dialogue">Change password</a>
       <a href="/logout">Logout</a>
     </div>
 	</li>

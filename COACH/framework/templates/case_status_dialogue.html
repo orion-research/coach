@@ -1,0 +1,31 @@
+<!DOCTYPE HTML>
+
+<H2>Case status</H2>
+
+<ul style="list-style-type: decimal;">
+	<li>Problem identification
+	<ul style="list-style-position: inside;">
+	    {% set activity = activities["case_description"] %}
+		{% include "case_status_activity.html" %}
+	    {% set activity = activities["stakeholders"] %}
+		{% include "case_status_activity.html" %}
+		{% set activity = activities["goal"] %}
+		{% include "case_status_activity.html" %}
+	    {% set activity = activities["context"] %}
+		{% include "case_status_activity.html" %}
+	</ul></li>
+	<li>Identify alternatives</li>
+	<ul>
+		{% set activity = activities["alternatives"] %}
+		{% include "case_status_activity.html" %}
+	    {% set activity = activities["properties"] %}
+		{% include "case_status_activity.html" %}
+	</ul></li>
+	{% set activity = activities["tradeoff"] %}
+	{% include "case_status_activity.html" %}
+	{% set activity = activities["close"] %}
+	{% include "case_status_activity.html" %}
+</ul>
+
+</BODY>
+</HTML>
