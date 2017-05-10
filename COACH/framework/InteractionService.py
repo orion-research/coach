@@ -539,14 +539,14 @@ class InteractionService(coach.Microservice):
         As a transition action, it creates the new case in the database, and connects the current user to it.
         """
         session["case_id"] = self.case_db_proxy.create_case(user_id = session["user_id"], user_token = session["user_token"], title = title, description = description)
-        return self.main_menu_transition()
+        return self.case_status_dialogue_transition()
 
 
     @endpoint("/open_case", ["GET"], "text/html")
     def open_case(self, case_id):
         # TODO: Instead of showing case id on screen, it should be the case name + id
         session["case_id"] = case_id
-        return self.main_menu_transition()
+        return self.case_status_dialogue_transition()
         
 
     @endpoint("/logout", ["GET"], "text/html")
