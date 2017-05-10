@@ -498,6 +498,9 @@ class InteractionService(coach.Microservice):
                 session["user_id"] = user_id
                 session["user_token"] = user_token
 
+                # To make sure that the cache is cleared and no case is selected, delete cookie information about case id.
+                session.pop("case_id", None)
+
                 # Add the user to the case db if it is not already there
                 self.case_db_proxy.create_user(user_id = session["user_id"], user_token = session["user_token"])
                 return self.main_menu_transition()
