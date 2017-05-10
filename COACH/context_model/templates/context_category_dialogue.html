@@ -1,0 +1,14 @@
+<H2>Context details - {{ category_name }}</H2>
+
+<form action="/context_model_request?endpoint={{ edit_endpoint }}" method="post" accept-charset="UTF-8">
+
+{% for e in entries %}
+{% include "entries.html" %}
+{% endfor %} 
+
+
+<br>
+<button type="submit">Save</button>
+<!--input type="submit" value="Save Context"/-->
+</form>
+    

@@ -224,6 +224,41 @@ class InteractionService(coach.Microservice):
         dialogue = render_template("open_case_dialogue.html", user_cases = user_cases)
         return self.main_menu_transition(main_dialogue = dialogue)
 
+    @endpoint("/case_status_dialogue", ["GET"], "text/html")
+    def case_status_dialogue_transition(self):
+        # Shows the case status
+        status = {}
+        """
+         Get case description
+        """  
+        result = self.case_db_proxy.get_case_description(case_id = session["case_id"])
+        if not result[1]:
+            status["case_description"] = "Not started"
+        else:
+            status["case_description"] = "Started"
+
+        result = self.case_db_proxy.case_users(case_id = session["case_id"])
+        if len(result) > 1:
+            status["stakeholders"] = "Started"
+        else:
+            # TODO: add the case where the users' own role as stakeholder have been defined
+            status["stakeholders"] = "Not started"
+
+        result = self.case_db_proxy.get_decision_alternatives(case_id = session["case_id"])
+        if len(result) > 0:
+            status["alternatives"] = "Started"
+        else:
+            status["alternatives"] = "Not started"
+    
+        if len(result) == 0:
+            status["properties"] = "Unavailable"
+        else:
+            # TODO: check if there are any properties defined to set their status to started or Not started
+            status["properties"] = "Not started"
+
+        dialogue = render_template("case_status_dialogue.html", status = status)
+        return self.main_menu_transition(main_dialogue = dialogue)
+
     
     @endpoint("/change_decision_process_dialogue", ["GET"], "text/html")
     def change_decision_process_dialogue_transition(self):

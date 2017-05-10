@@ -163,7 +163,7 @@ class AuthenticationService(Microservice):
         """       
         if self.confirm_user_token(user_id, user_token):
             self.password_hash(password)
-            self.users[user_id] = {"password_hash": self.password_hash(password)}
+            self.users[user_id]["password_hash"] = self.password_hash(password)
             self.save_data()                     
             return "Ok"
         else:

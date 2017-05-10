@@ -1,0 +1,28 @@
+<!DOCTYPE HTML>
+<HTML>
+<HEAD>
+	<TITLE>COACH</TITLE>
+</HEAD>
+
+<BODY>
+<H2>Case status</H2>
+
+<ul style="list-style-type: decimal;">
+	<li>Problem identification
+	<ul style="list-style-position: inside;">
+		<li><a href="/edit_case_description_dialogue">Describe case</a> {% if status["case_description"] == "Started" %}Started{% else %}Not started{% endif %}</li>
+		<li><a href="/add_stakeholder_dialogue">Add stakeholders</a> {% if status["stakeholders"] == "Started" %}Started{% else %}Not started{% endif %}</li>
+		<li><a href="#">Describe goal</a></li>
+		<li><a href="context_model_request?endpoint=edit_context_dialogue">Describe context</a></li>
+	</ul></li>
+	<li>Identify alternatives</li>
+	<ul>
+		<li><a href="/add_alternative_dialogue">Add alternatives</a> {% if status["alternatives"] == "Started" %}Started{% else %}Not started{% endif %}</li>
+		<li><a href="/property_model_request?endpoint=properties_dialogue">Set properties</a> {% if status["properties"] == "Unavailable" %}Unavailable{% else %}Not started{% endif %}</li>
+	</ul></li>
+	<li><a href="/change_decision_process_dialogue">Trade-off analysis</a></li>
+	<li><a href="#">Decide and close case</a></li>
+</ul>
+
+</BODY>
+</HTML>
