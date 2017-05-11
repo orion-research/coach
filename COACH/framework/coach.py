@@ -329,6 +329,12 @@ class Proxy():
 
         # The api of the service is fetched when the first endpoint call is made, to allow for asynchronous initiations of services.
         self.api = None
+
+        # A session is stored and reused to improve performance and also allow setting of e.g. cookies for testing purposes.
+        self.session = None
+
+        # Service http call results are stored, to allow inspection during testing.
+        self.result = None
         
 
     def __getattr__(self, name):
@@ -338,12 +344,14 @@ class Proxy():
         explicitly defined attributes is not intercepted.
         """
         def service_call(*args, **kwargs):
-            # On first service request, get the api of the service.
+            # Check if the right parameters are used
             if args:
                 raise TypeError("Proxies can only be called with keyword parameters, position arguments are not yet supported")
 
+            # On first service request, get the api of the service and create a session.
             if not self.api:
                 self.api = requests.get(self.url + "/get_api").json()
+                self.session = requests.Session()
 
             # Check if the endpoint exists, otherwise raise error
             if name in self.api:
@@ -357,22 +365,20 @@ class Proxy():
                                         "Allowed parameters are " + ", ".join(kwargs.keys()) + ".")
 
                 # Make the endpoint request
-                result = requests.request(http_method, self.url + "/" + name, data = kwargs)
-                
+                self.result = self.session.request(http_method, self.url + "/" + name, data = kwargs)
+
                 # If there was an error in the response, raise an exception
-                if result.status_code != 200:
+                if self.result.status_code != 200:
                     message = "An error occured while processing the endpoint " + name + ":\n"
                     message += "Service: " + self.url + "\n"
                     message += "Arguments: " + str(kwargs) + "\n\n"
-                    raise MicroserviceException(message + result.text)
+                    raise MicroserviceException(message + self.result.text)
                 
-                # Return result, decoded as json if desired, and otherwise as text      
-#                response = Response(endpoint_content_conversion[content][0](result), status = 200, content_type = content)
                 # Convert result to a Python object, depending on the content type
-                if "Content-Type" in result.headers:
-                    return endpoint_content_conversion[result.headers["Content-Type"]][1](result.text)
+                if "Content-Type" in self.result.headers:
+                    return endpoint_content_conversion[self.result.headers["Content-Type"]][1](self.result.text)
                 else:
-                    return result.text
+                    return self.result.text
             else:
                 raise AttributeError("Proxy has determined that service " + self.url + " does not provide endpoint for " + name)
 
