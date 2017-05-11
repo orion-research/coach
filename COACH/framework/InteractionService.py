@@ -177,20 +177,18 @@ class InteractionService(coach.Microservice):
         It always passes the current decision case database url and case id as a parameter in the request.
         """
         context_service = self.get_setting("context_service")
-        delegate_token = self.authentication_service_proxy.get_delegate_token(user_id = session["user_id"], user_token = session["user_token"], 
-                                                                              case_id = session["case_id"])
         params = request.values.to_dict()
         del params["endpoint"]
         params["user_id"] = session["user_id"]
-        params["delegate_token"] = delegate_token
+        params["user_token"] = session["user_token"]
         params["case_db"] = self.get_setting("database")
         params["case_id"] = session["case_id"]
         params["knowledge_repository"] = self.get_setting("knowledge_repository")
         response = requests.request(request.method, context_service + "/" + request.values["endpoint"], 
                                     params = params)
-        self.authentication_service_proxy.revoke_delegate_token(user_id = session["user_id"], user_token = session["user_token"])
         return self.main_menu_transition(main_dialogue = response.text)
-        
+
+
     @endpoint("/property_model_request", ["GET", "POST"], "text/html")
     def property_model_request(self):
         """
@@ -626,7 +624,7 @@ class InteractionService(coach.Microservice):
         """
         Exports the current case to the knowledge repository.
         """
-        description = self.case_db_proxy.export_case_data(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"], format = "ttl")
+        description = self.case_db_proxy.export_case_data(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"], format = "n3")
         requests.post(self.get_setting("knowledge_repository") + "/add_case", data = {"description": json.dumps(description)})
         print(description)
         description = description.replace("&", "&amp;")
