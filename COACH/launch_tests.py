@@ -39,10 +39,14 @@ class TestCreateUser(unittest.TestCase):
                                                            email = "orion@ri.se")
         self.assertIn("Error: Password and repeated password not equal!", http_response,
                       "COACH did not notice wrong repeated password")
+        response_object = self.int_service_proxy.result
+        self.assertIsNotNone(response_object, "The response object should not be None after create_user")
+        #self.assertEquals("12", )
 
 
     def test_create_random_user(self):
-        # TODO: could we make this a session somehow?
+        #self.int_service_proxy.session = TODO: OPEN A NEW SESSION
+        #print("¤¤¤¤¤¤¤ " + self.int_service_proxy.session)
 
         tmp_user = self.get_random_string(6)
         password = self.get_random_string(8)
