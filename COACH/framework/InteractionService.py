@@ -587,10 +587,10 @@ class InteractionService(coach.Microservice):
         user_profile = {'user_name': self.authentication_service_proxy.get_user_name(user_id = session["user_id"]),
                         'email': self.authentication_service_proxy.get_user_email(user_id = session["user_id"]),
                         'company_name': self.authentication_service_proxy.get_company_name(user_id = session["user_id"]),
-                        'skype_id':self.authentication_service_proxy.get_skype_id(user_id = session["user_id"]),
-                        'user_phone':self.authentication_service_proxy.get_user_phone(user_id = session["user_id"]),
-                        'location':self.authentication_service_proxy.get_user_location(user_id = session["user_id"]),
-                        'user_bio':self.authentication_service_proxy.get_user_bio(user_id = session["user_id"])}
+                        'skype_id': self.authentication_service_proxy.get_skype_id(user_id = session["user_id"]),
+                        'user_phone': self.authentication_service_proxy.get_user_phone(user_id = session["user_id"]),
+                        'location': self.authentication_service_proxy.get_user_location(user_id = session["user_id"]),
+                        'user_bio': self.authentication_service_proxy.get_user_bio(user_id = session["user_id"])}
         dialogue = render_template("user_profile_dialogue.html", user_profile = user_profile)
         return self.main_menu_transition(main_dialogue = dialogue)
 
