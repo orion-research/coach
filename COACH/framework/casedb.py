@@ -44,7 +44,6 @@ class CaseDatabase(coach.GraphDatabaseService):
         ident = rdflib.URIRef("coach_case_db")
 #            store = rdflib.plugin.get("SQLAlchemy", rdflib.store.Store)(identifier = ident)
 
-        # TODO: This works on Windows, but probably not on Unix.
         # See http://docs.sqlalchemy.org/en/latest/dialects/sqlite.html#module-sqlalchemy.dialects.sqlite.pysqlite, under Connect strings
         self.db_uri = "sqlite:///" + filepath
         self.store = SQLAlchemy(identifier = ident, engine = sqlalchemy.create_engine(self.db_uri))
@@ -60,6 +59,8 @@ class CaseDatabase(coach.GraphDatabaseService):
 
         self.orion_ns = "http://www.orion-research.se/ontology#"  # The name space for the ontology used
         self.data_ns = self.get_setting("protocol") + "://" + self.host + ":" + str(self.port) + "/data#"  # The name space for this data source
+        self.ns = { self.orion_ns : rdflib.Namespace(self.orion_ns),
+                    self.data_ns : rdflib.Namespace(self.data_ns) }
 
         # Namespace objects cannot be stored as object attributes, since they collide with the microservice mechanisms
         orion_ns = rdflib.Namespace(self.orion_ns)
@@ -217,9 +218,6 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.add((role, rdflib.RDF.type, orion_ns.Role))
             case_graph.add((role, orion_ns.person, rdflib.URIRef(self.authentication_service_proxy.get_user_uri(user_id = user_id))))
             case_graph.commit()
-
-            for t in case_graph:
-                print(str(t))
             return str(case_id)
         else:
             return "Invalid user token"

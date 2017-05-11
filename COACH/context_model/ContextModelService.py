@@ -44,8 +44,11 @@ from COACH.framework.coach import endpoint
 from flask.templating import render_template
 from flask import request
 
+# Linked data
+import rdflib
 
 class ContextModelService(coach.Microservice):
+
 
     organization = [{},{},{},{},{},{},{},{},{},{},{},{}]
 
@@ -610,42 +613,61 @@ class ContextModelService(coach.Microservice):
       })
       
       
+    def __init__(self, settings_file_name = None, working_directory = None):
+        
+        super().__init__(settings_file_name, working_directory = working_directory)
+      
+        # Store case database connection, using user_id and user_token as default parameters to all endpoint calls.
+        #self.case_db_proxy = self.create_proxy(self.get_setting("database"))
+
+        self.ontology = None
+        self.orion_ns = "http://www.orion-research.se/ontology#"
 
 
+    def get_ontology(self):
+        """
+        Returns the ontology. If the ontology has not been loaded yet, it is loaded and stored before being returned.
+        """
+        if not self.ontology:
+            self.ontology = rdflib.ConjunctiveGraph()
+            self.ontology.parse(data = self.case_db_proxy.get_ontology(format = "ttl"), format = "ttl")
+        return self.ontology
+        
+        
 
     @endpoint("/edit_context_dialogue", ["GET"], "text/html")
-    def edit_context_dialogue_transition(self, user_id, delegate_token, case_db, case_id):
+    def edit_context_dialogue_transition(self, user_id, user_token, case_db, case_id):
         """
         Endpoint which lets the user edit context information.
         """
         
         case_db_proxy = self.create_proxy(case_db)
        
-        values = {'C' : case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_C"),
-                  'O' : case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_O"),
-                  'P' : case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_P"),
-                  'S' : case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_S"),
-                  'M' : case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_M"),
-                  'B' : case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_B")
+        values = {'C' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_C"),
+                  'O' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_O"),
+                  'P' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_P"),
+                  'S' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_S"),
+                  'M' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_M"),
+                  'B' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_B")
                   }
         """
-        values['C'] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_C")
-        values['O'] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_O")
-        values['P'] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_P")
-        values['S'] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_S")
-        values['M'] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_M")
-        values['B'] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_B")
+        values['C'] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_C")
+        values['O'] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_O")
+        values['P'] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_P")
+        values['S'] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_S")
+        values['M'] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_M")
+        values['B'] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_B")
         
         for e in self.product :
-            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'])
+            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'])
         for e in self.organization :
-            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'])
+            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'])
         for e in self.stakeholders :
-            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'])
+            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'])
         for e in self.methods :
-            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'])
+            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'])
         for e in self.business :
-            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'])
+            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'])
         """
         #print("XXXX values XXX")
         #print(values)
@@ -656,7 +678,7 @@ class ContextModelService(coach.Microservice):
 
 
     @endpoint("/edit_context", ["POST"], "text/html")
-    def edit_context(self, user_id, delegate_token, case_db, case_id):
+    def edit_context(self, user_id, user_token, case_db, case_id):
         """
         This method is called using POST when the user presses the save button in the edit_context_dialogue_transition.
         It gets several form parameters: 
@@ -684,35 +706,35 @@ class ContextModelService(coach.Microservice):
         # Write the new context information to the database.
         case_db_proxy = self.create_proxy(case_db)
         
-        case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_C", value = request.values["C-text"] if "C-text" in request.values else "")
-        case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_O", value = request.values["O-text"] if "O-text" in request.values else "")
-        case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_P", value = request.values["P-text"] if "P-text" in request.values else "")
-        case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_S", value = request.values["S-text"] if "S-text" in request.values else "")
-        case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_M", value = request.values["M-text"] if "M-text" in request.values else "")
-        case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_B", value = request.values["B-text"] if "B-text" in request.values else "")
+        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_C", value = request.values["C-text"] if "C-text" in request.values else "")
+        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_O", value = request.values["O-text"] if "O-text" in request.values else "")
+        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_P", value = request.values["P-text"] if "P-text" in request.values else "")
+        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_S", value = request.values["S-text"] if "S-text" in request.values else "")
+        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_M", value = request.values["M-text"] if "M-text" in request.values else "")
+        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_B", value = request.values["B-text"] if "B-text" in request.values else "")
 
         """
         for e in self.organization :
-            case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")         
+            case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")         
         for e in self.product :
-            case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")         
+            case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")         
         for e in self.stakeholders :
-            case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")         
+            case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")         
         for e in self.methods :
-            case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")         
+            case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")         
         for e in self.business :
-            case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")         
+            case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")         
         """
         
         return "Context information (general) saved."
     
 
 
-    def context_category_dialogue(self, user_id, delegate_token, case_db, case_id, category, category_name, edit_endpoint):
+    def context_category_dialogue(self, user_id, user_token, case_db, case_id, category, category_name, edit_endpoint):
         case_db_proxy = self.create_proxy(case_db)
         values = {} 
         for e in category :
-            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'])
+            values[e['id']] = case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'])
         return render_template(
           "context_category_dialogue.html",
           category_name = category_name,
@@ -720,72 +742,179 @@ class ContextModelService(coach.Microservice):
           edit_endpoint = edit_endpoint,
           values = values)            
           
+    
     @endpoint("/context_organization_dialogue", ["GET"], "text/html")
-    def context_organization_dialogue(self, user_id, delegate_token, case_db, case_id):
-        return self.context_category_dialogue(user_id, delegate_token, case_db, case_id,
+    def context_organization_dialogue(self, user_id, user_token, case_db, case_id):
+        return self.context_category_dialogue(user_id, user_token, case_db, case_id,
            self.organization,
            "Organization",
            "edit_context_organization")
+    
         
     @endpoint("/context_product_dialogue", ["GET"], "text/html")
-    def context_product_dialogue(self, user_id, delegate_token, case_db, case_id):
-        return self.context_category_dialogue(user_id, delegate_token, case_db, case_id,
+    def context_product_dialogue(self, user_id, user_token, case_db, case_id):
+        return self.context_category_dialogue(user_id, user_token, case_db, case_id,
            self.product,
            "Product",
            "edit_context_product")
+    
           
     @endpoint("/context_stakeholder_dialogue", ["GET"], "text/html")
-    def context_stakeholder_dialogue(self, user_id, delegate_token, case_db, case_id):
-        return self.context_category_dialogue(user_id, delegate_token, case_db, case_id,
+    def context_stakeholder_dialogue(self, user_id, user_token, case_db, case_id):
+        return self.context_category_dialogue(user_id, user_token, case_db, case_id,
            self.stakeholders,
            "Stakeholders",
            "edit_context_stakeholder")
         
     @endpoint("/context_methods_dialogue", ["GET"], "text/html")
-    def context_methods_dialogue(self, user_id, delegate_token, case_db, case_id):
-        return self.context_category_dialogue(user_id, delegate_token, case_db, case_id,
+    def context_methods_dialogue(self, user_id, user_token, case_db, case_id):
+        return self.context_category_dialogue(user_id, user_token, case_db, case_id,
            self.methods,
            "Development metods and technology",
            "edit_context_methods")
           
     @endpoint("/context_business_dialogue", ["GET"], "text/html")
-    def context_business_dialogue(self, user_id, delegate_token, case_db, case_id): 
-        return self.context_category_dialogue(user_id, delegate_token, case_db, case_id,
+    def context_business_dialogue(self, user_id, user_token, case_db, case_id): 
+        return self.context_category_dialogue(user_id, user_token, case_db, case_id,
            self.business,
            "Markes and business",
            "edit_context_business")
                    
 
-    def edit_context_category(self, user_id, delegate_token, case_db, case_id, category):
+    def edit_context_category(self, user_id, user_token, case_db, case_id, category):
         # Write the new context information to the database.
         case_db_proxy = self.create_proxy(case_db)
         for e in category :
-            case_db_proxy.change_case_property(user_id = user_id, token = delegate_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")
+            case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")
 
+    
     @endpoint("/edit_context_organization", ["POST"], "text/html")
-    def edit_context_organization(self, user_id, delegate_token, case_db, case_id):
-        self.edit_context_category(user_id, delegate_token, case_db, case_id, self.organization)
+    def edit_context_organization(self, user_id, user_token, case_db, case_id):
+        self.edit_context_category(user_id, user_token, case_db, case_id, self.organization)
         return "Context information (organization) saved."
+    
 
     @endpoint("/edit_context_product", ["POST"], "text/html")
-    def edit_context_product(self, user_id, delegate_token, case_db, case_id):
-        self.edit_context_category(user_id, delegate_token, case_db, case_id, self.product)
+    def edit_context_product(self, user_id, user_token, case_db, case_id):
+        self.edit_context_category(user_id, user_token, case_db, case_id, self.product)
         return "Context information (product) saved."
 
     @endpoint("/edit_context_stakeholder", ["POST"], "text/html")
-    def edit_context_stakeholder(self, user_id, delegate_token, case_db, case_id):
-        self.edit_context_category(user_id, delegate_token, case_db, case_id, self.stakeholders)
+    def edit_context_stakeholder(self, user_id, user_token, case_db, case_id):
+        self.edit_context_category(user_id, user_token, case_db, case_id, self.stakeholders)
         return "Context information (stakeholder) saved."
 
     @endpoint("/edit_context_methods", ["POST"], "text/html")
-    def edit_context_methods(self, user_id, delegate_token, case_db, case_id):
-        self.edit_context_category(user_id, delegate_token, case_db, case_id, self.methods)
+    def edit_context_methods(self, user_id, user_token, case_db, case_id):
+        self.edit_context_category(user_id, user_token, case_db, case_id, self.methods)
         return "Context information (developer methods and technology) saved."
     
     @endpoint("/edit_context_business", ["POST"], "text/html")
-    def edit_context_business(self, user_id, delegate_token, case_db, case_id):
-        self.edit_context_category(user_id, delegate_token, case_db, case_id, self.business)
+    def edit_context_business(self, user_id, user_token, case_db, case_id):
+        self.edit_context_category(user_id, user_token, case_db, case_id, self.business)
         return "Context information (market and business) saved."
+
+
+    """
+    Temporary to test the ontology stuff
+    """
     
+    """
+    @endpoint("/context_product_dialogue", ["GET"], "text/html")
+    def context_product_dialogue(self, user_id, user_token, case_db, case_id):
+    
+        case_id = session["case_id"]
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        
+        
+
+        # If a goal exists, fetch its description
+        context = self.case_db_proxy.get_objects(user_id=session["user_id"], user_token=session["user_token"],
+                                               case_id=case_id, subject=case_id, predicate=orion_ns.context)
+        if context:
+            context_uri = context[0]
+            organizationContext = self.case_db_proxy.get_objects(user_id=session["user_id"], user_token=session["user_token"],
+                                                          case_id=case_id,
+                                                          subject=context_uri, predicate=orion_ns.organizationContext)
+            if organizationContext:
+                organizationContext = organizationContext[0]
+
+        dialogue = render_template("test.html", organizationContext = organizationContext)
+        return self.main_menu_transition(main_dialogue = dialogue)
+    
+    
+        return self.context_category_dialogue(user_id, user_token, case_db, case_id,
+           self.organization,
+           "Organization",
+           "edit_context_organization")
+
+
+    @endpoint("/edit_context_organization", ["POST"], "text/html")
+    def edit_context_organization(self, user_id, user_token, case_db, case_id):
+        
+        # Old stuff
+        
+        self.edit_context_category(user_id, user_token, case_db, case_id, self.organization)
+        
+        # Ontology stuff
+        
+        # Should this really be done every time?
+        self.case_db_proxy = self.create_proxy(case_db)
+
+
+        orion_ns = rdflib.Namespace(self.orion_ns)
+
+        # Does the case already have a Context element? If not, create it, and bind its url to context_url.
+        contexts = self.case_db_proxy.get_objects(user_id=user_id, user_token=user_token,
+                                               case_id=case_id, subject=case_id, predicate=orion_ns.context)
+        if contexts:
+            context_uri = contexts[0]
+        else:
+            context_uri = self.case_db_proxy.add_resource(user_id=user_id, user_token=user_token,
+                                                       case_id=case_id, resource_class=orion_ns.Context)
+            self.case_db_proxy.add_object_property(user_id=user_id, user_token=user_token,
+                                                   case_id=case_id, resource1=case_id, property_name=orion_ns.context,
+                                                   resource2=context_uri)
+
+        # Does the case already have a OrganizationContext element? If not, create it, and bind it.
+        organizationContexts = self.case_db_proxy.get_objects(user_id=user_id, user_token=user_token,
+                                               case_id=case_id, subject=context_uri, predicate=orion_ns.organizationContext)
+        if organizationContexts:
+            organizationContext_uri = organizationContexts[0]
+        else:
+            organizationContext_uri = self.case_db_proxy.add_resource(user_id=user_id, user_token=user_token,
+                                                       case_id=case_id, resource_class=orion_ns.OrganizationContext)
+            self.case_db_proxy.add_object_property(user_id=user_id, user_token=user_token,
+                                                   case_id=case_id, resource1=context_uri, property_name=orion_ns.organizationContext,
+                                                   resource2=organizationContext_uri)
+                                                   
+		# Add the degree of distribution
+        # Does the case already have a degreeOfDistribution element? If not, create it, and bind it.
+        degreeOfDistribution = self.case_db_proxy.get_objects(user_id=user_id, user_token=user_token,
+                                               case_id=case_id, subject=organizationContext_uri, predicate=orion_ns.degreeOfDistribution)
+        if degreeOfDistribution:
+            degreeOfDistribution_uri = degreeOfDistribution[0]
+        else:
+            organizationContext_uri = self.case_db_proxy.add_resource(user_id=user_id, user_token=user_token,
+                                                       case_id=case_id, resource_class=orion_ns.DegreeOfDistribution)
+            self.case_db_proxy.add_object_property(user_id=user_id, user_token=user_token,
+                                                   case_id=case_id, resource1=organizationContext_uri, property_name=orion_ns.organizationContext,
+                                                   resource2 = orion_ns.low)
+                                                   
+
+        # Add the degree of distribution
+        self.case_db_proxy.add_datatype_property(user_id = user_id, user_token = user_token,
+                                                 case_id = case_id,
+                                                 resource = goal_uri,
+                                                 property_name = orion_ns.description,
+                                                 value = rdflib.Literal(description))
+        return self.main_menu_transition(main_dialogue = "Goal description changed!")
+
+        
+        return "Context information (organization) saved."
+        
+        """
+
+
 if __name__ == '__main__':
     ContextModelService(sys.argv[1]).run()
