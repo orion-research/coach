@@ -42,6 +42,7 @@
         "description": "Settings for PughService"
     },
     "CaseDatabase": {
+        "knowledge_repository": "http://127.0.0.1:5005",
         "authentication_service": "http://127.0.0.1:5009",
         "secret_data_file_name": "settings/root_secret_data.json",
         "label": "CaseDB",
