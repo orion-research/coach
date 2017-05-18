@@ -1,3 +1,44 @@
-<H2>Properties</H2>
+<h2>Properties</h2>
+<p>
+	Choose which properties you have for each possible alternatives.
+	<br/>At the right, you can see which properties each alternative already have
+</p>
+<br />
 
-    
+<div class="formContainer">
+	<form action="/property_model_request?endpoint=add_property" method="post" accept-charset="UTF-8">
+		<p>Choose an alternative</p>
+		<select name="alternative" required>
+			{% for alternative in alternatives %}
+			<option>{{alternative.title}}</option>
+			{% endfor %}
+		</select>
+		<br />
+		<br />
+
+		<p>Choose a property</p>
+		<select name="property_" required>
+			{% for property in properties %}
+			<option>{{property}}</option>
+			{% endfor %}
+		</select>
+		<br />
+		<br />
+
+		<input type="submit" value="Add property"></input>
+	</form>
+</div>
+
+<div class="propertyViewContainer">
+	<table border="black" style="border-collapse: collapse">
+		{% for alternative in alternatives %}
+			<tr>
+				<th>{{alternative.title}}</th>
+				{% for property in alternative.properties %}
+					<td>{{property}}</td>
+				{% endfor %}
+			</tr>
+		{% endfor %}
+	</table>
+</div>
+

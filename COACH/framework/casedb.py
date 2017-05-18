@@ -385,7 +385,6 @@ class CaseDatabase(coach.GraphDatabaseService):
         else:
             return "Invalid user or delegate token"
     
-    
     @endpoint("/change_alternative_property", ["POST"], "application/json")
     def change_alternative_property(self, user_id, token, case_id, alternative, name, value):
         """
@@ -640,7 +639,7 @@ class CaseDatabase(coach.GraphDatabaseService):
     @endpoint("/get_objects", ["GET", "POST"], "application/json")
     def get_objects(self, user_id, user_token, case_id, subject, predicate):
         """
-        Returns the subjects of all triples where the predicate and object are as provided.
+        Returns the objects of all triples where the subject and predicate are as provided.
         """
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))

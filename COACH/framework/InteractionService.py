@@ -11,6 +11,7 @@ import ipaddress
 import json
 import os
 import subprocess
+import sys
 
 # Coach modules
 from COACH.framework import coach
@@ -201,7 +202,8 @@ class InteractionService(coach.Microservice):
         params = request.values.to_dict()
         del params["endpoint"]
         params["user_id"] = session["user_id"]
-        params["delegate_token"] = delegate_token
+        #params["delegate_token"] = delegate_token #TODO: To uncomment?
+        params["user_token"] = session["user_token"] # TODO: to remove?
         params["case_db"] = self.get_setting("database")
         params["case_id"] = session["case_id"]
         params["knowledge_repository"] = self.get_setting("knowledge_repository")
@@ -438,7 +440,6 @@ class InteractionService(coach.Microservice):
         """
         self.case_db_proxy.add_stakeholder(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"], stakeholder = stakeholder, role = "contributor")
         return self.main_menu_transition(main_dialogue = "Stakeholder added!")
-
 
     @endpoint("/change_stakeholder_role", ["POST", "GET"], "text/plain")
     def change_stakeholder_role(self, property, stakeholder, value):

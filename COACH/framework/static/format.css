@@ -59,4 +59,14 @@ div.contextentry {
     width: 38em; /* NOTE: Hard-coded to look ok locally */
 }
 
+div.formContainer {
+	float: left;
+	width: 40%	
+}
+
+div.propertyViewContainer {
+	float: right;
+	width: 60%;
+	overflow-x: auto;
+}
 
