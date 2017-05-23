@@ -1,0 +1,80 @@
+<h2>Estimation methods</h2>
+
+<script>
+	function combo_box_change(combo_box_name) {
+		document.getElementById("submit_button_input").value = combo_box_name;
+		document.getElementById("estimation_method_form").submit();
+	}
+</script>
+
+<table border="black" style="border-collapse:collapse">
+	<tr>
+		<th>Selected alternative</th>
+		<th>Selected property</th>
+		<th>Selected estimation method</th>
+	</tr>
+	<tr>
+		<td>{{selected_alternative_name}}</td>
+		<td>{{selected_property_name}}</td>
+		<td>{{selected_estimation_method_name}}</td>
+	</tr>
+</table>
+<br/>
+<br/>
+<br/>
+
+<form id="estimation_method_form" action="/property_model_request?endpoint=manage_estimation_method_form" method="post" accept-charset="UTF-8">
+	<label> Alternative: </label>
+	<select name="alternative_name" onchange="combo_box_change('alternative_name')">
+		{% for alternative_name in alternatives_name_list %}
+			{% if alternative_name == selected_alternative_name %}
+				<option selected>{{alternative_name}}</option>
+			{% else %}
+				<option>{{alternative_name}}</option>
+			{% endif %}
+		{% endfor %}
+	</select>
+	<br/>
+	
+	<label> Property: </label>
+	<select name="property_name" onchange="combo_box_change('property_name')">
+		{% for property_name in properties_name_list %}
+			{% if property_name == selected_property_name %}
+				<option selected>{{property_name}}</option>
+			{% else %}
+				<option>{{property_name}}</option>
+			{% endif %}
+		{% endfor %}
+	</select>
+	{% if enable_add_button %}
+		<input name="submit_component" type="submit" value="Add"></input>
+	{% endif %}
+	<br/>
+	
+	<label> Estimation method: </label>
+	<select name="estimation_method_name" onchange="combo_box_change('estimation_method_name')">
+		{% for estimation_method_name in estimation_methods_name_list %}
+			{% if estimation_method_name == selected_estimation_method_name %}
+				<option selected>{{estimation_method_name}}</option>
+			{% else %}
+				<option>{{estimation_method_name}}</option>
+			{% endif %}
+		{% endfor %}
+	</select>
+	<br/>
+	
+	<label> Used parameters: </label>
+	<ul>
+		{% for selected_estimation_method_parameter in selected_estimation_method_parameters_list %}
+			<li>
+				{{selected_estimation_method_parameter}}:
+				<input type="number" name="{{selected_estimation_method_parameter}}_value"></input>
+			</li>
+		{% endfor %}
+	</ul>
+	<input name="submit_component" type="submit" value="Compute"</input>
+	
+	 <!-- If the form is submitted with a button, this input will be ignored. Else, submit_component will 
+	 have the value of this input, which would have been modified by the submitting component to put its name -->
+	<input id="submit_button_input" type="hidden" name="submit_component" value=""></input>
+</form>

@@ -70,7 +70,7 @@ class InteractionService(coach.Microservice):
 
         # Placeholder for the ORION ontology. Since the ontology is loaded from the case database, it is not given a value here.
         # This is because it cannot be assumed that the case database is up and running at this point.
-        # Instead, the ontology is loaded upon the first call to the method self.get_ontolog(), which should be used for accessing it.
+        # Instead, the ontology is loaded upon the first call to the method self.get_ontology(), which should be used for accessing it.
         self.ontology = None
         self.orion_ns = "http://www.orion-research.se/ontology#"
 
@@ -200,6 +200,7 @@ class InteractionService(coach.Microservice):
         delegate_token = self.authentication_service_proxy.get_delegate_token(user_id = session["user_id"], user_token = session["user_token"], 
                                                                               case_id = session["case_id"])
         params = request.values.to_dict()
+        
         del params["endpoint"]
         params["user_id"] = session["user_id"]
         #params["delegate_token"] = delegate_token #TODO: To uncomment?
@@ -207,6 +208,7 @@ class InteractionService(coach.Microservice):
         params["case_db"] = self.get_setting("database")
         params["case_id"] = session["case_id"]
         params["knowledge_repository"] = self.get_setting("knowledge_repository")
+        
         response = requests.request(request.method, property_service + "/" + request.values["endpoint"], 
                                     params = params)
         self.authentication_service_proxy.revoke_delegate_token(user_id = session["user_id"], user_token = session["user_token"])

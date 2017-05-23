@@ -1,0 +1,32 @@
+<h2>Properties</h2>
+
+<p>
+	Choose which properties you have for each possible alternatives.
+	<br/>At the right, you can see which properties each alternative already have
+</p>
+<br />
+<table border="black" style="border-collapse: collapse; text-align:center" width=100%>
+	<tr>
+		<th></th>
+		<th></th>
+		{% for alternative_name in alternatives_name_list %}
+			<th>{{alternative_name}}</th>
+		{% endfor %}
+	</tr>
+
+
+	{% for property in properties_estimations %}
+		<tr>
+			<th rowspan="{{property.estimation_methods | length + 1}}">{{property.property_name}}</th>
+			{% for estimation in property.estimation_methods %}
+				<tr>
+					<th>{{estimation.estimation_method_name}}</th>
+					{% for value in estimation.estimated_values %}
+						<td>{{value}}</td>
+					{% endfor %}
+				</tr>
+			{% endfor %}
+		</tr>
+	{% endfor %}
+</table>
+
