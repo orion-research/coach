@@ -7,22 +7,6 @@
 	}
 </script>
 
-<table border="black" style="border-collapse:collapse">
-	<tr>
-		<th>Selected alternative</th>
-		<th>Selected property</th>
-		<th>Selected estimation method</th>
-	</tr>
-	<tr>
-		<td>{{selected_alternative_name}}</td>
-		<td>{{selected_property_name}}</td>
-		<td>{{selected_estimation_method_name}}</td>
-	</tr>
-</table>
-<br/>
-<br/>
-<br/>
-
 <form id="estimation_method_form" action="/property_model_request?endpoint=manage_estimation_method_form" method="post" accept-charset="UTF-8">
 	<label> Alternative: </label>
 	<select name="alternative_name" onchange="combo_box_change('alternative_name')">
@@ -34,6 +18,7 @@
 			{% endif %}
 		{% endfor %}
 	</select>
+	<br/>
 	<br/>
 	
 	<label> Property: </label>
@@ -50,6 +35,7 @@
 		<input name="submit_component" type="submit" value="Add"></input>
 	{% endif %}
 	<br/>
+	<br/>
 	
 	<label> Estimation method: </label>
 	<select name="estimation_method_name" onchange="combo_box_change('estimation_method_name')">
@@ -62,16 +48,40 @@
 		{% endfor %}
 	</select>
 	<br/>
+	<br/>
 	
-	<label> Used parameters: </label>
-	<ul>
-		{% for selected_estimation_method_parameter in selected_estimation_method_parameters_list %}
-			<li>
-				{{selected_estimation_method_parameter}}:
-				<input type="number" name="{{selected_estimation_method_parameter}}_value"></input>
-			</li>
-		{% endfor %}
-	</ul>
+	{% if 0 == 	selected_estimation_method_used_properties | length %}
+		No used property
+		<br/>
+	{% else %}
+		Used properties:
+		<ul>
+			{% for used_property in selected_estimation_method_used_properties %}
+				<li>
+					{{used_property}}
+				</li>
+			{% endfor %}
+		</ul>
+	{% endif %}
+	<br/>
+	
+	{% if 0 == selected_estimation_method_parameters_list | length %}
+		No parameters
+		<br/>
+	{% else %}
+		<label> Used parameters: </label>
+		<ul>
+			{% for parameter_name in selected_estimation_method_parameters_list %}
+				<li>
+					{{parameter_name}}:
+					<input type="number" name="{{parameter_name}}" 
+							value='{{selected_estimation_method_parameters_list[parameter_name]}}' required></input>
+				</li>
+			{% endfor %}
+		</ul>		
+	{% endif %}
+	<br/>
+	
 	<input name="submit_component" type="submit" value="Compute"</input>
 	
 	 <!-- If the form is submitted with a button, this input will be ignored. Else, submit_component will 

@@ -22,6 +22,8 @@ import rdflib
 import sqlalchemy
 from rdflib_sqlalchemy.store import SQLAlchemy
 
+from flask import request
+
 class CaseDatabase(coach.GraphDatabaseService):
     
     """
@@ -307,6 +309,7 @@ class CaseDatabase(coach.GraphDatabaseService):
     
     @endpoint("/add_property", ["POST"], "application/json")
     def add_property(self, user_id, user_token, case_id, alternative_uri, property_ontology_id):
+        #TODO: check delegate token?
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             orion_ns = rdflib.Namespace(self.orion_ns)
             case_id = rdflib.URIRef(case_id)
@@ -324,8 +327,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                 # The existing object will be retrieved
                 property_uri = properties_uri_list[0]
             else:
-                raise RuntimeError("A unique property should point to " + str(property_ontology_id) + 
-                                   " but " + str(len(properties_uri_list))) + " were found."
+                raise RuntimeError("A unique property should point to " + str(property_ontology_id) + " but " + str(len(properties_uri_list)) + " were found.")
 
             case_graph.add((property_uri, orion_ns.belong_to, rdflib.URIRef(alternative_uri)))
             
@@ -334,22 +336,190 @@ class CaseDatabase(coach.GraphDatabaseService):
         else:
             return "Invalid user token"
         
-    @endpoint("/get_alternative_from_property_ontology_id", ["POST"], "application/json")
+    @endpoint("/add_estimation", ["POST"], "application/json")
+    def add_estimation(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id, value,
+                       estimation_parameters_name, estimation_parameters_value):
+        #TODO: check delegate token?
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            # estimation_parameter_name / value must be reconstructed, because only the first element of the list is transmitted
+            # in arguments. However, they must be present in arguments list, so the caller is able to send them in the request
+            request_data = dict(request.form)
+            estimation_parameters_name = request_data["estimation_parameters_name"]
+            estimation_parameters_value = request_data["estimation_parameters_value"]
+            estimation_parameters = {}
+            for (name, parameter_value) in zip(estimation_parameters_name, estimation_parameters_value):
+                estimation_parameters[name] = parameter_value
+            
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_id = rdflib.URIRef(case_id)
+            case_graph = self.graph.get_context(case_id)
+            
+            #Check whether an estimation has already been computed
+            estimation_uri = self._get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id)
+            if estimation_uri is None:
+                estimation_uri = self.new_uri()
+                case_graph.add((case_id, orion_ns.estimation, estimation_uri))
+                case_graph.add((estimation_uri, rdflib.RDF.type, orion_ns.Estimation))
+                case_graph.add((estimation_uri, orion_ns.ontology_id, rdflib.Literal(estimation_method_ontology_id)))
+                case_graph.add((estimation_uri, orion_ns.belong_to_alternative, rdflib.URIRef(alternative_uri)))
+                case_graph.add((estimation_uri, orion_ns.belong_to_property, rdflib.URIRef(property_uri)))
+            
+            #set() create the value if it does not exist yet, and update it if it exists
+            case_graph.set((estimation_uri, orion_ns.value, rdflib.Literal(value)))
+            self._add_estimation_parameters(user_id, user_token, case_id, estimation_uri, estimation_parameters)
+        else:
+            return "Invalid user token"
+        
+    def _add_estimation_parameters(self, user_id, user_token, case_id, estimation_uri, parameter_name_to_value_dict):
+        # TODO: As this method is not an endpoint, does checking the user is useful?
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            query = """SELECT ?parameter ?parameter_name
+            WHERE {
+                ?case_id orion:parameter ?parameter .
+                ?estimation orion:has_parameter ?parameter .
+                ?parameter orion:name ?parameter_name
+            }
+            """
+            case_id = rdflib.URIRef(case_id)
+            estimation_uri = rdflib.URIRef(estimation_uri)
+            result = self.graph.query(query, initNs = {"orion": rdflib.Namespace(self.orion_ns)},
+                                      initBindings = {"case_id": case_id, "estimation": estimation_uri})
+            parameter_name_to_uri_dict = {}
+            for parameter_uri, parameter_name in result:
+                parameter_name_to_uri_dict[parameter_name] = parameter_uri
+            
+            #Update parameter_name_to_value_dict so each key is changed to be a rdf literal
+            for parameter_name in parameter_name_to_value_dict:
+                parameter_name_to_value_dict[rdflib.Literal(parameter_name)] = parameter_name_to_value_dict.pop(parameter_name)
+                
+            case_graph = self.graph.get_context(case_id)
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            for parameter_name in parameter_name_to_value_dict:
+                if parameter_name not in parameter_name_to_uri_dict:
+                    parameter_uri = self.new_uri()
+                    case_graph.add((parameter_uri, rdflib.RDF.type, orion_ns.Parameter))
+                    case_graph.add((case_id, orion_ns.parameter, parameter_uri))
+                    case_graph.add((estimation_uri, orion_ns.has_parameter, parameter_uri))
+                    case_graph.add((parameter_uri, orion_ns.name, rdflib.Literal(parameter_name)))
+                else:
+                    parameter_uri = rdflib.URIRef(parameter_name_to_uri_dict[parameter_name])
+                
+                value = rdflib.Literal(parameter_name_to_value_dict[parameter_name])
+                case_graph.set((parameter_uri, orion_ns.value, value))
+                    
+        else:
+            return "Invalid user token"
+        
+    @endpoint("/get_alternative_from_property_ontology_id", ["GET"], "application/json")
     def get_alternative_from_property_ontology_id(self, user_id, user_token, case_id, property_ontology_id):
         #TODO: check delegate token?
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             query = """SELECT ?alternative 
                         WHERE {
+                            ?case_id orion:alternative ?alternative .
                             ?property orion:belong_to ?alternative .
                             ?property orion:ontology_id ?property_ontology_id
                         } 
                     """
+            case_id = rdflib.URIRef(case_id)
             result = self.graph.query(query, initNs = { "orion": rdflib.Namespace(self.orion_ns)},
                                       initBindings = { "property_ontology_id": property_ontology_id })
             return [a for (a,) in result]
         else:
             return "Invalid user token"
-
+        
+    def _get_estimation_uri(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
+        #TODO: check delegate token?
+        # TODO: As this method is not an endpoint, does checking the user is useful?
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            query = """SELECT ?estimation 
+                        WHERE {
+                            ?case_id orion:estimation ?estimation .
+                            ?estimation orion:belong_to_alternative ?alternative_uri .
+                            ?estimation orion:belong_to_property ?property .
+                            ?estimation orion:ontology_id ?estimation_method_ontology_id
+                        } 
+                    """
+            alternative_uri = rdflib.URIRef(alternative_uri)
+            property_uri = rdflib.URIRef(property_uri)
+            case_id = rdflib.URIRef(case_id)
+            result = self.graph.query(query, initNs = { "orion": rdflib.Namespace(self.orion_ns)},
+                                      initBindings = { "alternative_uri": alternative_uri, "property": property_uri, 
+                                                      "estimation_method_ontology_id": estimation_method_ontology_id,
+                                                      "case_id": case_id })
+            result = [e for (e,) in result]
+            if len(result) > 1:
+                raise RuntimeError("At most one estimation should point to (alternative: " + str(alternative_uri) + ", property: " + 
+                                   str(property_uri) + ", estimation method ontology id" + str(estimation_method_ontology_id) + 
+                                   "), but " + str(len(result)) + " were found.")
+            
+            return result[0] if len(result) == 1 else None
+        else:
+            return "Invalid user token"
+        
+    @endpoint("/get_estimation_value", ["GET"], "application/json")
+    def get_estimation_value(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
+        """
+        INPUT:
+            alternative_uri: the uri of an alternative in the current database.
+            property_uri: the uri of a property in the current database.
+            estimation_method_ontology_id: the id of an estimation method in the ontology.
+        OUTPUT:
+            The triplet (alternative, property, estimation method's id) defined a unique estimation. If this estimation has previously
+            been stored in the database, retrieved and returned the value of this estimation. Else, return None.
+        """
+        
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            estimation_uri = self._get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id)
+            if estimation_uri is None:
+                return None
+            
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            estimation_value_list = self.get_objects(user_id, user_token, case_id, estimation_uri, orion_ns.value)
+            if len(estimation_value_list) != 1:
+                raise RuntimeError("There should be exactly one value for the estimation " + estimation_uri + " but " +
+                                   len(estimation_value_list) + " were found.")
+            return estimation_value_list[0]
+        else:
+            return "Invalid user token"
+    
+    @endpoint("/get_estimation_parameters", ["GET"], "application/json")
+    def get_estimation_parameters(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
+        """
+        INPUT:
+            alternative_uri: the uri of an alternative in the current database.
+            property_uri: the uri of a property in the current database.
+            estimation_method_ontology_id: the id of an estimation method in the ontology.
+        OUTPUT:
+            A dictionary, in which the keys are the parameter's name of the estimation defined by the triplet 
+            (alternative, property, estimation method's id), and the values are the value of the parameter.
+            Return an empty dictionary if no estimation was found for the triplet (alternative, property, estimation method's id)
+            or if no parameters exist for this estimation.
+        """
+        #TODO: check delegate token?
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            estimation_uri = self._get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id)
+            if estimation_uri is None:
+                return {}
+            
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_id = rdflib.URIRef(case_id)
+            query = """SELECT ?parameter_name ?parameter_value
+                        WHERE {
+                            ?estimation_uri orion:has_parameter ?parameter .
+                            ?parameter orion:value ?parameter_value .
+                            ?parameter orion:name ?parameter_name
+                        }
+            """
+            query_result = self.graph.query(query, initNs = {"orion": orion_ns}, initBindings = {"estimation_uri": estimation_uri})
+            
+            result = {}
+            for (parameter_name, parameter_value) in query_result:
+                result[parameter_name.toPython()] = parameter_value.toPython()
+            return result
+        else:
+            return "Invalid user token"
+    
     @endpoint("/get_decision_process", ["GET"], "application/json")    
     def get_decision_process(self, user_id, user_token, case_id):
         """
