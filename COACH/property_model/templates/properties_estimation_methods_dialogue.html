@@ -1,15 +1,15 @@
 <h2>Estimation methods</h2>
 
 <script>
-	function combo_box_change(combo_box_name) {
-		document.getElementById("submit_button_input").value = combo_box_name;
+	function combo_box_change(new_submit_component_value) {
+		document.getElementById("submit_button_input").value = new_submit_component_value;
 		document.getElementById("estimation_method_form").submit();
 	}
 </script>
 
 <form id="estimation_method_form" action="/property_model_request?endpoint=manage_estimation_method_form" method="post" accept-charset="UTF-8">
 	<label> Alternative: </label>
-	<select name="alternative_name" onchange="combo_box_change('alternative_name')">
+	<select name="alternative_name" onchange="combo_box_change('main_combo_box')">
 		{% for alternative_name in alternatives_name_list %}
 			{% if alternative_name == selected_alternative_name %}
 				<option selected>{{alternative_name}}</option>
@@ -22,7 +22,7 @@
 	<br/>
 	
 	<label> Property: </label>
-	<select name="property_name" onchange="combo_box_change('property_name')">
+	<select name="property_name" onchange="combo_box_change('main_combo_box')">
 		{% for property_name in properties_name_list %}
 			{% if property_name == selected_property_name %}
 				<option selected>{{property_name}}</option>
@@ -38,7 +38,7 @@
 	<br/>
 	
 	<label> Estimation method: </label>
-	<select name="estimation_method_name" onchange="combo_box_change('estimation_method_name')">
+	<select name="estimation_method_name" onchange="combo_box_change('main_combo_box')">
 		{% for estimation_method_name in estimation_methods_name_list %}
 			{% if estimation_method_name == selected_estimation_method_name %}
 				<option selected>{{estimation_method_name}}</option>
@@ -50,15 +50,26 @@
 	<br/>
 	<br/>
 	
-	{% if 0 == 	selected_estimation_method_used_properties | length %}
+	{% if 0 == 	used_properties | length %}
 		No used property
 		<br/>
 	{% else %}
 		Used properties:
 		<ul>
-			{% for used_property in selected_estimation_method_used_properties %}
+			{% for used_property in used_properties %}
 				<li>
-					{{used_property}}
+					{{used_property.name}}
+					<select name="{{used_property.name}}_selected_estimation_method" onchange="combo_box_change('main_combo_box')">
+						{% for estimation_method_name in used_property.estimation_methods_name %}
+							{% if estimation_method_name == used_property.selected %}
+								<option selected>{{estimation_method_name}}</option>
+							{% else %}
+								<option>{{estimation_method_name}}</option>
+							{% endif %}
+						{% endfor %}
+					</select>
+					Value : {{used_property.value}}
+					<input name="{{used_property.name}}_property_value" value="{{used_property.value}}" type="hidden"></input>
 				</li>
 			{% endfor %}
 		</ul>
@@ -74,7 +85,7 @@
 			{% for parameter_name in selected_estimation_method_parameters_list %}
 				<li>
 					{{parameter_name}}:
-					<input type="number" name="{{parameter_name}}" 
+					<input type="number" name="{{parameter_name}}_parameter" 
 							value='{{selected_estimation_method_parameters_list[parameter_name]}}' required></input>
 				</li>
 			{% endfor %}
@@ -82,7 +93,11 @@
 	{% endif %}
 	<br/>
 	
-	<input name="submit_component" type="submit" value="Compute"</input>
+	{% if enable_compute_button %}
+		<input name="submit_component" type="submit" value="Compute"></input>
+	{% else %}
+		<input name="submit_component" type="submit" value="Compute" disabled></input>
+	{% endif %}
 	
 	 <!-- If the form is submitted with a button, this input will be ignored. Else, submit_component will 
 	 have the value of this input, which would have been modified by the submitting component to put its name -->

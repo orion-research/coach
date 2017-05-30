@@ -338,9 +338,11 @@ class CaseDatabase(coach.GraphDatabaseService):
         
     @endpoint("/add_estimation", ["POST"], "application/json")
     def add_estimation(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id, value,
-                       estimation_parameters_name, estimation_parameters_value):
+                       estimation_parameters_name, estimation_parameters_value, used_properties, 
+                       estimation_methods_ontology_id_for_used_properties):
         #TODO: check delegate token?
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            
             # estimation_parameter_name / value must be reconstructed, because only the first element of the list is transmitted
             # in arguments. However, they must be present in arguments list, so the caller is able to send them in the request
             request_data = dict(request.form)
@@ -349,7 +351,17 @@ class CaseDatabase(coach.GraphDatabaseService):
             estimation_parameters = {}
             for (name, parameter_value) in zip(estimation_parameters_name, estimation_parameters_value):
                 estimation_parameters[name] = parameter_value
-            
+                
+            # Idem for used_properties
+            estimation_methods_ontology_id_for_used_properties = request_data["estimation_methods_ontology_id_for_used_properties"]
+            used_properties = request_data["used_properties"]
+            # A trash value has been added at the end of the list to be able to send it with the proxy, we now need to remove it
+            del estimation_methods_ontology_id_for_used_properties[-1]
+            del used_properties [-1]
+            used_properties_to_estimation_method_ontology_id = {}
+            for (_property_name, _estimation_method_ontology_id) in zip(used_properties, estimation_methods_ontology_id_for_used_properties):
+                used_properties_to_estimation_method_ontology_id[_property_name] = _estimation_method_ontology_id
+                
             orion_ns = rdflib.Namespace(self.orion_ns)
             case_id = rdflib.URIRef(case_id)
             case_graph = self.graph.get_context(case_id)
@@ -364,9 +376,13 @@ class CaseDatabase(coach.GraphDatabaseService):
                 case_graph.add((estimation_uri, orion_ns.belong_to_alternative, rdflib.URIRef(alternative_uri)))
                 case_graph.add((estimation_uri, orion_ns.belong_to_property, rdflib.URIRef(property_uri)))
             
-            #set() create the value if it does not exist yet, and update it if it exists
+            # set() create the value if it does not exist yet, and update it if it exists
             case_graph.set((estimation_uri, orion_ns.value, rdflib.Literal(value)))
             self._add_estimation_parameters(user_id, user_token, case_id, estimation_uri, estimation_parameters)
+            self._add_estimation_used_properties(user_id, user_token, case_id, alternative_uri, estimation_uri, 
+                                                 used_properties_to_estimation_method_ontology_id)
+            case_graph.commit()
+            return str(case_id)
         else:
             return "Invalid user token"
         
@@ -407,6 +423,23 @@ class CaseDatabase(coach.GraphDatabaseService):
                 value = rdflib.Literal(parameter_name_to_value_dict[parameter_name])
                 case_graph.set((parameter_uri, orion_ns.value, value))
                     
+        else:
+            return "Invalid user token"
+        
+    def _add_estimation_used_properties(self, user_id, user_token, case_id, alternative_uri, estimation_uri,
+                                        used_properties_to_estimation_method_ontology_id):
+        # TODO: As this method is not an endpoint, does checking the user is useful?
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            
+            self.remove_datatype_property(user_id, user_token, case_id, estimation_uri, orion_ns.use_estimation)
+            
+            case_graph = self.graph.get_context(case_id)
+            for property_uri in used_properties_to_estimation_method_ontology_id:
+                used_estimation_uri = self._get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri,
+                                                               used_properties_to_estimation_method_ontology_id[property_uri])
+                case_graph.add((estimation_uri, orion_ns.use_estimation, used_estimation_uri))
+                
         else:
             return "Invalid user token"
         
@@ -654,9 +687,11 @@ class CaseDatabase(coach.GraphDatabaseService):
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_id = rdflib.URIRef(case_id)
             case_graph = self.graph.get_context(case_id)
-            serialized_graph = case_graph.serialize(format = format).decode("utf-8")
-            self.kr_db_proxy.export_case(case_graph = serialized_graph, format = format)
-            return serialized_graph
+            #TODO: to uncomment
+            return case_graph.serialize(format = format).decode("utf-8")
+#             serialized_graph = case_graph.serialize(format = format).decode("utf-8")
+#             self.kr_db_proxy.export_case(case_graph = serialized_graph, format = format)
+#             return serialized_graph
         else:
             return "Invalid user token"
     

@@ -369,7 +369,7 @@ class Proxy():
 
                 # If there was an error in the response, raise an exception
                 if self.result.status_code != 200:
-                    message = "An error occured while processing the endpoint " + name + ":\n"
+                    message = "An error occurred while processing the endpoint " + name + ":\n"
                     message += "Service: " + self.url + "\n"
                     message += "Arguments: " + str(kwargs) + "\n\n"
                     raise MicroserviceException(message + self.result.text)
