@@ -15,17 +15,17 @@
 	</tr>
 
 	{% for property in properties_estimations %}
-		<tr>
+		<tr style="border: 2px solid black">
 			<th rowspan="{{property.estimation_methods | length + 1}}">{{property.property_name}}</th>
 			{% for estimation in property.estimation_methods %}
 				<tr>
 					<th>{{estimation.estimation_method_name}}</th>
 					{% for value_object in estimation.estimated_values %}
-						<td>
+						<td {% if not value_object.up_to_date %} style="background-color:yellow"{%endif%}>
 							<a href="/property_model_request?endpoint=shortcut_from_overview
 							&alternative_name={{value_object.alternative_name}}
 							&property_name={{property.property_name}}
-							&estimation_method_name={{estimation.estimation_method_name}}" style="text-decoration:none">
+							&estimation_method_name={{estimation.estimation_method_name}}" style="text-decoration:none; color:black">
 								<div>
 									&nbsp;{{value_object.value}}&nbsp;
 								</div>

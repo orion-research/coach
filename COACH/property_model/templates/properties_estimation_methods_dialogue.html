@@ -71,6 +71,9 @@
 					Value : {{used_property.value}}
 					<input name="{{used_property.name}}_property_value" value="{{used_property.value}}" type="hidden"></input>
 					<button name="submit_component" type="submit" value="{{used_property.name}}_goto_button">Goto</button>
+					{% if not used_property.up_to_date %}
+						/!\ This value is out-of-date
+					{% endif %}
 				</li>
 			{% endfor %}
 		</ul>
@@ -94,10 +97,14 @@
 	{% endif %}
 	<br/>
 	
-	{% if estimation_value == None %}
+	{% if estimation_value.value == None %}
 		This estimation has not been computed yet
 	{% else %}
-		Current value is {{estimation_value}}
+		Current value is {{estimation_value.value}}
+		{% if not estimation_value.up_to_date %}
+			<br/>
+			/!\ The current value is out-of-date
+		{% endif %}
 	{% endif %}
 	<br/>
 	

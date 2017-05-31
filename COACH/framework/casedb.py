@@ -381,6 +381,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             self._add_estimation_parameters(user_id, user_token, case_id, estimation_uri, estimation_parameters)
             self._add_estimation_used_properties(user_id, user_token, case_id, alternative_uri, estimation_uri, 
                                                  used_properties_to_estimation_method_ontology_id)
+            self._manage_estimation_up_to_date_property(user_id, user_token, case_id, estimation_uri)
             case_graph.commit()
             return str(case_id)
         else:
@@ -443,6 +444,18 @@ class CaseDatabase(coach.GraphDatabaseService):
         else:
             return "Invalid user token"
         
+    def _manage_estimation_up_to_date_property(self, user_id, user_token, case_id, estimation_uri):
+        # TODO: As this method is not an endpoint, does checking the user is useful?        
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_graph = self.graph.get_context(case_id)
+            dependents_estimation_uri_list = self.get_subjects(user_id, user_token, case_id, orion_ns.use_estimation, estimation_uri)
+            for dependent_estimation_uri in dependents_estimation_uri_list:
+                case_graph.set((dependent_estimation_uri, orion_ns.up_to_date, rdflib.Literal(False)))
+            case_graph.set((estimation_uri, orion_ns.up_to_date, rdflib.Literal(True)))
+        else:
+            return "Invalid user token"
+        
     @endpoint("/get_alternative_from_property_ontology_id", ["GET"], "application/json")
     def get_alternative_from_property_ontology_id(self, user_id, user_token, case_id, property_ontology_id):
         #TODO: check delegate token?
@@ -499,7 +512,9 @@ class CaseDatabase(coach.GraphDatabaseService):
             estimation_method_ontology_id: the id of an estimation method in the ontology.
         OUTPUT:
             The triplet (alternative, property, estimation method's id) defined a unique estimation. If this estimation has previously
-            been stored in the database, retrieved and returned the value of this estimation. Else, return None.
+            been stored in the database, retrieved and returned a dictionary, with one property being the value of this estimation,
+            and the other one a boolean telling whether the value is up-to-date or not. The keys are respectively "value" and
+            "up_to_date". If no estimation are found, return None.
         """
         
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
@@ -511,8 +526,14 @@ class CaseDatabase(coach.GraphDatabaseService):
             estimation_value_list = self.get_objects(user_id, user_token, case_id, estimation_uri, orion_ns.value)
             if len(estimation_value_list) != 1:
                 raise RuntimeError("There should be exactly one value for the estimation " + estimation_uri + " but " +
-                                   len(estimation_value_list) + " were found.")
-            return estimation_value_list[0]
+                                   str(len(estimation_value_list)) + " were found.")
+            
+            estimation_up_to_date_list = self.get_objects(user_id, user_token, case_id, estimation_uri, orion_ns.up_to_date)
+            if len(estimation_up_to_date_list) != 1:
+                raise RuntimeError("There should be exactly one up-to-date value for the estimation " + estimation_uri + " but " +
+                                   str(len(estimation_up_to_date_list)) + " were found.")
+            result = {"value": estimation_value_list[0].toPython(), "up_to_date": estimation_up_to_date_list[0].toPython()}
+            return result
         else:
             return "Invalid user token"
     

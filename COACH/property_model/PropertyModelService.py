@@ -178,10 +178,9 @@ class PropertyModelService(coach.Microservice):
         case_db_proxy = db_infos["case_db_proxy"]
         
         
-        template = None
         if not self._is_property_linked_to_alternative(db_infos, alternative_name, property_name):
-            template = self._add_property(db_infos, alternative_name, property_name, estimation_method_name, 
-                                          selected_estimation_method_for_used_properties)
+            self._add_property(db_infos, alternative_name, property_name, estimation_method_name, 
+                               selected_estimation_method_for_used_properties)
             
         estimation_method_ontology_id = self._get_estimation_method_ontology_id_from_name(estimation_method_name)
         estimation_value = self._compute_estimation_value(estimation_method_ontology_id, estimation_parameters, used_properties_value)
@@ -212,10 +211,8 @@ class PropertyModelService(coach.Microservice):
                                      estimation_parameters_value=estimation_parameters_value, used_properties=used_properties,
                                      estimation_methods_ontology_id_for_used_properties=estimation_methods_ontology_id_for_used_properties)
         
-        if template is None:
-            return self._properties_estimation_methods_dialogue_transition(db_infos, alternative_name, property_name, estimation_method_name,
-                                                                           selected_estimation_method_for_used_properties)
-        return template
+        return self._properties_estimation_methods_dialogue_transition(db_infos, alternative_name, property_name, estimation_method_name,
+                                                                        selected_estimation_method_for_used_properties)
     
         
     def _properties_estimation_methods_dialogue_transition(self, db_infos, selected_alternative_name, selected_property_name, 
@@ -338,7 +335,7 @@ class PropertyModelService(coach.Microservice):
 
         if len(properties_list) > 1:
             raise RuntimeError("There should be at most one property with the name " + property_name + " but "
-                               + len(properties_list) + " were found.")
+                               + str(len(properties_list)) + " were found.")
         return properties_list[0] if len(properties_list) == 1 else None
 
     def _get_estimated_value_list(self, db_infos, alternatives_uri_list, property_name, estimation_method_ontology_id):
@@ -349,8 +346,9 @@ class PropertyModelService(coach.Microservice):
             estimation_method_ontology_id: the id of the estimation method in the ontology for which the value will be retrieved
         
         OUTPUT:
-            A list where each element is an object with two properties: one is the name of the corresponding alternatives, and the 
-            other is the value of the current estimation.
+            A list where each element is a dictionary with three properties: one is the name of the corresponding alternatives, one  
+            is the value of the current estimation and the last is a boolean telling whether the value is up-to-date. The keys are 
+            respectively "alternative_name", "value" and "up_to_date".
             The value can have 3 different value: 
               - An empty string if the provided property has not be added to the current alternative.
               - The string "---" if the provided property has be added to the current alternative,
@@ -372,16 +370,16 @@ class PropertyModelService(coach.Microservice):
         result = []
         for alternative_uri in alternatives_uri_list:
             if alternative_uri in linked_alternatives_list_uri:
-                result_value = case_db_proxy.get_estimation_value(user_id=user_id, user_token=user_token, case_id=case_id, 
+                db_result = case_db_proxy.get_estimation_value(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                                   alternative_uri=alternative_uri, property_uri=property_uri, 
                                                                   estimation_method_ontology_id=estimation_method_ontology_id)
-                if result_value is None:
-                    result_value = self.PROPERTY_VALUE_NOT_COMPUTED_STRING
+                if db_result is None:
+                    db_result = {"value": self.PROPERTY_VALUE_NOT_COMPUTED_STRING, "up_to_date": True}
             else:
-                result_value = self.PROPERTY_NOT_ADDED_STRING
+                db_result = {"value": self.PROPERTY_NOT_ADDED_STRING, "up_to_date": True}
             
             alternative_name = self._get_alternative_name_from_uri(db_infos, alternative_uri)
-            result.append({"alternative_name": alternative_name, "value": result_value})
+            result.append({"alternative_name": alternative_name, "value": db_result["value"], "up_to_date": db_result["up_to_date"]})
         
         return result
     
@@ -520,9 +518,11 @@ class PropertyModelService(coach.Microservice):
             if property_value is None:
                 property_value = self.PROPERTY_VALUE_NOT_COMPUTED_STRING
             
-            result.append({"name": current_property_name, "estimation_methods_name": estimation_method_name_list, "value": property_value,
+            result.append({"name": current_property_name, "estimation_methods_name": estimation_method_name_list, 
+                           "value": property_value["value"], "up_to_date": property_value["up_to_date"],
                            "selected": selected_estimation_method_for_current_property})
         
+        log("result :", result)
         return result
     
     def _get_estimation_value(self, db_infos, alternative_uri, property_name, estimation_method_name):
