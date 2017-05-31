@@ -35,11 +35,10 @@ import rdflib
 
 #TODO: To suppress
 import string
+# TODO: to suppress
 from datetime import datetime
 import inspect
 
-
-# TODO: to suppress
 def log(*args):
     message = datetime.now().strftime("%H:%M:%S") + " : "
     message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
@@ -53,6 +52,8 @@ def log(*args):
 class PropertyModelService(coach.Microservice):
     PROPERTY_NOT_ADDED_STRING = ""
     PROPERTY_VALUE_NOT_COMPUTED_STRING = "---"
+    ESTIMATION_METHOD_ONTOLOGY_ID_SUFFIX = "_ontology_id"
+    PROPERTY_ONTOLOGY_ID_SUFFIX = "_ontology_id"
     
     def __init__(self, settings_file_name = None, working_directory = None):
         super().__init__(settings_file_name, working_directory = working_directory)
@@ -88,9 +89,17 @@ class PropertyModelService(coach.Microservice):
             
             properties_estimations.append({"property_name": property_name, "estimation_methods": estimation_methods})
  
+        log("properties_estimations :", properties_estimations)
         return render_template("properties_overview_dialogue.html", properties_estimations=properties_estimations,
                                alternatives_name_list=alternatives_name_list)
-
+        
+    @endpoint("/shortcut_from_overview", ["GET"], "text/html")
+    def shortcut_from_overview(self, user_id, user_token, case_db, case_id, alternative_name, property_name, estimation_method_name):
+        case_db_proxy = self.create_proxy(case_db)
+        db_infos = {"case_id": case_id, "user_id": user_id, "user_token": user_token, "case_db_proxy": case_db_proxy}
+        
+        return self._properties_estimation_methods_dialogue_transition(db_infos, alternative_name, property_name, estimation_method_name,
+                                                                       {})
     @endpoint("/properties_estimation_methods_dialogue", ["GET"], "text/html")
     def properties_estimation_methods_dialogue_transition(self, user_id, user_token, case_db, case_id):
         case_db_proxy = self.create_proxy(case_db)
@@ -106,6 +115,8 @@ class PropertyModelService(coach.Microservice):
         PROPERTY_SELECTED_ESTIMATION_METHOD_SUFFIX_LENGTH = len(PROPERTY_SELECTED_ESTIMATION_METHOD_SUFFIX)
         PROPERTY_VALUE_SUFFIX = "_property_value"
         PROPERTY_VALUE_SUFFIX_LENGTH = len(PROPERTY_VALUE_SUFFIX)
+        GOTO_BUTTON_SUFFIX = "_goto_button"
+        GOTO_BUTTON_SUFFIX_LENGTH = len(GOTO_BUTTON_SUFFIX)
         
         estimation_method_parameters = {}
         selected_estimation_method_for_used_properties = {}
@@ -136,9 +147,13 @@ class PropertyModelService(coach.Microservice):
         elif submit_component == "main_combo_box":
             return self._properties_estimation_methods_dialogue_transition(db_infos, alternative_name, property_name, estimation_method_name,
                                                                            selected_estimation_method_for_used_properties)
-            
+        elif submit_component.endswith(GOTO_BUTTON_SUFFIX):
+            property_name = submit_component[:-GOTO_BUTTON_SUFFIX_LENGTH]
+            estimation_method_name = selected_estimation_method_for_used_properties[property_name]
+            return self._properties_estimation_methods_dialogue_transition(db_infos, alternative_name, property_name, 
+                                                                           estimation_method_name, {})
         else:
-            raise MicroserviceException("Unknown submit_component name : " + submit_component)
+            raise MicroserviceException("Unknown submit_component name : '" + submit_component + "'")
         
     def _add_property(self, db_infos, alternative_name, property_name, estimation_method_name, selected_estimation_method_for_used_properties):
         user_id = db_infos["user_id"]
@@ -204,7 +219,7 @@ class PropertyModelService(coach.Microservice):
     
         
     def _properties_estimation_methods_dialogue_transition(self, db_infos, selected_alternative_name, selected_property_name, 
-                                                           selected_estimation_method_name, selected_estimation_method_for_used_properties):        
+                                                           selected_estimation_method_name, selected_estimation_method_for_used_properties):                
         alternatives_name_list = self._get_alternatives(db_infos)[0]
         selected_alternative_name = (selected_alternative_name if selected_alternative_name in 
                                           alternatives_name_list else alternatives_name_list[0])
@@ -217,7 +232,8 @@ class PropertyModelService(coach.Microservice):
         estimation_methods_name_list = self._get_estimation_methods(selected_property_name)
         selected_estimation_method_name = (selected_estimation_method_name if selected_estimation_method_name in
                                                 estimation_methods_name_list else estimation_methods_name_list[0])
-        used_properties = self._get_estimation_method_used_properties(db_infos, selected_alternative_name, selected_estimation_method_name,
+        used_properties = self._get_estimation_method_used_properties(db_infos, selected_alternative_name, selected_property_name,
+                                                                      selected_estimation_method_name,
                                                                       selected_estimation_method_for_used_properties)
         selected_estimation_method_parameters_list = self._get_selected_estimation_method_parameters(db_infos, selected_alternative_name,
                                                                                                      selected_property_name,
@@ -225,12 +241,15 @@ class PropertyModelService(coach.Microservice):
         
         enable_compute_button = self._is_compute_button_enable(used_properties)
         
+        selected_alternative_uri = self._get_alternative_uri_from_name(db_infos, selected_alternative_name)
+        estimation_value = self._get_estimation_value(db_infos, selected_alternative_uri, selected_property_name, selected_estimation_method_name)
+
         return render_template("properties_estimation_methods_dialogue.html", alternatives_name_list=alternatives_name_list,
                                properties_name_list=properties_name_list, estimation_methods_name_list=estimation_methods_name_list,
                                selected_estimation_method_parameters_list=selected_estimation_method_parameters_list, 
                                selected_alternative_name=selected_alternative_name, selected_property_name=selected_property_name,
                                selected_estimation_method_name=selected_estimation_method_name, enable_add_button=enable_add_button,
-                               used_properties=used_properties, enable_compute_button=enable_compute_button)
+                               used_properties=used_properties, enable_compute_button=enable_compute_button, estimation_value=estimation_value)
 
     def _get_alternative_uri_from_name(self, db_infos, alternative_name) :
         """
@@ -291,8 +310,12 @@ class PropertyModelService(coach.Microservice):
     
     def _get_property_ontology_id_from_name(self, property_name):
         # TODO: Currently, the property_ontology_id is the property's name
-        property_ontology_id = property_name + "_ontology_id"
+        property_ontology_id = property_name + self.PROPERTY_ONTOLOGY_ID_SUFFIX
         return property_ontology_id
+    
+    def _get_property_name_from_ontology_id(self, property_ontology_id):
+        property_name = property_ontology_id[:-len(self.PROPERTY_ONTOLOGY_ID_SUFFIX)]
+        return property_name
     
     def _get_property_uri_from_name(self, db_infos, property_name):
         """
@@ -326,7 +349,8 @@ class PropertyModelService(coach.Microservice):
             estimation_method_ontology_id: the id of the estimation method in the ontology for which the value will be retrieved
         
         OUTPUT:
-            A list where each element is the value of the corresponding alternative (by index).
+            A list where each element is an object with two properties: one is the name of the corresponding alternatives, and the 
+            other is the value of the current estimation.
             The value can have 3 different value: 
               - An empty string if the provided property has not be added to the current alternative.
               - The string "---" if the provided property has be added to the current alternative,
@@ -356,7 +380,8 @@ class PropertyModelService(coach.Microservice):
             else:
                 result_value = self.PROPERTY_NOT_ADDED_STRING
             
-            result.append(result_value)
+            alternative_name = self._get_alternative_name_from_uri(db_infos, alternative_uri)
+            result.append({"alternative_name": alternative_name, "value": result_value})
         
         return result
     
@@ -442,13 +467,13 @@ class PropertyModelService(coach.Microservice):
         
         return database_parameters
     
-    def _get_estimation_method_used_properties(self, db_infos, alternative_name, estimation_method_name, 
-                                               property_to_estimation_method_name_dict):      
+    def _get_estimation_method_used_properties(self, db_infos, alternative_name, property_name, estimation_method_name, 
+                                               property_to_estimation_method_name_dict):        
         user_id = db_infos["user_id"]
         user_token = db_infos["user_token"]
         case_id = db_infos["case_id"]
         case_db_proxy = db_infos["case_db_proxy"]
-        
+             
         if estimation_method_name == "E2":
             used_properties_name = ["Prop 2"]
         elif estimation_method_name == "E3":
@@ -458,7 +483,24 @@ class PropertyModelService(coach.Microservice):
         else:
             used_properties_name = []
             
+            
         alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
+        property_uri = self._get_property_uri_from_name(db_infos, property_name)
+        if property_uri is not None:
+            estimation_method_ontology_id = self._get_estimation_method_ontology_id_from_name(estimation_method_name)
+            estimation_uri = case_db_proxy.get_estimation_uri(user_id=user_id, user_token=user_token, case_id=case_id,
+                                                              alternative_uri=alternative_uri, property_uri=property_uri,
+                                                              estimation_method_ontology_id=estimation_method_ontology_id)
+        else:
+            estimation_uri = None
+        
+        if estimation_uri is not None:
+            properties_used_to_estimation_method = case_db_proxy.get_estimation_used_properties(user_id=user_id, user_token=user_token,
+                                                                                                case_id=case_id, 
+                                                                                                estimation_uri=estimation_uri)
+        else:
+            properties_used_to_estimation_method = {}
+        
         result = []
         for current_property_name in used_properties_name:
             
@@ -466,28 +508,46 @@ class PropertyModelService(coach.Microservice):
             if current_property_name in property_to_estimation_method_name_dict:
                 selected_estimation_method_for_current_property = property_to_estimation_method_name_dict[current_property_name]
             else:
-                selected_estimation_method_for_current_property = estimation_method_name_list[0]
-            current_estimation_method_ontology_id = self._get_estimation_method_ontology_id_from_name(selected_estimation_method_for_current_property)
+                current_property_ontology_id = self._get_property_ontology_id_from_name(current_property_name)
+                if current_property_ontology_id in properties_used_to_estimation_method:
+                    selected_estimation_method_for_current_property = properties_used_to_estimation_method[current_property_ontology_id]
+                    selected_estimation_method_for_current_property = self._get_estimation_method_name_from_ontology_id(selected_estimation_method_for_current_property)
+                else:
+                    selected_estimation_method_for_current_property = estimation_method_name_list[0]
                 
-            current_property_uri = self._get_property_uri_from_name(db_infos, current_property_name)
-            if (current_property_uri is not None):
-                property_value = case_db_proxy.get_estimation_value(user_id=user_id, user_token=user_token, case_id=case_id, 
-                                                                    alternative_uri=alternative_uri, property_uri=current_property_uri, 
-                                                                    estimation_method_ontology_id=current_estimation_method_ontology_id)
-                if property_value is None:
-                    property_value = self.PROPERTY_VALUE_NOT_COMPUTED_STRING
-            else:
+            property_value = self._get_estimation_value(db_infos, alternative_uri, current_property_name,
+                                                        selected_estimation_method_for_current_property)
+            if property_value is None:
                 property_value = self.PROPERTY_VALUE_NOT_COMPUTED_STRING
+            
             result.append({"name": current_property_name, "estimation_methods_name": estimation_method_name_list, "value": property_value,
                            "selected": selected_estimation_method_for_current_property})
         
         return result
+    
+    def _get_estimation_value(self, db_infos, alternative_uri, property_name, estimation_method_name):
+        user_id = db_infos["user_id"]
+        user_token = db_infos["user_token"]
+        case_id = db_infos["case_id"]
+        case_db_proxy = db_infos["case_db_proxy"]
+        
+        property_uri = self._get_property_uri_from_name(db_infos, property_name)
+        if property_uri is None:
+            return None
+        estimation_method_ontology_id = self._get_estimation_method_ontology_id_from_name(estimation_method_name)
+        estimation_value = case_db_proxy.get_estimation_value(user_id=user_id, user_token=user_token, case_id=case_id, 
+                                                              alternative_uri=alternative_uri, property_uri=property_uri, 
+                                                              estimation_method_ontology_id=estimation_method_ontology_id)
+        return estimation_value
         
     def _get_estimation_method_ontology_id_from_name(self, estimation_method_name):
         #TODO: Currently, the estimation_method_ontology_id is the estimation method's name
-        estimation_method_ontology_id = estimation_method_name + "_ontology_id"
+        estimation_method_ontology_id = estimation_method_name + self.ESTIMATION_METHOD_ONTOLOGY_ID_SUFFIX
         return estimation_method_ontology_id
-
+    
+    def _get_estimation_method_name_from_ontology_id(self, estimation_method_ontology_id):
+        estimation_method_name = estimation_method_ontology_id[:-len(self.ESTIMATION_METHOD_ONTOLOGY_ID_SUFFIX)]
+        return estimation_method_name
 
 if __name__ == '__main__':
     PropertyModelService(sys.argv[1]).run()

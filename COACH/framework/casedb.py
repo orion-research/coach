@@ -367,7 +367,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph = self.graph.get_context(case_id)
             
             #Check whether an estimation has already been computed
-            estimation_uri = self._get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id)
+            estimation_uri = self.get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id)
             if estimation_uri is None:
                 estimation_uri = self.new_uri()
                 case_graph.add((case_id, orion_ns.estimation, estimation_uri))
@@ -436,8 +436,8 @@ class CaseDatabase(coach.GraphDatabaseService):
             
             case_graph = self.graph.get_context(case_id)
             for property_uri in used_properties_to_estimation_method_ontology_id:
-                used_estimation_uri = self._get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri,
-                                                               used_properties_to_estimation_method_ontology_id[property_uri])
+                used_estimation_uri = self.get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri,
+                                                              used_properties_to_estimation_method_ontology_id[property_uri])
                 case_graph.add((estimation_uri, orion_ns.use_estimation, used_estimation_uri))
                 
         else:
@@ -461,9 +461,9 @@ class CaseDatabase(coach.GraphDatabaseService):
         else:
             return "Invalid user token"
         
-    def _get_estimation_uri(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
+    @endpoint("/get_estimation_uri", ["GET"], "application/json")
+    def get_estimation_uri(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
         #TODO: check delegate token?
-        # TODO: As this method is not an endpoint, does checking the user is useful?
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             query = """SELECT ?estimation 
                         WHERE {
@@ -503,7 +503,7 @@ class CaseDatabase(coach.GraphDatabaseService):
         """
         
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
-            estimation_uri = self._get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id)
+            estimation_uri = self.get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id)
             if estimation_uri is None:
                 return None
             
@@ -531,12 +531,11 @@ class CaseDatabase(coach.GraphDatabaseService):
         """
         #TODO: check delegate token?
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
-            estimation_uri = self._get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id)
+            estimation_uri = self.get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id)
             if estimation_uri is None:
                 return {}
             
             orion_ns = rdflib.Namespace(self.orion_ns)
-            case_id = rdflib.URIRef(case_id)
             query = """SELECT ?parameter_name ?parameter_value
                         WHERE {
                             ?estimation_uri orion:has_parameter ?parameter .
@@ -549,6 +548,38 @@ class CaseDatabase(coach.GraphDatabaseService):
             result = {}
             for (parameter_name, parameter_value) in query_result:
                 result[parameter_name.toPython()] = parameter_value.toPython()
+            return result
+        else:
+            return "Invalid user token"
+        
+    @endpoint("/get_estimation_used_properties", ["GET"], "application/json")
+    def get_estimation_used_properties(self, user_id, user_token, case_id, estimation_uri):
+        """
+        INPUT:
+            estimation_uri: the uri of an estimation. It could be None
+        OUTPUT:
+            A dictionary with all the properties used by the provided estimation.
+            The dictionary is from the property ontology's id to the estimation method ontology's id. 
+            If the provided estimation_uri is None, return an empty dictionary.
+        """
+        #TODO: check delegate token?
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            if estimation_uri is None:
+                return {}
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            query = """SELECT ?property_ontology_id ?estimation_method_ontology_id
+                        WHERE {
+                            ?estimation_uri orion:use_estimation ?used_estimation .
+                            ?used_estimation orion:ontology_id  ?estimation_method_ontology_id .
+                            ?used_estimation orion:belong_to_property ?property_uri .
+                            ?property_uri orion:ontology_id ?property_ontology_id
+                        }
+            """
+            query_result = self.graph.query(query, initNs = {"orion": orion_ns}, initBindings = {"estimation_uri": estimation_uri})
+            
+            result = {}
+            for (property_ontology_id, estimation_method_ontology_id) in query_result:
+                result[property_ontology_id.toPython()] = estimation_method_ontology_id.toPython()
             return result
         else:
             return "Invalid user token"

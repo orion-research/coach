@@ -70,6 +70,7 @@
 					</select>
 					Value : {{used_property.value}}
 					<input name="{{used_property.name}}_property_value" value="{{used_property.value}}" type="hidden"></input>
+					<button name="submit_component" type="submit" value="{{used_property.name}}_goto_button">Goto</button>
 				</li>
 			{% endfor %}
 		</ul>
@@ -93,11 +94,19 @@
 	{% endif %}
 	<br/>
 	
+	{% if estimation_value == None %}
+		This estimation has not been computed yet
+	{% else %}
+		Current value is {{estimation_value}}
+	{% endif %}
+	<br/>
+	
 	{% if enable_compute_button %}
 		<input name="submit_component" type="submit" value="Compute"></input>
 	{% else %}
 		<input name="submit_component" type="submit" value="Compute" disabled></input>
 	{% endif %}
+	
 	
 	 <!-- If the form is submitted with a button, this input will be ignored. Else, submit_component will 
 	 have the value of this input, which would have been modified by the submitting component to put its name -->
