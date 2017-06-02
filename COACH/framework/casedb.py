@@ -376,7 +376,6 @@ class CaseDatabase(coach.GraphDatabaseService):
                 case_graph.add((estimation_uri, orion_ns.belong_to_alternative, rdflib.URIRef(alternative_uri)))
                 case_graph.add((estimation_uri, orion_ns.belong_to_property, rdflib.URIRef(property_uri)))
             
-            # set() create the value if it does not exist yet, and update it if it exists
             case_graph.set((estimation_uri, orion_ns.value, rdflib.Literal(value)))
             self._add_estimation_parameters(user_id, user_token, case_id, estimation_uri, estimation_parameters)
             self._add_estimation_used_properties(user_id, user_token, case_id, alternative_uri, estimation_uri, 
