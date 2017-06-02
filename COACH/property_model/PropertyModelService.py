@@ -33,8 +33,8 @@ from flask import request
 # Linked data
 import rdflib
 
-#TODO: To suppress
-import string
+# TODO: to suppress
+import types
 # TODO: to suppress
 from datetime import datetime
 import inspect
@@ -46,7 +46,6 @@ def log(*args):
         message += str(arg) + " "
     print(message)
     sys.stdout.flush()
-    
 
 
 class PropertyModelService(coach.Microservice):
@@ -58,6 +57,7 @@ class PropertyModelService(coach.Microservice):
     def __init__(self, settings_file_name = None, working_directory = None):
         super().__init__(settings_file_name, working_directory = working_directory)
         self.orion_ns = "http://www.orion-research.se/ontology#"  # The name space for the ontology used
+        self.ontology = None
 
     @endpoint("/properties_overview_dialogue", ["GET"], "text/html")
     def properties_dialogue_overview_transition(self, user_id, user_token, case_db, case_id):
@@ -67,7 +67,7 @@ class PropertyModelService(coach.Microservice):
         case_db_proxy = self.create_proxy(case_db)
         db_infos = {"case_id": case_id, "user_id": user_id, "user_token": user_token, "case_db_proxy": case_db_proxy}
         
-        properties_name_list = self._get_properties_name_list()
+        properties_name_list = self._get_properties_name_list(db_infos)
 
         # Get all alternatives previously added by the user for the current case
         alternatives_list = self._get_alternatives(db_infos)
@@ -75,10 +75,10 @@ class PropertyModelService(coach.Microservice):
         alternatives_uri_list = alternatives_list[1]
         properties_estimations = []
         for property_name in properties_name_list:
-            estimations_methods_names = self._get_estimation_methods(property_name)
+            estimations_methods_names = self._get_estimation_methods(db_infos, property_name)
             estimation_methods = []
             for estimation_method_name in estimations_methods_names:
-                estimation_method_ontology_id = self._get_estimation_method_ontology_id_from_name(estimation_method_name)
+                estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name, True)
                 estimated_values = self._get_estimated_value_list(db_infos, alternatives_uri_list, property_name, 
                                                                   estimation_method_ontology_id)
                 
@@ -89,7 +89,6 @@ class PropertyModelService(coach.Microservice):
             
             properties_estimations.append({"property_name": property_name, "estimation_methods": estimation_methods})
  
-        log("properties_estimations :", properties_estimations)
         return render_template("properties_overview_dialogue.html", properties_estimations=properties_estimations,
                                alternatives_name_list=alternatives_name_list)
         
@@ -104,6 +103,9 @@ class PropertyModelService(coach.Microservice):
     def properties_estimation_methods_dialogue_transition(self, user_id, user_token, case_db, case_id):
         case_db_proxy = self.create_proxy(case_db)
         db_infos = {"case_id": case_id, "user_id": user_id, "user_token": user_token, "case_db_proxy": case_db_proxy}
+        alternatives_name_list = self._get_alternatives(db_infos)[0]
+        if len(alternatives_name_list) == 0:
+            return "Add alternatives before going to this page"
         return self._properties_estimation_methods_dialogue_transition(db_infos, "", "", "", {})
     
     @endpoint("/manage_estimation_method_form", ["POST"], "text/html")
@@ -163,7 +165,7 @@ class PropertyModelService(coach.Microservice):
         
         alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
 
-        property_ontology_id = self._get_property_ontology_id_from_name(property_name)
+        property_ontology_id = self._get_property_ontology_id_name(property_name, True)
         case_db_proxy.add_property(user_id=user_id, user_token=user_token, case_id=case_id, alternative_uri=alternative_uri, 
                                    property_ontology_id=property_ontology_id)
         
@@ -182,7 +184,7 @@ class PropertyModelService(coach.Microservice):
             self._add_property(db_infos, alternative_name, property_name, estimation_method_name, 
                                selected_estimation_method_for_used_properties)
             
-        estimation_method_ontology_id = self._get_estimation_method_ontology_id_from_name(estimation_method_name)
+        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name, True)
         estimation_value = self._compute_estimation_value(estimation_method_ontology_id, estimation_parameters, used_properties_value)
         
         alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
@@ -192,7 +194,7 @@ class PropertyModelService(coach.Microservice):
         for prop_name in selected_estimation_method_for_used_properties:
             em_name = selected_estimation_method_for_used_properties[prop_name]
             prop_uri = self._get_property_uri_from_name(db_infos, prop_name)
-            used_properties_to_estimation_method_ontology_id[prop_uri] = self._get_estimation_method_ontology_id_from_name(em_name)
+            used_properties_to_estimation_method_ontology_id[prop_uri] = self._get_estimation_method_ontology_id_name(em_name, True)
         
         # Splitting the dictionary in two lists is a workaround to be able to send it with the proxy. However, it
         # does not work when lists are empty 
@@ -219,20 +221,20 @@ class PropertyModelService(coach.Microservice):
                                                            selected_estimation_method_name, selected_estimation_method_for_used_properties):                
         alternatives_name_list = self._get_alternatives(db_infos)[0]
         selected_alternative_name = (selected_alternative_name if selected_alternative_name in 
-                                          alternatives_name_list else alternatives_name_list[0])
+                                     alternatives_name_list else alternatives_name_list[0])
         
-        properties_name_list = self._get_properties_name_list()
+        properties_name_list = self._get_properties_name_list(db_infos)
         selected_property_name = (selected_property_name if selected_property_name in 
                                        properties_name_list else properties_name_list[0])
         enable_add_button = not self._is_property_linked_to_alternative(db_infos, selected_alternative_name, selected_property_name)
 
-        estimation_methods_name_list = self._get_estimation_methods(selected_property_name)
+        estimation_methods_name_list = self._get_estimation_methods(db_infos, selected_property_name)
         selected_estimation_method_name = (selected_estimation_method_name if selected_estimation_method_name in
                                                 estimation_methods_name_list else estimation_methods_name_list[0])
         used_properties = self._get_estimation_method_used_properties(db_infos, selected_alternative_name, selected_property_name,
                                                                       selected_estimation_method_name,
                                                                       selected_estimation_method_for_used_properties)
-        selected_estimation_method_parameters_list = self._get_selected_estimation_method_parameters(db_infos, selected_alternative_name,
+        selected_estimation_method_parameters_list = self._get_estimation_method_parameters(db_infos, selected_alternative_name,
                                                                                                      selected_property_name,
                                                                                                      selected_estimation_method_name)
         
@@ -301,18 +303,59 @@ class PropertyModelService(coach.Microservice):
         alternatives_uri_list = [alternative[1] for alternative in alternatives_from_db]
         return (alternatives_name_list, alternatives_uri_list)
     
-    def _get_properties_name_list(self):
-        # TODO: Get possible properties from the ontology
-        return ["Prop 1", "Prop 2", "Prop 3"]
+    def _get_properties_name_list(self, db_infos):
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        return [prop_object[2].toPython() for prop_object in self._get_ontology_instances(orion_ns.Property, db_infos)]
     
-    def _get_property_ontology_id_from_name(self, property_name):
-        # TODO: Currently, the property_ontology_id is the property's name
-        property_ontology_id = property_name + self.PROPERTY_ONTOLOGY_ID_SUFFIX
-        return property_ontology_id
+    def _get_ontology(self, db_infos = None):
+        """
+        INPUT:
+            db_infos: db_infos is a dictionary, which contains a key "case_db_proxy", which is the proxy to access database. 
+            It can be omitted if the ontology has already been got from the database.
+        OUTPUT:
+            The ontology stored in the database. The query to the database is done only once and the result is stored. 
+            Thanks to that, the following times, the stored object can be returned immediately. 
+        """
+        if not self.ontology:
+            case_db_proxy = db_infos["case_db_proxy"]
+            self.ontology = rdflib.ConjunctiveGraph()
+            self.ontology.parse(data = case_db_proxy.get_ontology(format = "ttl"), format = "ttl")
+        return self.ontology
     
-    def _get_property_name_from_ontology_id(self, property_ontology_id):
-        property_name = property_ontology_id[:-len(self.PROPERTY_ONTOLOGY_ID_SUFFIX)]
-        return property_name
+    def _get_ontology_instances(self, class_name, db_infos = None):
+        """
+        Returns a list containing all the instances of the given class in the ontology.
+        The result is a list of tuples, where the tuple elements are the instances' uri, gradeID, title, and description.
+        """
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        q = """\
+        SELECT ?instance_uri ?grade_id ?title ?description
+        WHERE {
+            ?instance_uri a ?class_name .
+            ?instance_uri orion:gradeId ?grade_id .
+            ?instance_uri orion:title ?title .
+            ?instance_uri orion:description ?description .
+        }
+        """
+        result = self._get_ontology(db_infos).query(q, initNs = { "orion": orion_ns }, 
+                                                    initBindings = { "?class_name": class_name })
+        return list(result)
+    
+    def _get_property_ontology_id_name(self, property_attribute, is_property_attribute_is_name):
+        if is_property_attribute_is_name:
+            index_returned = 1
+            index_look_for = 2
+        else:
+            index_returned = 2
+            index_look_for = 1
+        
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        # Here we can omit db_infos because _get_ontology has already been called to get the properties' name
+        properties_list = self._get_ontology_instances(orion_ns.Property)
+        for property_tuple in properties_list:
+            if property_tuple[index_look_for].toPython() == property_attribute:
+                return property_tuple[index_returned].toPython()
+        raise RuntimeError("The provided property attribute " + property_attribute + " should be in the ontology")
     
     def _get_property_uri_from_name(self, db_infos, property_name):
         """
@@ -329,7 +372,7 @@ class PropertyModelService(coach.Microservice):
         case_db_proxy = db_infos["case_db_proxy"]
         orion_ns = rdflib.Namespace(self.orion_ns)
         
-        property_ontology_id = self._get_property_ontology_id_from_name(property_name)
+        property_ontology_id = self._get_property_ontology_id_name(property_name, True)
         properties_list = case_db_proxy.get_subjects(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                      predicate=orion_ns.ontology_id, object=property_ontology_id)
 
@@ -361,7 +404,7 @@ class PropertyModelService(coach.Microservice):
         case_id = db_infos["case_id"]
         case_db_proxy = db_infos["case_db_proxy"]
 
-        property_ontology_id = self._get_property_ontology_id_from_name(property_name)        
+        property_ontology_id = self._get_property_ontology_id_name(property_name, True)        
         linked_alternatives_list_uri = case_db_proxy.get_alternative_from_property_ontology_id(user_id=user_id, user_token=user_token, 
                                                                                                case_id=case_id, 
                                                                                                property_ontology_id=property_ontology_id)
@@ -423,35 +466,39 @@ class PropertyModelService(coach.Microservice):
             estimation_value -= int(parameter_value)
         return estimation_value
     
-    def _get_estimation_methods(self, property_name):
-        #TODO: fetch estimation methods from database
-        if property_name == "Prop 1":
-            result = ["E0", "E1", "E2"]
-        elif property_name == "Prop 2":
-            result = ["E1", "E3"]
-        else:
-            result = ["E4", "E5", "E6"]
+    def _get_estimation_methods(self, db_infos, property_name):
+        property_ontology_id = self._get_property_ontology_id_name(property_name, True)
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        query = """ SELECT ?estimation_method_name
+                    WHERE {
+                        ?estimation_method_uri a orion:EstimationMethod .
+                        ?estimation_method_uri orion:belongTo ?property_uri .
+                        ?property_uri orion:gradeId ?property_ontology_id .
+                        ?estimation_method_uri orion:title ?estimation_method_name .
+                    }
+        """
         
+        query_result = self._get_ontology(db_infos).query(query, initNs = {"orion": orion_ns}, 
+                                                    initBindings = {"property_ontology_id": rdflib.Literal(property_ontology_id)})
+        
+        result = [e.toPython() for (e,) in query_result]
         if len(result) == 0:
             raise RuntimeError("At least one estimation method must be available for the property " + property_name)
         return result
     
-    def _get_selected_estimation_method_parameters(self, db_infos, alternative_name, property_name, estimation_method_name):
+    def _get_estimation_method_parameters(self, db_infos, alternative_name, property_name, estimation_method_name):
         user_id = db_infos["user_id"]
         user_token = db_infos["user_token"]
         case_id = db_infos["case_id"]
         case_db_proxy = db_infos["case_db_proxy"]
         
-        #TODO: fetch parameters names from somewhere
-        estimation_method_number = int(estimation_method_name[1])
-        parameters = string.ascii_lowercase[:estimation_method_number]
-        parameters = {x + str(estimation_method_number):0 for x in parameters}
+        parameters = {param:0 for param in self._get_estimation_method_parameters_name(estimation_method_name)}
         
         alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
         if property_uri is None:
             return parameters # if the property has not been added in the database, no parameters could have been stored
-        estimation_method_ontology_id = self._get_estimation_method_ontology_id_from_name(estimation_method_name)
+        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name, True)
         database_parameters = case_db_proxy.get_estimation_parameters(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                                       alternative_uri=alternative_uri, property_uri=property_uri, 
                                                                       estimation_method_ontology_id=estimation_method_ontology_id)
@@ -465,65 +512,83 @@ class PropertyModelService(coach.Microservice):
         
         return database_parameters
     
+    def _get_estimation_method_parameters_name(self, estimation_method_name):
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        query = """ SELECT ?estimation_method_parameter_name
+                    WHERE {
+                        ?estimation_method_uri a orion:EstimationMethod .
+                        ?estimation_method_uri orion:title ?estimation_method_name .
+                        ?estimation_method_uri orion:hasParameter ?estimation_method_parameter_name .
+                    }
+                """
+                    
+        query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, 
+                                                  initBindings = {"estimation_method_name": rdflib.Literal(estimation_method_name)})
+        result = [e.toPython() for (e,) in query_result]
+        return result
+    
     def _get_estimation_method_used_properties(self, db_infos, alternative_name, property_name, estimation_method_name, 
                                                property_to_estimation_method_name_dict):        
         user_id = db_infos["user_id"]
         user_token = db_infos["user_token"]
         case_id = db_infos["case_id"]
         case_db_proxy = db_infos["case_db_proxy"]
-             
-        if estimation_method_name == "E2":
-            used_properties_name = ["Prop 2"]
-        elif estimation_method_name == "E3":
-            used_properties_name = ["Prop 3"]
-        elif estimation_method_name == "E6":
-            used_properties_name = ["Prop 1", "Prop 2"]
-        else:
-            used_properties_name = []
-            
-            
+
+        used_properties_name = self._get_estimation_method_used_properties_name(estimation_method_name)
+
         alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
-        if property_uri is not None:
-            estimation_method_ontology_id = self._get_estimation_method_ontology_id_from_name(estimation_method_name)
+        try:
+            estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name, True)
             estimation_uri = case_db_proxy.get_estimation_uri(user_id=user_id, user_token=user_token, case_id=case_id,
                                                               alternative_uri=alternative_uri, property_uri=property_uri,
                                                               estimation_method_ontology_id=estimation_method_ontology_id)
-        else:
-            estimation_uri = None
-        
-        if estimation_uri is not None:
             properties_used_to_estimation_method = case_db_proxy.get_estimation_used_properties(user_id=user_id, user_token=user_token,
                                                                                                 case_id=case_id, 
                                                                                                 estimation_uri=estimation_uri)
-        else:
+        except MicroserviceException:
             properties_used_to_estimation_method = {}
         
         result = []
         for current_property_name in used_properties_name:
             
-            estimation_method_name_list = self._get_estimation_methods(current_property_name)
+            estimation_method_name_list = self._get_estimation_methods(db_infos, current_property_name)
             if current_property_name in property_to_estimation_method_name_dict:
                 selected_estimation_method_for_current_property = property_to_estimation_method_name_dict[current_property_name]
             else:
-                current_property_ontology_id = self._get_property_ontology_id_from_name(current_property_name)
+                current_property_ontology_id = self._get_property_ontology_id_name(current_property_name, True)
                 if current_property_ontology_id in properties_used_to_estimation_method:
                     selected_estimation_method_for_current_property = properties_used_to_estimation_method[current_property_ontology_id]
-                    selected_estimation_method_for_current_property = self._get_estimation_method_name_from_ontology_id(selected_estimation_method_for_current_property)
+                    selected_estimation_method_for_current_property = self._get_estimation_method_ontology_id_name(selected_estimation_method_for_current_property, False)
                 else:
                     selected_estimation_method_for_current_property = estimation_method_name_list[0]
                 
             property_value = self._get_estimation_value(db_infos, alternative_uri, current_property_name,
                                                         selected_estimation_method_for_current_property)
             if property_value is None:
-                property_value = self.PROPERTY_VALUE_NOT_COMPUTED_STRING
+                property_value = {"value": self.PROPERTY_VALUE_NOT_COMPUTED_STRING, "up_to_date": True}
             
             result.append({"name": current_property_name, "estimation_methods_name": estimation_method_name_list, 
                            "value": property_value["value"], "up_to_date": property_value["up_to_date"],
                            "selected": selected_estimation_method_for_current_property})
-        
-        log("result :", result)
+            
         return result
+    
+    def _get_estimation_method_used_properties_name(self, estimation_method_name):
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        query = """ SELECT ?property_name
+                    WHERE {
+                        ?estimation_method_uri a orion:EstimationMethod .
+                        ?estimation_method_uri orion:title ?estimation_method_name .
+                        ?estimation_method_uri orion:useProperty ?property_uri .
+                        ?property_uri orion:title ?property_name .
+                    }
+        """
+        
+        query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, 
+                                                  initBindings={"estimation_method_name": rdflib.Literal(estimation_method_name)})
+        
+        return [e.toPython() for (e,) in query_result]
     
     def _get_estimation_value(self, db_infos, alternative_uri, property_name, estimation_method_name):
         user_id = db_infos["user_id"]
@@ -534,21 +599,28 @@ class PropertyModelService(coach.Microservice):
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
         if property_uri is None:
             return None
-        estimation_method_ontology_id = self._get_estimation_method_ontology_id_from_name(estimation_method_name)
+        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name, True)
         estimation_value = case_db_proxy.get_estimation_value(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                               alternative_uri=alternative_uri, property_uri=property_uri, 
                                                               estimation_method_ontology_id=estimation_method_ontology_id)
         return estimation_value
-        
-    def _get_estimation_method_ontology_id_from_name(self, estimation_method_name):
-        #TODO: Currently, the estimation_method_ontology_id is the estimation method's name
-        estimation_method_ontology_id = estimation_method_name + self.ESTIMATION_METHOD_ONTOLOGY_ID_SUFFIX
-        return estimation_method_ontology_id
     
-    def _get_estimation_method_name_from_ontology_id(self, estimation_method_ontology_id):
-        estimation_method_name = estimation_method_ontology_id[:-len(self.ESTIMATION_METHOD_ONTOLOGY_ID_SUFFIX)]
-        return estimation_method_name
-
+    def _get_estimation_method_ontology_id_name(self, estimation_method_attribute, is_attribute_name):
+        if is_attribute_name:
+            index_returned = 1
+            index_look_for = 2
+        else:
+            index_returned = 2
+            index_look_for = 1
+            
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        estimation_methods_list = self._get_ontology_instances(orion_ns.EstimationMethod)
+        for estimation_method_tuple in estimation_methods_list:
+            if estimation_method_tuple[index_look_for].toPython() == estimation_method_attribute:
+                return estimation_method_tuple[index_returned].toPython()
+        raise RuntimeError("The provided estimation method attribute " + estimation_method_attribute + " should be in the ontology")
+        
+        pass
 if __name__ == '__main__':
     PropertyModelService(sys.argv[1]).run()
 

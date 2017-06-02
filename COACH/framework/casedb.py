@@ -739,11 +739,9 @@ class CaseDatabase(coach.GraphDatabaseService):
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_id = rdflib.URIRef(case_id)
             case_graph = self.graph.get_context(case_id)
-            #TODO: to uncomment
-            return case_graph.serialize(format = format).decode("utf-8")
-#             serialized_graph = case_graph.serialize(format = format).decode("utf-8")
-#             self.kr_db_proxy.export_case(case_graph = serialized_graph, format = format)
-#             return serialized_graph
+            serialized_graph = case_graph.serialize(format = format).decode("utf-8")
+            self.kr_db_proxy.export_case(case_graph = serialized_graph, format = format)
+            return serialized_graph
         else:
             return "Invalid user token"
     
