@@ -309,7 +309,6 @@ class CaseDatabase(coach.GraphDatabaseService):
     
     @endpoint("/add_property", ["POST"], "application/json")
     def add_property(self, user_id, user_token, case_id, alternative_uri, property_ontology_id):
-        #TODO: check delegate token?
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             orion_ns = rdflib.Namespace(self.orion_ns)
             case_id = rdflib.URIRef(case_id)
@@ -338,30 +337,8 @@ class CaseDatabase(coach.GraphDatabaseService):
         
     @endpoint("/add_estimation", ["POST"], "application/json")
     def add_estimation(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id, value,
-                       estimation_parameters_name, estimation_parameters_value, used_properties, 
-                       estimation_methods_ontology_id_for_used_properties):
-        #TODO: check delegate token?
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
-            
-            # estimation_parameter_name / value must be reconstructed, because only the first element of the list is transmitted
-            # in arguments. However, they must be present in arguments list, so the caller is able to send them in the request
-            request_data = dict(request.form)
-            estimation_parameters_name = request_data["estimation_parameters_name"]
-            estimation_parameters_value = request_data["estimation_parameters_value"]
-            estimation_parameters = {}
-            for (name, parameter_value) in zip(estimation_parameters_name, estimation_parameters_value):
-                estimation_parameters[name] = parameter_value
-                
-            # Idem for used_properties
-            estimation_methods_ontology_id_for_used_properties = request_data["estimation_methods_ontology_id_for_used_properties"]
-            used_properties = request_data["used_properties"]
-            # A trash value has been added at the end of the list to be able to send it with the proxy, we now need to remove it
-            del estimation_methods_ontology_id_for_used_properties[-1]
-            del used_properties [-1]
-            used_properties_to_estimation_method_ontology_id = {}
-            for (_property_name, _estimation_method_ontology_id) in zip(used_properties, estimation_methods_ontology_id_for_used_properties):
-                used_properties_to_estimation_method_ontology_id[_property_name] = _estimation_method_ontology_id
-                
+                       estimation_parameters, used_properties_to_estimation_method_ontology_id):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):              
             orion_ns = rdflib.Namespace(self.orion_ns)
             case_id = rdflib.URIRef(case_id)
             case_graph = self.graph.get_context(case_id)
@@ -387,77 +364,64 @@ class CaseDatabase(coach.GraphDatabaseService):
             return "Invalid user token"
         
     def _add_estimation_parameters(self, user_id, user_token, case_id, estimation_uri, parameter_name_to_value_dict):
-        # TODO: As this method is not an endpoint, does checking the user is useful?
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
-            query = """SELECT ?parameter ?parameter_name
-            WHERE {
-                ?case_id orion:parameter ?parameter .
-                ?estimation orion:has_parameter ?parameter .
-                ?parameter orion:name ?parameter_name
-            }
-            """
-            case_id = rdflib.URIRef(case_id)
-            estimation_uri = rdflib.URIRef(estimation_uri)
-            result = self.graph.query(query, initNs = {"orion": rdflib.Namespace(self.orion_ns)},
-                                      initBindings = {"case_id": case_id, "estimation": estimation_uri})
-            parameter_name_to_uri_dict = {}
-            for parameter_uri, parameter_name in result:
-                parameter_name_to_uri_dict[parameter_name] = parameter_uri
+        query = """SELECT ?parameter ?parameter_name
+        WHERE {
+            ?case_id orion:parameter ?parameter .
+            ?estimation orion:has_parameter ?parameter .
+            ?parameter orion:name ?parameter_name
+        }
+        """
+        case_id = rdflib.URIRef(case_id)
+        estimation_uri = rdflib.URIRef(estimation_uri)
+        result = self.graph.query(query, initNs = {"orion": rdflib.Namespace(self.orion_ns)},
+                                  initBindings = {"case_id": case_id, "estimation": estimation_uri})
+        parameter_name_to_uri_dict = {}
+        for parameter_uri, parameter_name in result:
+            parameter_name_to_uri_dict[parameter_name] = parameter_uri
+        
+        #Update parameter_name_to_value_dict so each key is changed to be a rdf literal
+        for parameter_name in parameter_name_to_value_dict:
+            parameter_name_to_value_dict[rdflib.Literal(parameter_name)] = parameter_name_to_value_dict.pop(parameter_name)
             
-            #Update parameter_name_to_value_dict so each key is changed to be a rdf literal
-            for parameter_name in parameter_name_to_value_dict:
-                parameter_name_to_value_dict[rdflib.Literal(parameter_name)] = parameter_name_to_value_dict.pop(parameter_name)
-                
-            case_graph = self.graph.get_context(case_id)
-            orion_ns = rdflib.Namespace(self.orion_ns)
-            for parameter_name in parameter_name_to_value_dict:
-                if parameter_name not in parameter_name_to_uri_dict:
-                    parameter_uri = self.new_uri()
-                    case_graph.add((parameter_uri, rdflib.RDF.type, orion_ns.Parameter))
-                    case_graph.add((case_id, orion_ns.parameter, parameter_uri))
-                    case_graph.add((estimation_uri, orion_ns.has_parameter, parameter_uri))
-                    case_graph.add((parameter_uri, orion_ns.name, rdflib.Literal(parameter_name)))
-                else:
-                    parameter_uri = rdflib.URIRef(parameter_name_to_uri_dict[parameter_name])
-                
-                value = rdflib.Literal(parameter_name_to_value_dict[parameter_name])
-                case_graph.set((parameter_uri, orion_ns.value, value))
+        case_graph = self.graph.get_context(case_id)
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        for parameter_name in parameter_name_to_value_dict:
+            if parameter_name not in parameter_name_to_uri_dict:
+                parameter_uri = self.new_uri()
+                case_graph.add((parameter_uri, rdflib.RDF.type, orion_ns.Parameter))
+                case_graph.add((case_id, orion_ns.parameter, parameter_uri))
+                case_graph.add((estimation_uri, orion_ns.has_parameter, parameter_uri))
+                case_graph.add((parameter_uri, orion_ns.name, rdflib.Literal(parameter_name)))
+            else:
+                parameter_uri = rdflib.URIRef(parameter_name_to_uri_dict[parameter_name])
+            
+            value = rdflib.Literal(parameter_name_to_value_dict[parameter_name])
+            case_graph.set((parameter_uri, orion_ns.value, value))
                     
-        else:
-            return "Invalid user token"
         
     def _add_estimation_used_properties(self, user_id, user_token, case_id, alternative_uri, estimation_uri,
                                         used_properties_to_estimation_method_ontology_id):
-        # TODO: As this method is not an endpoint, does checking the user is useful?
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
-            orion_ns = rdflib.Namespace(self.orion_ns)
-            
-            self.remove_datatype_property(user_id, user_token, case_id, estimation_uri, orion_ns.use_estimation)
-            
-            case_graph = self.graph.get_context(case_id)
-            for property_uri in used_properties_to_estimation_method_ontology_id:
-                used_estimation_uri = self.get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri,
-                                                              used_properties_to_estimation_method_ontology_id[property_uri])
-                case_graph.add((estimation_uri, orion_ns.use_estimation, used_estimation_uri))
-                
-        else:
-            return "Invalid user token"
+        orion_ns = rdflib.Namespace(self.orion_ns)
         
+        self.remove_datatype_property(user_id, user_token, case_id, estimation_uri, orion_ns.use_estimation)
+        
+        case_graph = self.graph.get_context(case_id)
+        for property_uri in used_properties_to_estimation_method_ontology_id:
+            used_estimation_uri = self.get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri,
+                                                          used_properties_to_estimation_method_ontology_id[property_uri])
+            case_graph.add((estimation_uri, orion_ns.use_estimation, used_estimation_uri))
+            
+    
     def _manage_estimation_up_to_date_property(self, user_id, user_token, case_id, estimation_uri):
-        # TODO: As this method is not an endpoint, does checking the user is useful?        
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
-            orion_ns = rdflib.Namespace(self.orion_ns)
-            case_graph = self.graph.get_context(case_id)
-            dependents_estimation_uri_list = self.get_subjects(user_id, user_token, case_id, orion_ns.use_estimation, estimation_uri)
-            for dependent_estimation_uri in dependents_estimation_uri_list:
-                case_graph.set((dependent_estimation_uri, orion_ns.up_to_date, rdflib.Literal(False)))
-            case_graph.set((estimation_uri, orion_ns.up_to_date, rdflib.Literal(True)))
-        else:
-            return "Invalid user token"
-        
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        case_graph = self.graph.get_context(case_id)
+        dependents_estimation_uri_list = self.get_subjects(user_id, user_token, case_id, orion_ns.use_estimation, estimation_uri)
+        for dependent_estimation_uri in dependents_estimation_uri_list:
+            case_graph.set((dependent_estimation_uri, orion_ns.up_to_date, rdflib.Literal(False)))
+        case_graph.set((estimation_uri, orion_ns.up_to_date, rdflib.Literal(True)))
+    
     @endpoint("/get_alternative_from_property_ontology_id", ["GET"], "application/json")
     def get_alternative_from_property_ontology_id(self, user_id, user_token, case_id, property_ontology_id):
-        #TODO: check delegate token?
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             query = """SELECT ?alternative 
                         WHERE {
@@ -475,8 +439,10 @@ class CaseDatabase(coach.GraphDatabaseService):
         
     @endpoint("/get_estimation_uri", ["GET"], "application/json")
     def get_estimation_uri(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
-        #TODO: check delegate token?
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            if property_uri is None:
+                return None
+            
             query = """SELECT ?estimation 
                         WHERE {
                             ?case_id orion:estimation ?estimation .
@@ -549,7 +515,6 @@ class CaseDatabase(coach.GraphDatabaseService):
             Return an empty dictionary if no estimation was found for the triplet (alternative, property, estimation method's id)
             or if no parameters exist for this estimation.
         """
-        #TODO: check delegate token?
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             estimation_uri = self.get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id)
             if estimation_uri is None:
@@ -582,7 +547,6 @@ class CaseDatabase(coach.GraphDatabaseService):
             The dictionary is from the property ontology's id to the estimation method ontology's id. 
             If the provided estimation_uri is None, return an empty dictionary.
         """
-        #TODO: check delegate token?
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             if estimation_uri is None:
                 return {}

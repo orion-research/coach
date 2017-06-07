@@ -197,21 +197,17 @@ class InteractionService(coach.Microservice):
         It always passes the current decision case database url and case id as a parameter in the request.
         """
         property_service = self.get_setting("property_service")
-        delegate_token = self.authentication_service_proxy.get_delegate_token(user_id = session["user_id"], user_token = session["user_token"], 
-                                                                              case_id = session["case_id"])
         params = request.values.to_dict()
         
         del params["endpoint"]
         params["user_id"] = session["user_id"]
-        #params["delegate_token"] = delegate_token #TODO: To uncomment?
-        params["user_token"] = session["user_token"] # TODO: to remove?
+        params["user_token"] = session["user_token"]
         params["case_db"] = self.get_setting("database")
         params["case_id"] = session["case_id"]
         params["knowledge_repository"] = self.get_setting("knowledge_repository")
         
         response = requests.request(request.method, property_service + "/" + request.values["endpoint"], 
                                     params = params)
-        self.authentication_service_proxy.revoke_delegate_token(user_id = session["user_id"], user_token = session["user_token"])
         return self.main_menu_transition(main_dialogue = response.text)
     
     @endpoint("/create_case_dialogue", ["GET"], "text/html")

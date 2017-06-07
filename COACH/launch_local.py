@@ -18,6 +18,8 @@ from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 from COACH.framework.KnowledgeInferenceService import KnowledgeInferenceService
 from COACH.context_model import ContextModelService
 from COACH.framework.AuthenticationService import AuthenticationService
+from COACH.estimation_method.expert_estimate.ExpertEstimate import ExpertEstimate
+from COACH.estimation_method.cocomo.COCOMO import COCOMO
 
 def run_all():
     # Start all the services
@@ -25,26 +27,30 @@ def run_all():
     KnowledgeRepositoryService.KnowledgeRepositoryService().run()
 
     InteractionService().run()
-    
+
     PughService.PughService().run()
-    
+
     SimpleDecisionProcessService.SimpleDecisionProcessService().run()
 
     CaseDatabase().run()
-    
+
     AverageOfTwo.AverageOfTwo().run()
-    
+
     DirectoryService().run()
-    
+
     PropertyModelService.PropertyModelService().run()
-    
+
     ExpertOpinion.ExpertOpinion().run()
-    
+
     KnowledgeInferenceService().run()
-    
+
     ContextModelService.ContextModelService().run()
 
     AuthenticationService().run()
+
+    ExpertEstimate().run()
+
+    COCOMO().run()
 
 if __name__ == '__main__':
     run_all()

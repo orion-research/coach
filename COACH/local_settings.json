@@ -95,5 +95,15 @@
         "secret_data_file_name": "../framework/settings/root_secret_data.json",
         "name": "Knowledge repository microservice for the ORION project",
         "description": "Settings for KnowledgeRepositoryService"
+    },
+    "ExpertEstimate": {
+        "port": 5012,
+        "name": "ExpertEstimate estimation method",
+        "description": "Settings for ExpertEstimate"
+    },
+    "COCOMO": {
+        "port": 5013,
+        "name": "COCOMO estimation method",
+        "description": "Settings for COCOMO"
     }
 }

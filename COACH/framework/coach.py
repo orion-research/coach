@@ -225,9 +225,13 @@ class Microservice:
             and adds them as arguments to the method. Trace output to the console can be obtained by setting
             the class variable trace to True. The result from the method call is returned as a Response object.
             """
-            args = [request.values[p.name] for (_, p) in inspect.signature(m).parameters.items()]
+            request_args = request.get_json(force=True, silent=True)
+            if not request_args:
+                request_args = request.values
+
+            args = [request_args[p.name] for (_, p) in inspect.signature(m).parameters.items()]
             if self.trace: 
-                print(highlight_text(self.trace_indent * "    " + m.__name__ + "(" + ", ".join(args) + ")"))
+                print(highlight_text(self.trace_indent * "    " + m.__name__ + "(" + str(args) + ")"))
                 self.trace_indent += 1
             try:
                 result = m(*args)
@@ -236,11 +240,12 @@ class Microservice:
                     print(highlight_text(self.trace_indent * "    " + "result from " + m.__name__ + ": " + (str(result).split("\n", 1)[0])))
                 response = Response(endpoint_content_conversion[content][0](result), status = 200, content_type = content)
             except Exception as _:
-                message = "An error occured while processing the endpoint " + m.__name__ + ":\n"
+                message = "An error occurred while processing the endpoint " + m.__name__ + ":\n"
                 message += "Service: " + self.__class__.__name__ + " running at " + self.host + ":" + str(self.port) + "\n"
                 message += "Arguments: " + str([(p.name, request.values[p.name]) for (_, p) in inspect.signature(m).parameters.items()]) + "\n"
                 message += traceback.format_exc() + "\n\n"
                 response = Response(message, status = 500, content_type = "text/plain")
+
             return response
         
         return wrapping
@@ -364,8 +369,11 @@ class Proxy():
                         raise TypeError("Parameter " + p + " is not defined for proxy method " + name + ". " +
                                         "Allowed parameters are " + ", ".join(kwargs.keys()) + ".")
 
+                # The arguments are send in json to handle complex structure (nested dictionary, list...). 
+                # However, this will fail if an argument is not serializable in json.
+                kwargs_json = json.dumps(kwargs)
                 # Make the endpoint request
-                self.result = self.session.request(http_method, self.url + "/" + name, data = kwargs)
+                self.result = self.session.request(http_method, self.url + "/" + name, data = kwargs_json)
 
                 # If there was an error in the response, raise an exception
                 if self.result.status_code != 200:

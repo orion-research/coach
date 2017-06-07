@@ -728,25 +728,18 @@
 :Property
     rdfs:subClassOf :Class .
 
-:prop1
+:cost
     :gradeId "AP1" ;
     a :Property ;
-    :title "Prop 1" ;
-    :description "" .
+    :title "Cost" ;
+    :description "Cost of a project" .
 
-:prop2
+:kloc
     :gradeId "AP2" ;
     a :Property ;
-    :title "Prop 2" ;
-    :description "" .
+    :title "KLOC" ;
+    :description "number of lines of code (in thousands) in a project".
 
-:prop3
-    :gradeId "AP3" ;
-    a :Property ;
-    :title "Prop 3" ;
-    :description "" .
-    
-    
 # Estimation methods
 
 :estimationMethod
@@ -757,81 +750,24 @@
 :EstimationMethod
     rdfs:subClassOf :Class .
 
-:e0
-    :gradeId "AEM0" ;
-    a :EstimationMethod ;
-    :title "E0" ;
-    :description "" ;
-    :belongTo :prop1 .
-
-:e1
+# Expert estimate is a special estimation method, which will be a default to all properties.
+# Consequently, it does not have a field "belongTo".
+:expertEstimate
     :gradeId "AEM1" ;
     a :EstimationMethod ;
-    :title "E1" ;
-    :description "" ;
-    :belongTo :prop1 ,
-        :prop2 ;
-    :hasParameter "a1" .
-        
-:e2
+    :title "ExpertEstimate" ;
+    :description "An expert does an estimation of a property" ;
+    :hasParameter "estimation" .
+
+:cocomo
     :gradeId "AEM2" ;
     a :EstimationMethod ;
-    :title "E2" ;
+    :title "COCOMO" ;
     :description "" ;
-    :belongTo :prop1 ;
-    :hasParameter "a2" ,
-        "b2" ;
-    :useProperty :prop2 .
-    
-:e3
-    :gradeId "AEM3" ;
-    a :EstimationMethod ;
-    :title "E3" ;
-    :description "" ;
-    :belongTo :prop2 ;
-    :hasParameter "a3" ,
-        "b3" ,
-        "c3" ;
-    :useProperty :prop3 .
-    
-:e4
-    :gradeId "AEM4" ;
-    a :EstimationMethod ;
-    :title "E4" ;
-    :description "" ;
-    :belongTo :prop3 ;
-    :hasParameter "a4" ,
-        "b4" ,
-        "c4" ,
-        "d4" .
-    
-:e5
-    :gradeId "AEM5" ;
-    a :EstimationMethod ;
-    :title "E5" ;
-    :description "" ;
-    :belongTo :prop3 ;
-    :hasParameter "a5" ,
-        "b5" ,
-        "c5" ,
-        "d5" ,
-        "e5" .
-    
-:e6
-    :gradeId "AEM6" ;
-    a :EstimationMethod ;
-    :title "E6" ;
-    :description "" ;
-    :belongTo :prop3 ;
-    :hasParameter "a6" ,
-        "b6" ,
-        "c6" ,
-        "d6" ,
-        "e6" ,
-        "f6" ;
-    :useProperty :prop1 ,
-        :prop2 .
-
+    :belongTo :cost ;
+    :hasParameter "a" ,
+        "b" ;
+    :useProperty :kloc .
 
 ### Asset usage
 
