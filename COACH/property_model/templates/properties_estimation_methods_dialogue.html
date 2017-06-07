@@ -83,11 +83,19 @@
 	{% else %}
 		<label> Used parameters: </label>
 		<ul>
-			{% for parameter_name in selected_estimation_method_parameters_list %}
+			{% for parameter in selected_estimation_method_parameters_list %}
 				<li>
-					{{parameter_name}}:
-					<input type="number" name="{{parameter_name}}_parameter" 
-							value='{{selected_estimation_method_parameters_list[parameter_name]}}' required></input>
+					{{parameter.name}}:
+					{% if parameter.type == "integer" %}
+						<input type="number" name="{{parameter.name}}_parameter" 
+								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required></input>
+					{% elif parameter.type == "float" %}
+						<input type="number" step="any" name="{{parameter.name}}_parameter" 
+								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required></input>
+					{% else %}
+						<input type="text" name="{{parameter.name}}_parameter" 
+								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required></input>
+					{% endif %}
 				</li>
 			{% endfor %}
 		</ul>		

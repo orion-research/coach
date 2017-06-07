@@ -33,7 +33,7 @@ class ExpertEstimate(EstimationMethodService):
         if len(parameters_dict) != 1 or len(properties_dict) != 0:
             raise RuntimeError("Provided parameters does not match with the ontology")
         
-        return parameters_dict["estimation"]
+        return float(parameters_dict["estimation"])
     
 if __name__ == '__main__':
     ExpertEstimate(sys.argv[1]).run()

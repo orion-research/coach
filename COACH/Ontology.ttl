@@ -757,7 +757,7 @@
     a :EstimationMethod ;
     :title "ExpertEstimate" ;
     :description "An expert does an estimation of a property" ;
-    :hasParameter "estimation" .
+    :hasParameter :expertEstimateEstimation .
 
 :cocomo
     :gradeId "AEM2" ;
@@ -765,9 +765,29 @@
     :title "COCOMO" ;
     :description "" ;
     :belongTo :cost ;
-    :hasParameter "a" ,
-        "b" ;
+    :hasParameter :cocomoA ,
+        :cocomoB ;
     :useProperty :kloc .
+    
+# Estimation method's parameters
+# Each parameter's uri is: <estimation method name><parameter name>.
+
+:expertEstimateEstimation
+    :name "estimation" ;
+    :type "float" ;
+    :defaultValue "0" .
+    
+:cocomoA
+    :name "a" ;
+    :type "float" ;
+    :min "0" ;
+    :defaultValue "0" .
+
+:cocomoB
+    :name "b" ;
+    :type "float" ;
+    :min "0" ;
+    :defaultValue "1" .
 
 ### Asset usage
 

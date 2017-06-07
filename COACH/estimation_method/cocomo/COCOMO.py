@@ -21,7 +21,7 @@ class COCOMO(EstimationMethodService):
         if len(parameters_dict) != 2 or len(properties_dict) != 1:
             raise RuntimeError("Provided parameters does not match with the ontology")
         
-        return int(parameters_dict["a"]) * int(properties_dict["KLOC"]) ** int(parameters_dict["b"])
+        return float(parameters_dict["a"]) * float(properties_dict["KLOC"]) ** float(parameters_dict["b"])
     
 if __name__ == '__main__':
     COCOMO(sys.argv[1]).run()
