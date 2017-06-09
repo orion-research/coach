@@ -150,11 +150,14 @@ class PropertyModelService(coach.Microservice):
                  - "Compute": it will call the provided estimation method, and stores the resulting value in the database for
                         the provided alternative and property. For the computation, it can use parameters and dependents properties. This 
                         parameters and dependents properties are provided in the http request.
+                 - "Delete": it will delete the estimation defined by the triplet (alternative, property, estimation method) from the
+                        database. The value of this estimation as well as all the stored parameters will be deleted. Moreover, all the
+                        dependents properties will be tagged "out_of_date".
                  - "main_combo_box": it will refresh the estimation method view. Options in the main combo box can change, as well as
                         the parameters list and the dependents properties list. The default value of each parameter is got from the 
                         database if any, else 0.
                  - "<property_name>_goto_button": it will refresh the estimation method view. The selected alternative will be 
-                        alternative_name. However, submit_component must be in the form <property_name>_goto_button, and the selecte
+                        alternative_name. However, submit_component must be in the form <property_name>_goto_button, and the selected
                         property is defined by the first part of submit_component's name. Finally, the selected estimation_method is
                         got from the request, from the value of the parameter <property_name>_selected_estimation_method.
             Besides those named parameters, the request can contain several optional parameters, which are defined by their suffix:
@@ -197,19 +200,21 @@ class PropertyModelService(coach.Microservice):
         db_infos = {"case_id": case_id, "user_id": user_id, "user_token": user_token, "case_db_proxy": case_db_proxy}
         
         if submit_component == "Compute":
-            return self._handle_compute_button(db_infos, alternative_name, property_name, estimation_method_name, estimation_method_parameters,
-                                               selected_estimation_method_for_used_properties, used_properties_value)
-            
+            self._handle_compute_button(db_infos, alternative_name, property_name, estimation_method_name, estimation_method_parameters,
+                                        selected_estimation_method_for_used_properties, used_properties_value)
+        elif submit_component == "Delete":
+            self._handle_delete_button(db_infos, alternative_name, property_name, estimation_method_name)
         elif submit_component == "main_combo_box":
-            return self._properties_estimation_methods_dialogue_transition(db_infos, alternative_name, property_name, estimation_method_name,
-                                                                           selected_estimation_method_for_used_properties)
+            pass # Avoid the Exception to be raised.
         elif submit_component.endswith(GOTO_BUTTON_SUFFIX):
             property_name = submit_component[:-GOTO_BUTTON_SUFFIX_LENGTH]
             estimation_method_name = selected_estimation_method_for_used_properties[property_name]
-            return self._properties_estimation_methods_dialogue_transition(db_infos, alternative_name, property_name, 
-                                                                           estimation_method_name, {})
+            selected_estimation_method_for_used_properties = {}
         else:
-            raise MicroserviceException("Unknown submit_component name : '" + submit_component + "'")
+            raise RuntimeError("Unknown submit_component name : '" + submit_component + "'")
+        
+        return self._properties_estimation_methods_dialogue_transition(db_infos, alternative_name, property_name, estimation_method_name,
+                                                                       selected_estimation_method_for_used_properties)
         
     def _add_property(self, db_infos, alternative_name, property_name):
         """
@@ -237,20 +242,14 @@ class PropertyModelService(coach.Microservice):
             Compute an estimation using the provided estimation method, parameters and dependents properties. If the property has not 
             been added to the alternative, add it. Store the value of the estimation as well as those of the parameters in the database.
         INPUT:
-            alternative_name: The name of the alternative for which the estimation is computed. Moreover, it will be the selected alternative
-                in the estimation method view.
-            property_name: The name of the property for which the estimation is computed. Moreover, it will be the selected property
-                in the estimation method view.
-            estimation_method_name: The name of the estimation method used to compute the estimation. Moreover, it will be the selected
-                estimation method in the estimation method view.
+            alternative_name: The name of the alternative for which the estimation is computed.
+            property_name: The name of the property for which the estimation is computed.
+            estimation_method_name: The name of the estimation method used to compute the estimation.
             estimation_parameters: A dictionary, containing all the parameters used by the provided estimation method. Each key is the name
                 of a parameter, with the corresponding value the value of this parameter.
             selected_estimation_method_for_used_properties: A dictionary, containing the dependents properties of the provided estimation
-                method as keys, and the estimation method used for this dependent property as values. It the resulting estimation method
-                view, the dependents properties will have this estimation method selected.
+                method as keys, and the estimation method used for this dependent property as values.
             used_properties_value: A dictionary, containing the dependents properties as keys, and their value as values.
-        OUTPUT:
-            The estimation method view.
         """
         user_id = db_infos["user_id"]
         user_token = db_infos["user_token"]
@@ -278,10 +277,30 @@ class PropertyModelService(coach.Microservice):
                                      value=estimation_value, estimation_parameters=estimation_parameters, 
                                      used_properties_to_estimation_method_ontology_id=used_properties_to_estimation_method_ontology_id)
         
-        return self._properties_estimation_methods_dialogue_transition(db_infos, alternative_name, property_name, estimation_method_name,
-                                                                        selected_estimation_method_for_used_properties)
     
+    def _handle_delete_button(self, db_infos, alternative_name, property_name, estimation_method_name):
+        """
+        DESCRIPTION:
+            Delete the provided estimation, defined by the triplet (alternative, property, estimation method) from the database,
+            as well as all its parameters. All estimation that depends of this one are tagged "out_of_date".
+        INPUT:
+            alternative_name: The alternative's name of the triplet defining the estimation.
+            property_name: The property's name of the triplet defining the estimation.
+            estimation_method_name: The estimation method's name of the triplet defining the estimation.
+        """
+        user_id = db_infos["user_id"]
+        user_token = db_infos["user_token"]
+        case_id = db_infos["case_id"]
+        case_db_proxy = db_infos["case_db_proxy"]
         
+        alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
+        property_uri = self._get_property_uri_from_name(db_infos, property_name)
+        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
+        case_db_proxy.remove_estimation(user_id=user_id, user_token=user_token, case_id=case_id,
+                                                          alternative_uri=alternative_uri, property_uri=property_uri,
+                                                          estimation_method_ontology_id=estimation_method_ontology_id)
+        
+                
     def _properties_estimation_methods_dialogue_transition(self, db_infos, selected_alternative_name, selected_property_name, 
                                                            selected_estimation_method_name, selected_estimation_method_for_used_properties):
         """
@@ -315,14 +334,18 @@ class PropertyModelService(coach.Microservice):
         estimation_methods_name_list = self._get_estimation_methods_name(selected_property_name)
         selected_estimation_method_name = (selected_estimation_method_name if selected_estimation_method_name in
                                                 estimation_methods_name_list else estimation_methods_name_list[0])
+        
         used_properties = self._get_estimation_method_used_properties(db_infos, selected_alternative_name, selected_property_name,
                                                                       selected_estimation_method_name,
                                                                       selected_estimation_method_for_used_properties)
+
         selected_estimation_method_parameters_list = self._get_estimation_method_parameters(db_infos, selected_alternative_name,
                                                                                                      selected_property_name,
                                                                                                      selected_estimation_method_name)
         
         enable_compute_button = self._is_compute_button_enable(used_properties)
+        enable_delete_button = self._is_delete_button_enable(db_infos, selected_alternative_name, selected_property_name,
+                                                             selected_estimation_method_name)
         
         selected_alternative_uri = self._get_alternative_uri_from_name(db_infos, selected_alternative_name)
         estimation_value = self._get_estimation_value(db_infos, selected_alternative_uri, selected_property_name, selected_estimation_method_name)
@@ -332,7 +355,8 @@ class PropertyModelService(coach.Microservice):
                                selected_estimation_method_parameters_list=selected_estimation_method_parameters_list, 
                                selected_alternative_name=selected_alternative_name, selected_property_name=selected_property_name,
                                selected_estimation_method_name=selected_estimation_method_name, used_properties=used_properties, 
-                               enable_compute_button=enable_compute_button, estimation_value=estimation_value)
+                               enable_compute_button=enable_compute_button, enable_delete_button=enable_delete_button,
+                               estimation_value=estimation_value)
 
     def _get_alternative_uri_from_name(self, db_infos, alternative_name) :
         """
@@ -616,7 +640,7 @@ class PropertyModelService(coach.Microservice):
     def _is_compute_button_enable(self, used_properties):
         """
         DESCRIPTION:
-            Returns true if the compute button is enable, otherwise False.
+            Return true if the compute button is enable, otherwise False.
         INPUT:
             used_properties: A list, in which each element is a dictionary containing the key value.
         OUTPUT:
@@ -628,6 +652,33 @@ class PropertyModelService(coach.Microservice):
             except ValueError:
                 return False
         return True
+    
+    def _is_delete_button_enable(self, db_infos, alternative_name, property_name, estimation_method_name):
+        """
+        DESCRIPTION:
+            Return True if the delete button is enable, otherwise false.
+            The delete button is enable if the current estimation has already been added to the database.
+            The current estimation is defined by the triplet (alternative, property, estimation_method).
+        INPUT:
+            alternative_name: The alternative's name of the triplet defining the estimation.
+            property_namt: The property's name of the triplet defining the estimation.
+            estimation_method_name: The estimation method's name of the estimation method defining the estimation.
+        OUTPUT:
+            True if the provided estimation has already been added in the database, false otherwise.
+        """
+        user_id = db_infos["user_id"]
+        user_token = db_infos["user_token"]
+        case_id = db_infos["case_id"]
+        case_db_proxy = db_infos["case_db_proxy"]
+        
+        alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
+        property_uri = self._get_property_uri_from_name(db_infos, property_name)
+        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
+        
+        estimation_method_uri = case_db_proxy.get_estimation_uri(user_id=user_id, user_token=user_token, case_id=case_id,
+                                                                 alternative_uri=alternative_uri, property_uri=property_uri,
+                                                                 estimation_method_ontology_id=estimation_method_ontology_id)
+        return (estimation_method_uri is not None)
     
     def _compute_estimation_value(self, estimation_method_name, estimation_method_parameters, used_properties_name_to_value):
         """

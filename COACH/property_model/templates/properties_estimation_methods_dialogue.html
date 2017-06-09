@@ -65,8 +65,13 @@
 							{% endif %}
 						{% endfor %}
 					</select>
-					Value : {{used_property.value}}
-					<input name="{{used_property.name}}_property_value" value="{{used_property.value}}" type="hidden"></input>
+					Value : 
+					{% if used_property.value is number %}
+						{{ "%.4f" | format(used_property.value) }}
+					{% else %}
+						{{used_property.value}}
+					{% endif %}
+					<input name="{{used_property.name}}_property_value" value="{{used_property.value}}" type="hidden">
 					<button name="submit_component" type="submit" value="{{used_property.name}}_goto_button">Goto</button>
 					{% if not used_property.up_to_date %}
 						/!\ This value is out-of-date
@@ -88,13 +93,13 @@
 					{{parameter.name}}:
 					{% if parameter.type == "integer" %}
 						<input type="number" name="{{parameter.name}}_parameter" 
-								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required></input>
+								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required>
 					{% elif parameter.type == "float" %}
 						<input type="number" step="any" name="{{parameter.name}}_parameter" 
-								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required></input>
+								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required>
 					{% else %}
 						<input type="text" name="{{parameter.name}}_parameter" 
-								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required></input>
+								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required>
 					{% endif %}
 				</li>
 			{% endfor %}
@@ -114,13 +119,18 @@
 	<br/>
 	
 	{% if enable_compute_button %}
-		<input name="submit_component" type="submit" value="Compute"></input>
+		<input name="submit_component" type="submit" value="Compute">
 	{% else %}
-		<input name="submit_component" type="submit" value="Compute" disabled></input>
+		<input name="submit_component" type="submit" value="Compute" disabled>
 	{% endif %}
 	
+	{% if enable_delete_button %}
+		<input name="submit_component" type="submit" value="Delete">
+	{% else %}	
+		<input name="submit_component" type="submit" value="Delete" disabled>
+	{% endif %}
 	
 	 <!-- If the form is submitted with a button, this input will be ignored. Else, submit_component will 
 	 have the value of this input, which would have been modified by the submitting component to put its name -->
-	<input id="submit_button_input" type="hidden" name="submit_component" value=""></input>
+	<input id="submit_button_input" type="hidden" name="submit_component" value="">
 </form>

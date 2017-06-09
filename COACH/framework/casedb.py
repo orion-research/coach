@@ -411,6 +411,33 @@ class CaseDatabase(coach.GraphDatabaseService):
                                                           used_properties_to_estimation_method_ontology_id[property_uri])
             case_graph.add((estimation_uri, orion_ns.use_estimation, used_estimation_uri))
             
+    @endpoint("/remove_estimation", ["POST"], "application/json")
+    def remove_estimation(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            estimation_uri = self.get_estimation_uri(user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id)
+            if estimation_uri is None:
+                return
+            
+            self._manage_estimation_up_to_date_property(user_id, user_token, case_id, estimation_uri)
+            self._remove_estimation_parameters(user_id, user_token, case_id, estimation_uri)
+            self.remove_resource(user_id, user_token, case_id, estimation_uri)
+        else:
+            return "Invalid user token"
+    
+    def _remove_estimation_parameters(self, user_id, user_token, case_id, estimation_uri):
+        query_parameters = """  SELECT ?parameter_uri
+                                    WHERE {
+                                        ?estimation_uri orion:has_parameter ?parameter_uri .
+                                        ?case_id orion:parameter ?parameter_uri .
+                                    }
+                                """
+        case_id = rdflib.URIRef(case_id)
+        estimation_uri = rdflib.URIRef(estimation_uri)
+        parameter_uri_list = list(self.graph.query(query_parameters, initNs = {"orion": rdflib.Namespace(self.orion_ns)},
+                                                   initBindings = {"case_id": case_id, "estimation_uri": rdflib.URIRef(estimation_uri)}))
+        for (parameter_uri,) in parameter_uri_list:
+            self.remove_resource(user_id, user_token, case_id, parameter_uri)
+            
     
     def _manage_estimation_up_to_date_property(self, user_id, user_token, case_id, estimation_uri):
         orion_ns = rdflib.Namespace(self.orion_ns)
@@ -702,9 +729,10 @@ class CaseDatabase(coach.GraphDatabaseService):
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_id = rdflib.URIRef(case_id)
             case_graph = self.graph.get_context(case_id)
-            serialized_graph = case_graph.serialize(format = format).decode("utf-8")
-            self.kr_db_proxy.export_case(case_graph = serialized_graph, format = format)
-            return serialized_graph
+            return case_graph.serialize(format = format).decode("utf-8")
+#             serialized_graph = case_graph.serialize(format = format).decode("utf-8")
+#             self.kr_db_proxy.export_case(case_graph = serialized_graph, format = format)
+#             return serialized_graph
         else:
             return "Invalid user token"
     
