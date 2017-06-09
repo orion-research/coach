@@ -9,9 +9,6 @@ import os
 import sys
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
-import json
-
-
 from COACH.framework.coach import endpoint, EstimationMethodService
 
 # TODO: to suppress
@@ -26,7 +23,7 @@ def log(*args):
     print(message)
     sys.stdout.flush()
 
-class ExpertEstimate(EstimationMethodService):
+class ExpertEstimateFloat(EstimationMethodService):
     
     @endpoint("/compute", ["POST"], "application/json")
     def compute(self, parameters_dict, properties_dict):
@@ -36,4 +33,4 @@ class ExpertEstimate(EstimationMethodService):
         return float(parameters_dict["estimation"])
     
 if __name__ == '__main__':
-    ExpertEstimate(sys.argv[1]).run()
+    ExpertEstimateFloat(sys.argv[1]).run()

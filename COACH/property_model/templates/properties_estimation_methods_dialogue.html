@@ -105,7 +105,7 @@
 	{% if estimation_value == None %}
 		This estimation has not been computed yet
 	{% else %}
-		Current value is {{estimation_value.value}}
+		Current value is {{ "%.4f" | format(estimation_value.value) }}
 		{% if not estimation_value.up_to_date %}
 			<br/>
 			/!\ The current value is out-of-date

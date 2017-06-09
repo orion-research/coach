@@ -96,14 +96,39 @@
         "name": "Knowledge repository microservice for the ORION project",
         "description": "Settings for KnowledgeRepositoryService"
     },
-    "ExpertEstimate": {
+    "ExpertEstimateText": {
         "port": 5012,
-        "name": "ExpertEstimate estimation method",
-        "description": "Settings for ExpertEstimate"
+        "name": "ExpertEstimateText estimation method",
+        "description": "Settings for ExpertEstimateText"
     },
-    "COCOMO": {
+    "ExpertEstimateFloat": {
         "port": 5013,
-        "name": "COCOMO estimation method",
-        "description": "Settings for COCOMO"
+        "name": "ExpertEstimateFloat estimation method",
+        "description": "Settings for ExpertEstimateFloat"
+    },
+    "ExpertEstimateInteger": {
+        "port": 5014,
+        "name": "ExpertEstimateInteger estimation method",
+        "description": "Settings for ExpertEstimateInteger"
+    },
+    "BasicCOCOMO": {
+        "port": 5015,
+        "name": "BasicCOCOMO estimation method",
+        "description": "Settings for BasicCOCOMO"
+    },
+    "IntermediateCOCOMO": {
+        "port": 5016,
+        "name": "IntermediateCOCOMO estimation method",
+        "description": "Settings for IntermediateCOCOMO"
+    },
+     "AdvancedCOCOMO": {
+        "port": 5016,
+        "name": "AdvancedCOCOMO estimation method",
+        "description": "Settings for AdvancedCOCOMO"
+    },
+     "CostEstimation": {
+        "port": 5017,
+        "name": "CostEstimation estimation method",
+        "description": "Settings for CostEstimation"
     }
 }

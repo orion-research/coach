@@ -9,12 +9,9 @@ import os
 import sys
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
-import json
-
-
 from COACH.framework.coach import endpoint, EstimationMethodService
 
-class COCOMO(EstimationMethodService):
+class BasicCOCOMO(EstimationMethodService):
     
     @endpoint("/compute", ["POST"], "application/json")
     def compute(self, parameters_dict, properties_dict):
@@ -24,4 +21,4 @@ class COCOMO(EstimationMethodService):
         return float(parameters_dict["a"]) * float(properties_dict["KLOC"]) ** float(parameters_dict["b"])
     
 if __name__ == '__main__':
-    COCOMO(sys.argv[1]).run()
+    BasicCOCOMO(sys.argv[1]).run()

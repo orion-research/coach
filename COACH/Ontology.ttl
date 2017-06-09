@@ -728,17 +728,34 @@
 :Property
     rdfs:subClassOf :Class .
 
-:cost
+:developmentEffort
     :gradeId "AP1" ;
     a :Property ;
-    :title "Cost" ;
-    :description "Cost of a project" .
+    :title "DevelopmentEffort" ;
+    :description "Cost of a project" ;
+    :type "float" .
 
 :kloc
     :gradeId "AP2" ;
     a :Property ;
     :title "KLOC" ;
-    :description "number of lines of code (in thousands) in a project".
+    :description "number of lines of code (in thousands) in a project" ;
+    :type "float" .
+    
+:cost
+    :gradeId "AP3" ;
+    a :Property ;
+    :title "Cost" ;
+    :description "" ;
+    :type "float" .
+    
+:worstCaseExecutionTime
+    :gradeId "AP4" ;
+    a :Property ;
+    :title "Worst case execution time" ;
+    :description "" ;
+    :type "integer" .
+
 
 # Estimation methods
 
@@ -752,42 +769,223 @@
 
 # Expert estimate is a special estimation method, which will be a default to all properties.
 # Consequently, it does not have a field "belongTo".
-:expertEstimate
+:expertEstimateText
     :gradeId "AEM1" ;
     a :EstimationMethod ;
-    :title "ExpertEstimate" ;
+    :title "Expert estimate text" ;
+    :microserviceName "ExpertEstimateText" ;
     :description "An expert does an estimation of a property" ;
-    :hasParameter :expertEstimateEstimation .
+    :hasParameter :expertEstimateTextEstimation ;
+    :type "text" .
 
-:cocomo
+:expertEstimateFloat
     :gradeId "AEM2" ;
     a :EstimationMethod ;
-    :title "COCOMO" ;
+    :title "Expert estimate float" ;
+    :microserviceName "ExpertEstimateFloat" ;
+    :description "An expert does an estimation of a property" ;
+    :hasParameter :expertEstimateFloatEstimation ;
+    :type "float" .
+    
+:expertEstimateInteger
+    :gradeId "AEM3" ;
+    a :EstimationMethod ;
+    :title "Expert estimate integer" ;
+    :microserviceName "ExpertEstimateInteger" ;
+    :description "An expert does an estimation of a property" ;
+    :hasParameter :expertEstimateIntegerEstimation ;
+    :type "integer" .
+
+:basicCocomo
+    :gradeId "AEM4" ;
+    a :EstimationMethod ;
+    :title "Basic COCOMO" ;
+    :microserviceName "BasicCOCOMO" ;
     :description "" ;
-    :belongTo :cost ;
+    :belongTo :developmentEffort ;
     :hasParameter :cocomoA ,
         :cocomoB ;
-    :useProperty :kloc .
+    :useProperty :kloc ;
+    :type "float" .
+
+:intermediateCocomo
+    :gradeId "AEM5" ;
+    a :EstimationMethod ;
+    :title "Intermediate COCOMO" ;
+    :microserviceName "IntermediateCOCOMO" ;
+    :description "" ;
+    :belongTo :developmentEffort ;
+    :hasParameter :cocomoA ,
+        :cocomoB ,
+        :intermediateCocomoRELY ,
+        :intermediateCocomoDATA ,
+        :intermediateCocomoCPLX ,
+        :intermediateCocomoTIME ,
+        :intermediateCocomoSTOR ,
+        :intermediateCocomoVIRT ,
+        :intermediateCocomoTURN ,
+        :intermediateCocomoACAP ,
+        :intermediateCocomoAEXP ,
+        :intermediateCocomoPCAP ,
+        :intermediateCocomoVEXP ,
+        :intermediateCocomoLEXP ,
+        :intermediateCocomoMODP ,
+        :intermediateCocomoTOOL ,
+        :intermediateCocomoSCED ;
+    :useProperty :kloc ;
+    :type "float" .
+    
+:costEstimation
+    :gradeId "AEM8" ;
+    a :EstimationMethod ;
+    :title "Cost estimation" ;
+    :microserviceName "CostEstimation" ;
+    :description "" ;
+    :belongTo :cost ;
+    :hasParameter :costEstimationSalary ;
+    :useProperty :developmentEffort ;
+    :type "float" .
     
 # Estimation method's parameters
 # Each parameter's uri is: <estimation method name><parameter name>.
 
-:expertEstimateEstimation
+:expertEstimateTextEstimation
+    :name "estimation" ;
+    :type "text" ;
+    :defaultValue "" .
+
+:expertEstimateFloatEstimation
     :name "estimation" ;
     :type "float" ;
     :defaultValue "0" .
     
+:expertEstimateIntegerEstimation
+    :name "estimation" ;
+    :type "integer" ;
+    :defaultValue "0" .
+
 :cocomoA
     :name "a" ;
     :type "float" ;
     :min "0" ;
-    :defaultValue "0" .
+    :defaultValue "1" .
 
 :cocomoB
     :name "b" ;
     :type "float" ;
     :min "0" ;
     :defaultValue "1" .
+    
+:intermediateCocomoRELY
+    :name "RELY" ;
+    :type "float" ;
+    :min "0.75" ;
+    :max "1.40" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoDATA
+    :name "DATA" ;
+    :type "float" ;
+    :min "0.94" ;
+    :max "1.16" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoCPLX
+    :name "CPLX" ;
+    :type "float" ;
+    :min "0.70" ;
+    :max "1.65" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoTIME
+    :name "TIME" ;
+    :type "float" ;
+    :min "1" ;
+    :max "1.66" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoSTOR
+    :name "STOR" ;
+    :type "float" ;
+    :min "1" ;
+    :max "1.56" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoVIRT
+    :name "VIRT" ;
+    :type "float" ;
+    :min "0.87" ;
+    :max "1.30" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoTURN
+    :name "TURN" ;
+    :type "float" ;
+    :min "0.87" ;
+    :max "1.15" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoACAP
+    :name "ACAP" ;
+    :type "float" ;
+    :min "0.71" ;
+    :max "1.46" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoAEXP
+    :name "AEXP" ;
+    :type "float" ;
+    :min "0.82" ;
+    :max "1.29" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoPCAP
+    :name "PCAP" ;
+    :type "float" ;
+    :min "0.70" ;
+    :max "1.42" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoVEXP
+    :name "VEXP" ;
+    :type "float" ;
+    :min "0.90" ;
+    :max "1.21" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoLEXP
+    :name "LEXP" ;
+    :type "float" ;
+    :min "0.95" ;
+    :max "1.14" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoMODP
+    :name "MODP" ;
+    :type "float" ;
+    :min "0.82" ;
+    :max "1.24" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoTOOL
+    :name "TOOL" ;
+    :type "float" ;
+    :min "0.83" ;
+    :max "1.24" ;
+    :defaultValue "1" .
+    
+:intermediateCocomoSCED
+    :name "SCED" ;
+    :type "float" ;
+    :min "1" ;
+    :max "1.23" ;
+    :defaultValue "1" .
+    
+:costEstimationSalary
+    :name "Salary" ;
+    :type "float" ;
+    :min "0" ;
+    :defaultValue "0" .
 
 ### Asset usage
 

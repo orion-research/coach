@@ -18,8 +18,12 @@ from COACH.estimation_method.ExpertOpinion import ExpertOpinion
 from COACH.framework.KnowledgeInferenceService import KnowledgeInferenceService
 from COACH.context_model import ContextModelService
 from COACH.framework.AuthenticationService import AuthenticationService
-from COACH.estimation_method.expert_estimate.ExpertEstimate import ExpertEstimate
-from COACH.estimation_method.cocomo.COCOMO import COCOMO
+from COACH.estimation_method.expert_estimate_text.ExpertEstimateText import ExpertEstimateText
+from COACH.estimation_method.expert_estimate_float.ExpertEstimateFloat import ExpertEstimateFloat
+from COACH.estimation_method.expert_estimate_integer.ExpertEstimateInteger import ExpertEstimateInteger
+from COACH.estimation_method.basic_cocomo.BasicCOCOMO import BasicCOCOMO
+from COACH.estimation_method.intermediate_cocomo.IntermediateCOCOMO import IntermediateCOCOMO
+from COACH.estimation_method.cost_estimation.CostEstimation import CostEstimation
 
 def run_all():
     # Start all the services
@@ -48,9 +52,13 @@ def run_all():
 
     AuthenticationService().run()
 
-    ExpertEstimate().run()
-
-    COCOMO().run()
+    # Estimation methods
+    ExpertEstimateText().run()
+    ExpertEstimateFloat().run()
+    ExpertEstimateInteger().run()
+    BasicCOCOMO().run()
+    IntermediateCOCOMO().run()
+    CostEstimation().run()
 
 if __name__ == '__main__':
     run_all()

@@ -86,10 +86,10 @@ class PropertyModelService(coach.Microservice):
         alternatives_uri_list = alternatives_list[1]
         properties_estimations = []
         for property_name in properties_name_list:
-            estimations_methods_names = self._get_estimation_methods(db_infos, property_name)
+            estimations_methods_names = self._get_estimation_methods_name(property_name)
             estimation_methods = []
             for estimation_method_name in estimations_methods_names:
-                estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name, True)
+                estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
                 estimated_values = self._get_estimated_value_list(db_infos, alternatives_uri_list, property_name, 
                                                                   estimation_method_ontology_id)
                 
@@ -131,8 +131,8 @@ class PropertyModelService(coach.Microservice):
         """
         case_db_proxy = self.create_proxy(case_db)
         db_infos = {"case_id": case_id, "user_id": user_id, "user_token": user_token, "case_db_proxy": case_db_proxy}
-        alternatives_name_list = self._get_alternatives(db_infos)[0]
-        if len(alternatives_name_list) == 0:
+        alternatives_uri_list = self._get_alternatives(db_infos)[1]
+        if len(alternatives_uri_list) == 0:
             return "Add alternatives before going to this page"
         return self._properties_estimation_methods_dialogue_transition(db_infos, "", "", "", {})
     
@@ -226,7 +226,7 @@ class PropertyModelService(coach.Microservice):
         
         alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
 
-        property_ontology_id = self._get_property_ontology_id_name(property_name, True)
+        property_ontology_id = self._get_property_ontology_id_name(property_name)
         case_db_proxy.add_property(user_id=user_id, user_token=user_token, case_id=case_id, alternative_uri=alternative_uri, 
                                    property_ontology_id=property_ontology_id)
     
@@ -270,9 +270,9 @@ class PropertyModelService(coach.Microservice):
         for prop_name in selected_estimation_method_for_used_properties:
             em_name = selected_estimation_method_for_used_properties[prop_name]
             prop_uri = self._get_property_uri_from_name(db_infos, prop_name)
-            used_properties_to_estimation_method_ontology_id[prop_uri] = self._get_estimation_method_ontology_id_name(em_name, True)
+            used_properties_to_estimation_method_ontology_id[prop_uri] = self._get_estimation_method_ontology_id_name(em_name)
 
-        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name, True)
+        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
         case_db_proxy.add_estimation(user_id=user_id, user_token=user_token, case_id=case_id, alternative_uri=alternative_uri, 
                                      property_uri=property_uri, estimation_method_ontology_id=estimation_method_ontology_id, 
                                      value=estimation_value, estimation_parameters=estimation_parameters, 
@@ -312,7 +312,7 @@ class PropertyModelService(coach.Microservice):
         selected_property_name = (selected_property_name if selected_property_name in 
                                        properties_name_list else properties_name_list[0])
 
-        estimation_methods_name_list = self._get_estimation_methods(db_infos, selected_property_name)
+        estimation_methods_name_list = self._get_estimation_methods_name(selected_property_name)
         selected_estimation_method_name = (selected_estimation_method_name if selected_estimation_method_name in
                                                 estimation_methods_name_list else estimation_methods_name_list[0])
         used_properties = self._get_estimation_method_used_properties(db_infos, selected_alternative_name, selected_property_name,
@@ -454,7 +454,7 @@ class PropertyModelService(coach.Microservice):
                                                     initBindings = { "?class_name": class_name })
         return list(result)
     
-    def _get_property_ontology_id_name(self, property_attribute, is_property_attribute_name):
+    def _get_property_ontology_id_name(self, property_attribute, is_property_attribute_name = True):
         """
         DESCRIPTION:
             Returns the name or the ontology id of the property defined by property_attribute.
@@ -486,7 +486,7 @@ class PropertyModelService(coach.Microservice):
     def _get_property_uri_from_name(self, db_infos, property_name):
         """
         DESCRIPTION:
-            Returns the uri of a property identified by the name property_name.
+            Returns the uri in the database of a property identified by the name property_name.
         INPUT:
             property_name: The name of a property.
         OUTPUT:
@@ -500,7 +500,7 @@ class PropertyModelService(coach.Microservice):
         case_db_proxy = db_infos["case_db_proxy"]
         orion_ns = rdflib.Namespace(self.orion_ns)
         
-        property_ontology_id = self._get_property_ontology_id_name(property_name, True)
+        property_ontology_id = self._get_property_ontology_id_name(property_name)
         properties_list = case_db_proxy.get_subjects(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                      predicate=orion_ns.ontology_id, object=property_ontology_id)
 
@@ -508,6 +508,39 @@ class PropertyModelService(coach.Microservice):
             raise RuntimeError("There should be at most one property with the name " + property_name + " but "
                                + str(len(properties_list)) + " were found.")
         return properties_list[0] if len(properties_list) == 1 else None
+    
+    def _get_property_type(self, property_name):
+        """
+        DESCRIPTION:
+            Return the type of the property defined by property_name.
+        INPUT:
+            property_name: The name of a property.
+        OUTPUT:
+            The type of the property defined by property_name.
+        ERROR:
+            Raise a RuntimeError if there is no type or more than one type for the provided property, or if the type 
+            is invalid. Valid types are "text", "float" and "integer".
+        """
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        query = """ SELECT ?property_type
+                    WHERE {
+                        ?property_ontology_uri a orion:Property .
+                        ?property_ontology_uri orion:title ?property_name .
+                        ?property_ontology_uri orion:type ?property_type .
+                    }
+        """
+        query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, 
+                                                  initBindings = {"property_name": rdflib.Literal(property_name)})
+        result = [t.toPython() for (t,) in query_result]
+        if len(result) != 1:
+            raise RuntimeError("The property " + property_name + " must have exactly 1 type, but " + str(len(result)) + " were found.")
+        
+        result[0] = result[0].strip()
+        allowed_types = ["text", "float", "integer"]
+        if result[0] not in allowed_types:
+            raise RuntimeError("The property " + property_name + " have an unknown type (" + result[0] + "). Valid types are: "
+                               + ", ".join(allowed_types) + ".")
+        return result[0]
 
     def _get_estimated_value_list(self, db_infos, alternatives_uri_list, property_name, estimation_method_ontology_id):
         """
@@ -533,7 +566,7 @@ class PropertyModelService(coach.Microservice):
         case_id = db_infos["case_id"]
         case_db_proxy = db_infos["case_db_proxy"]
 
-        property_ontology_id = self._get_property_ontology_id_name(property_name, True)        
+        property_ontology_id = self._get_property_ontology_id_name(property_name)        
         linked_alternatives_list_uri = case_db_proxy.get_alternative_from_property_ontology_id(user_id=user_id, user_token=user_token, 
                                                                                                case_id=case_id, 
                                                                                                property_ontology_id=property_ontology_id)
@@ -607,7 +640,8 @@ class PropertyModelService(coach.Microservice):
         OUTPUT:
             The estimation computed by the estimation method.
         """
-        estimation_method_service = self.get_setting(estimation_method_name)
+        estimation_method_microservice_name = self._get_estimation_method_microservice_name(estimation_method_name)
+        estimation_method_service = self.get_setting(estimation_method_microservice_name)
         global_settings = self.get_setting("object")
         estimation_method_service_address = (global_settings["protocol"] + "://" + global_settings["host"] + ":" 
                                             + str(estimation_method_service["port"]))
@@ -615,31 +649,69 @@ class PropertyModelService(coach.Microservice):
         estimation_method_proxy = self.create_proxy(estimation_method_service_address)
         return estimation_method_proxy.compute(parameters_dict=estimation_method_parameters, properties_dict=used_properties_name_to_value)
         
-    def _get_estimation_methods(self, db_infos, property_name):
+    def _get_estimation_method_microservice_name(self, estimation_method_name):
+        """
+        DESCRIPTION:
+            Return the name of the microservice used by the provided estimation method.
+        INTPUT:
+            estimation_method_name: The name of an estimation method.
+        OUTPUT:
+            The name of the microservice used by the provided estimation method.
+        ERROR:
+            Raise a RuntimeError if no microservice name is found, or if more than 1 are found.
+        """
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        query = """ SELECT ?estimation_method_microservice_name
+                    WHERE {
+                        ?estimation_method_ontology_uri a orion:EstimationMethod .
+                        ?estimation_method_ontology_uri orion:title ?estimation_method_name .
+                        ?estimation_method_ontology_uri orion:microserviceName ?estimation_method_microservice_name .
+                    }
+        """
+        
+        query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns},
+                                                  initBindings = {"estimation_method_name": rdflib.Literal(estimation_method_name)})
+        result = [e.toPython().strip() for (e,) in query_result]
+        if len(result) != 1:
+            raise RuntimeError("There should be exactly one microservice name for the estimation method " + estimation_method_name 
+                               + " but " + str(len(result)) + " were found.")
+        return result[0]
+    
+    def _get_estimation_methods_name(self, property_name):
         """
         DESCRIPTION:
             Returns a list with the name of all estimation methods in the ontology which are available for the provided property.
-            The estimation method "ExpertEstimate" is a default to all properties.
         INPUT:
-            property_name: The returned estimation method are all available for this property.
+            property_name: The name of the property for which the returned estimation methods are available.
         OUTPUT:
             A list with the name of all estimation methods available for the provided property.
+            The estimation method "ExpertEstimate" is a default to all properties, and it is declined in 3 differents estimation methods,
+            depending of the type of the property.
         """
-        property_ontology_id = self._get_property_ontology_id_name(property_name, True)
+        property_ontology_id = self._get_property_ontology_id_name(property_name)
         orion_ns = rdflib.Namespace(self.orion_ns)
         query = """ SELECT ?estimation_method_name
                     WHERE {
                         ?estimation_method_ontology_uri a orion:EstimationMethod .
                         ?estimation_method_ontology_uri orion:belongTo ?property_ontology_uri .
+                        ?estimation_method_ontology_uri orion:type ?type .
+                        ?property_ontology_uri orion:type ?type .
                         ?estimation_method_ontology_uri orion:title ?estimation_method_name .
                     }
         """
         
-        query_result = self._get_ontology(db_infos).query(query, initNs = {"orion": orion_ns}, 
-                                                    initBindings = {"property_ontology_uri": rdflib.URIRef(property_ontology_id)})
+        query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, 
+                                                  initBindings = {"property_ontology_uri": rdflib.URIRef(property_ontology_id)})
         
-        result = [e.toPython() for (e,) in query_result]
-        result.append("ExpertEstimate")
+        result = [e.toPython().strip() for (e,) in query_result]
+        property_type = self._get_property_type(property_name)
+        if property_type == "text":
+            result.append("Expert estimate text")
+        elif property_type == "float":
+            result.append("Expert estimate float")
+        else:
+            result.append("Expert estimate integer")
+            
         return result
     
     def _get_estimation_method_parameters(self, db_infos, alternative_name, property_name, estimation_method_name):
@@ -676,7 +748,7 @@ class PropertyModelService(coach.Microservice):
         case_id = db_infos["case_id"]
         case_db_proxy = db_infos["case_db_proxy"]
         
-        parameters = self._get_estimation_method_parameters_name(estimation_method_name)
+        parameters = self._get_estimation_method_parameters_from_ontology(estimation_method_name)
         
         alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
@@ -685,7 +757,7 @@ class PropertyModelService(coach.Microservice):
             # so no parameters could have been stored in the database.
             return parameters
         
-        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name, True)
+        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
         database_parameters = case_db_proxy.get_estimation_parameters(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                                       alternative_uri=alternative_uri, property_uri=property_uri, 
                                                                       estimation_method_ontology_id=estimation_method_ontology_id)
@@ -705,7 +777,7 @@ class PropertyModelService(coach.Microservice):
             
         return parameters
     
-    def _get_estimation_method_parameters_name(self, estimation_method_name):
+    def _get_estimation_method_parameters_from_ontology(self, estimation_method_name):
         """
         DESCRIPTION:
             Returns a list in which each element is a dictionary representing a parameter used by the provided estimation method.
@@ -751,12 +823,12 @@ class PropertyModelService(coach.Microservice):
                                                   initBindings = {"estimation_method_name": rdflib.Literal(estimation_method_name)})
         result = []
         for (parameter_name, parameter_type, parameter_default_value, parameter_min, parameter_max) in query_result:            
-            parameter_descriptor = {"name": parameter_name.toPython(), "type": parameter_type.toPython(), 
-                                     "value": parameter_default_value.toPython()}
+            parameter_descriptor = {"name": parameter_name.toPython().strip(), "type": parameter_type.toPython().strip(), 
+                                     "value": parameter_default_value.toPython().strip()}
             if parameter_min is not None:
-                parameter_descriptor["min"] = parameter_min.toPython()
+                parameter_descriptor["min"] = parameter_min.toPython().strip()
             if parameter_max is not None:
-                parameter_descriptor["max"] = parameter_max.toPython()
+                parameter_descriptor["max"] = parameter_max.toPython().strip()
                 
             allowed_types = ["integer", "float", "text"]
             if parameter_descriptor["type"] not in allowed_types:
@@ -764,7 +836,6 @@ class PropertyModelService(coach.Microservice):
                                    + " Allowed types are : " + ", ".join(allowed_types))
                 
             result.append(parameter_descriptor)
-        log("result :", result)
         return result
     
     def _get_estimation_method_used_properties(self, db_infos, alternative_name, property_name, estimation_method_name, 
@@ -772,14 +843,6 @@ class PropertyModelService(coach.Microservice):
         """
         DESCRIPTION:
             Returns a list in which each element is a dependent property of the provided estimation.
-            Each element is a dictionary containing the keys 
-                - "name": The name of the dependent property of the estimation method.
-                - "estimation_methods_name": The list of all estimation methods available for the dependent property.
-                - "selected": The selected estimation method for the dependent property.
-                - "value": The value of the dependent property computed with the selected estimation method. If there is
-                    none, this field contains the string '---'.
-                - "up_to_date": True if the value of the dependent property is up-to-date, false otherwise. A value of a 
-                    property is up-to-date if it has been computed after each of its dependents properties.
         INPUT:
             The estimation is defined by a triplet (alternative, property, estimation method).
             alternative_name: The name of the alternative in the triplet.
@@ -791,6 +854,15 @@ class PropertyModelService(coach.Microservice):
                 dependent property has never been computed, the first estimation method available will be selected.
         OUTPUT:
             A list in which each element is a dependent property of the provided estimation.
+            Each element is a dictionary containing the keys 
+                - "name": The name of the dependent property of the estimation method.
+                - "estimation_methods_name": The list of all estimation methods available for the dependent property.
+                - "selected": The selected estimation method for the dependent property.
+                - "value": The value of the dependent property computed with the selected estimation method. If there is
+                    none, this field contains the string '---'.
+                - "up_to_date": True if the value of the dependent property is up-to-date, false otherwise. A value of a 
+                    property is up-to-date if it has been computed after each of its dependents properties.
+
         """
         user_id = db_infos["user_id"]
         user_token = db_infos["user_token"]
@@ -801,8 +873,9 @@ class PropertyModelService(coach.Microservice):
 
         alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
+        #TODO: remove try/catch?
         try:
-            estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name, True)
+            estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
             estimation_uri = case_db_proxy.get_estimation_uri(user_id=user_id, user_token=user_token, case_id=case_id,
                                                               alternative_uri=alternative_uri, property_uri=property_uri,
                                                               estimation_method_ontology_id=estimation_method_ontology_id)
@@ -815,11 +888,11 @@ class PropertyModelService(coach.Microservice):
         result = []
         for current_property_name in used_properties_name:
             
-            estimation_method_name_list = self._get_estimation_methods(db_infos, current_property_name)
+            estimation_method_name_list = self._get_estimation_methods_name(current_property_name)
             if current_property_name in property_to_estimation_method_name_dict:
                 selected_estimation_method_for_current_property = property_to_estimation_method_name_dict[current_property_name]
             else:
-                current_property_ontology_id = self._get_property_ontology_id_name(current_property_name, True)
+                current_property_ontology_id = self._get_property_ontology_id_name(current_property_name)
                 if current_property_ontology_id in properties_used_to_estimation_method:
                     selected_estimation_method_for_current_property = properties_used_to_estimation_method[current_property_ontology_id]
                     selected_estimation_method_for_current_property = self._get_estimation_method_ontology_id_name(selected_estimation_method_for_current_property, False)
@@ -840,11 +913,11 @@ class PropertyModelService(coach.Microservice):
     def _get_estimation_method_used_properties_name(self, estimation_method_name):
         """
         DESCRIPTION:
-            Returns the dependents property of the provided estimation method.
+            Returns the dependents properties' name of the provided estimation method.
         INPUT:
             estimation_method_name: The name of the estimation method.
         OUTPUT:
-            A list containing the dependents property of the provided estimation method, or an empty list if there is no
+            A list containing the dependents properties' name of the provided estimation method, or an empty list if there is no
             dependents property
         """
         orion_ns = rdflib.Namespace(self.orion_ns)
@@ -860,7 +933,7 @@ class PropertyModelService(coach.Microservice):
         query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, 
                                                   initBindings={"estimation_method_name": rdflib.Literal(estimation_method_name)})
         
-        return [e.toPython() for (e,) in query_result]
+        return [e.toPython().strip() for (e,) in query_result]
     
     def _get_estimation_value(self, db_infos, alternative_uri, property_name, estimation_method_name):
         """
@@ -880,13 +953,12 @@ class PropertyModelService(coach.Microservice):
         case_db_proxy = db_infos["case_db_proxy"]
         
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
-        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name, True)
-        estimation_value = case_db_proxy.get_estimation_value(user_id=user_id, user_token=user_token, case_id=case_id, 
+        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
+        return case_db_proxy.get_estimation_value(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                               alternative_uri=alternative_uri, property_uri=property_uri, 
                                                               estimation_method_ontology_id=estimation_method_ontology_id)
-        return estimation_value
     
-    def _get_estimation_method_ontology_id_name(self, estimation_method_attribute, is_attribute_name):
+    def _get_estimation_method_ontology_id_name(self, estimation_method_attribute, is_attribute_name = True):
         """
         DESCRIPTION:
             Returns the name or the ontology id of the estimation method defined by estimation_method_attribute.
