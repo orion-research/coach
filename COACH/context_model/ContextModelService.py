@@ -749,15 +749,13 @@ class ContextModelService(coach.Microservice):
            self.organization,
            "Organization",
            "edit_context_organization")
-    
-        
+       
     @endpoint("/context_product_dialogue", ["GET"], "text/html")
     def context_product_dialogue(self, user_id, user_token, case_db, case_id):
         return self.context_category_dialogue(user_id, user_token, case_db, case_id,
            self.product,
            "Product",
            "edit_context_product")
-    
           
     @endpoint("/context_stakeholder_dialogue", ["GET"], "text/html")
     def context_stakeholder_dialogue(self, user_id, user_token, case_db, case_id):
@@ -787,12 +785,10 @@ class ContextModelService(coach.Microservice):
         for e in category :
             case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")
 
-    
     @endpoint("/edit_context_organization", ["POST"], "text/html")
     def edit_context_organization(self, user_id, user_token, case_db, case_id):
         self.edit_context_category(user_id, user_token, case_db, case_id, self.organization)
         return "Context information (organization) saved."
-    
 
     @endpoint("/edit_context_product", ["POST"], "text/html")
     def edit_context_product(self, user_id, user_token, case_db, case_id):
@@ -815,46 +811,75 @@ class ContextModelService(coach.Microservice):
         return "Context information (market and business) saved."
 
 
+
+
+
     """
     Temporary to test the ontology stuff
     """
     
-    """
-    @endpoint("/context_product_dialogue", ["GET"], "text/html")
-    def context_product_dialogue(self, user_id, user_token, case_db, case_id):
     
-        case_id = session["case_id"]
+    @endpoint("/test_context_organization_dialogue", ["GET"], "text/html")
+    def test_context_organization_dialogue(self, user_id, user_token, case_db, case_id):
+    
         orion_ns = rdflib.Namespace(self.orion_ns)
         
-        
+        # Should this really be done every time?
+        self.case_db_proxy = self.create_proxy(case_db)
+
 
         # If a goal exists, fetch its description
-        context = self.case_db_proxy.get_objects(user_id=session["user_id"], user_token=session["user_token"],
+        context = self.case_db_proxy.get_objects(user_id=user_id, user_token=user_token,
                                                case_id=case_id, subject=case_id, predicate=orion_ns.context)
         if context:
             context_uri = context[0]
-            organizationContext = self.case_db_proxy.get_objects(user_id=session["user_id"], user_token=session["user_token"],
+            organizationContext = self.case_db_proxy.get_objects(user_id=user_id, user_token=user_token,
                                                           case_id=case_id,
                                                           subject=context_uri, predicate=orion_ns.organizationContext)
+        
             if organizationContext:
-                organizationContext = organizationContext[0]
+                organizationContext_uri = organizationContext[0]
 
-        dialogue = render_template("test.html", organizationContext = organizationContext)
-        return self.main_menu_transition(main_dialogue = dialogue)
+        # Hardcoded for now, but this should be generated from the ontology:
+        org_context = [
+            {'id' : orion_ns.degreeOfDistribution,
+             'description' : 'Degree of distribution of the development site (consider factors such as local or global/distributed development with multiple development sites, multiple geographical locations, national or international).',
+             'type' : 'radio',
+             'alternatives' : [(orion_ns.low, 'Low'), 
+                               (orion_ns.medium, 'Medium'),
+                               (orion_ns.high, 'High')],
+             'guideline' : 'Low distribution = same room or building\nMedium distribution = same area or within driving/commuting distance, locally distributed\nMedium to High distribution = large driving/commuting distance but within same time zone, locally distributed, on-shore\nHigh distribution = Within a 3-hour time zone difference, off-shore\nVery High distribution = Some are in areas with greater than 3 hours time zone difference, long off-shore',
+            },
+            {'id' : orion_ns.strategyOrGoal,
+             'description' : 'The current business strategy or goal of the organization - referring to what the organization wants to achieve in the near future.',
+             'type' : 'text',
+             'guideline' : '',
+            }
+            ]
+            
+        values = {
+            orion_ns.degreeOfDistribution : orion_ns.high,
+            orion_ns.strategyOrGoal : "Super smart strategy!"
+            }
+            
+        values[org_context[0]['id']] = self.case_db_proxy.get_datatype_property(user_id=user_id, user_token=user_token, case_id=case_id,
+                                 resource=organizationContext_uri,
+                                 property_name=org_context[0]['id'])
+        
+        
+        dialogue = render_template("test.html", org_context = org_context, values = values)
+        return dialogue
     
     
-        return self.context_category_dialogue(user_id, user_token, case_db, case_id,
-           self.organization,
-           "Organization",
-           "edit_context_organization")
 
 
-    @endpoint("/edit_context_organization", ["POST"], "text/html")
-    def edit_context_organization(self, user_id, user_token, case_db, case_id):
+    @endpoint("/test_edit_context_organization", ["POST"], "text/html")
+    def test_edit_context_organization(self, user_id, user_token, case_db, case_id):
         
         # Old stuff
         
         self.edit_context_category(user_id, user_token, case_db, case_id, self.organization)
+        
         
         # Ontology stuff
         
@@ -887,33 +912,34 @@ class ContextModelService(coach.Microservice):
             self.case_db_proxy.add_object_property(user_id=user_id, user_token=user_token,
                                                    case_id=case_id, resource1=context_uri, property_name=orion_ns.organizationContext,
                                                    resource2=organizationContext_uri)
-                                                   
-		# Add the degree of distribution
-        # Does the case already have a degreeOfDistribution element? If not, create it, and bind it.
-        degreeOfDistribution = self.case_db_proxy.get_objects(user_id=user_id, user_token=user_token,
-                                               case_id=case_id, subject=organizationContext_uri, predicate=orion_ns.degreeOfDistribution)
-        if degreeOfDistribution:
-            degreeOfDistribution_uri = degreeOfDistribution[0]
-        else:
-            organizationContext_uri = self.case_db_proxy.add_resource(user_id=user_id, user_token=user_token,
-                                                       case_id=case_id, resource_class=orion_ns.DegreeOfDistribution)
-            self.case_db_proxy.add_object_property(user_id=user_id, user_token=user_token,
-                                                   case_id=case_id, resource1=organizationContext_uri, property_name=orion_ns.organizationContext,
-                                                   resource2 = orion_ns.low)
-                                                   
-
-        # Add the degree of distribution
-        self.case_db_proxy.add_datatype_property(user_id = user_id, user_token = user_token,
-                                                 case_id = case_id,
-                                                 resource = goal_uri,
-                                                 property_name = orion_ns.description,
-                                                 value = rdflib.Literal(description))
-        return self.main_menu_transition(main_dialogue = "Goal description changed!")
+                                
+                                
+        # Remove any existing degreeOfDistribution values                                                 
+        self.case_db_proxy.remove_datatype_property(user_id=user_id, user_token=user_token, case_id=case_id,
+                                 resource=organizationContext_uri,
+                                 property_name=orion_ns.degreeOfDistribution)
+                                 
+        # Add new degreeOfDistribution value                       
+        self.case_db_proxy.add_datatype_property(user_id=user_id, user_token=user_token, case_id=case_id, 
+                              resource=organizationContext_uri,
+                              property_name=orion_ns.degreeOfDistribution,
+                              value=orion_ns.medium)
+                                        
+        # Remove any existing stabilityOfOrganization values                                                 
+        self.case_db_proxy.remove_datatype_property(user_id=user_id, user_token=user_token, case_id=case_id,
+                                 resource=organizationContext_uri,
+                                 property_name=orion_ns.stabilityOfOrganization)
+                                 
+        # Add new stabilityOfOrganization value                       
+        self.case_db_proxy.add_datatype_property(user_id=user_id, user_token=user_token, case_id=case_id, 
+                              resource=organizationContext_uri,
+                              property_name=orion_ns.stabilityOfOrganization,
+                              value=orion_ns.veryHigh)
 
         
         return "Context information (organization) saved."
         
-        """
+        
 
 
 if __name__ == '__main__':
