@@ -237,13 +237,17 @@ class AuthenticationService(Microservice):
             return None 
 
     @endpoint("/set_user_profile", ["GET", "POST"], "application/json")
-    def set_user_profile(self, user_id, user_name, company_name, email):
+    def set_user_profile(self, user_id, user_name, company_name, email, skype_id, user_phone, location, user_bio):
         """
         Saves the profile of a user.
         """
         self.users[user_id]["name"] = user_name
         self.users[user_id]["company_name"] = company_name
         self.users[user_id]["email"] = email
+        self.users[user_id]["skype_id"] = skype_id
+        self.users[user_id]["user_phone"] = user_phone
+        self.users[user_id]["location"] = location
+        self.users[user_id]["user_bio"] = user_bio
         self.save_data()
     
         
@@ -270,6 +274,34 @@ class AuthenticationService(Microservice):
         """
         return self.users[user_id]["company_name"] if "company_name" in self.users[user_id] else ""
 
+
+    @endpoint("/get_skype_id", ["GET", "POST"], "application/json")
+    def get_skype_id(self, user_id):
+        """
+        Returns the skype id of a user.
+        """
+        return self.users[user_id]["skype_id"] if "skype_id" in self.users[user_id] else ""
+
+    @endpoint("/get_user_phone", ["GET", "POST"], "application/json")
+    def get_user_phone(self, user_id):
+        """
+        Returns the phone number of a user.
+        """
+        return self.users[user_id]["user_phone"] if "user_phone" in self.users[user_id] else ""
+
+    @endpoint("/get_user_location", ["GET", "POST"], "application/json")
+    def get_user_location(self, user_id):
+        """
+        Returns the location of a user.
+        """
+        return self.users[user_id]["location"] if "location" in self.users[user_id] else ""
+
+    @endpoint("/get_user_bio", ["GET", "POST"], "application/json")
+    def get_user_bio(self, user_id):
+        """
+        Returns the bio of a user.
+        """
+        return self.users[user_id]["user_bio"] if "user_bio" in self.users[user_id] else ""
 
     @endpoint("/get_user_uri", ["GET", "POST"], "application/json")
     def get_user_uri(self, user_id):

@@ -27,8 +27,22 @@ E-mail:
 Company: 
 <BR><INPUT type="text" name="company_name" value="{{ user_profile["company_name"] }}">
 <BR>
+Skype id: 
+<BR><INPUT type="text" name="skype_id" value="{{ user_profile["skype_id"] }}">
+<BR>
+Contact details (telephone number): 
+<BR><INPUT type="text" name="user_phone" value="{{ user_profile["user_phone"] }}">
+<BR>
+Primary location (Country/City): 
+<BR><INPUT type="text" name="location" value="{{ user_profile["location"] }}">
+<BR>
+Bio: 
+<BR><textarea name="user_bio" rows="5" cols="70" value="{{ user_profile["user_bio"] }}"></textarea>
+<!--<BR><INPUT type="text" name="user_bio" value="{{ user_profile["user_bio"] }}"> -->
+<BR>
 <INPUT type="submit" value="Save">
 </FORM>
+
 
 </BODY>
 </HTML>

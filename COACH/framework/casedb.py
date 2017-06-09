@@ -12,6 +12,7 @@ sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 # Coach framework
 from COACH.framework import coach
 from COACH.framework.coach import endpoint
+from COACH.knowledge_repository import KnowledgeRepositoryService
 
 # Standard libraries
 import json
@@ -48,6 +49,9 @@ class CaseDatabase(coach.GraphDatabaseService):
         self.db_uri = "sqlite:///" + filepath
         self.store = SQLAlchemy(identifier = ident, engine = sqlalchemy.create_engine(self.db_uri))
         self.graph = rdflib.ConjunctiveGraph(store = self.store, identifier = ident)
+        
+        # Store case database connection, using user_id and user_token as default parameters to all endpoint calls.
+        self.kr_db_proxy = self.create_proxy(self.get_setting("knowledge_repository"))
 
         # Open the database file, creating it if it does not already exist.
         if not os.path.isfile(filepath):
@@ -438,7 +442,9 @@ class CaseDatabase(coach.GraphDatabaseService):
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_id = rdflib.URIRef(case_id)
             case_graph = self.graph.get_context(case_id)
-            return case_graph.serialize(format = format).decode("utf-8")
+            serialized_graph = case_graph.serialize(format = format).decode("utf-8")
+            self.kr_db_proxy.export_case(case_graph = serialized_graph, format = format)
+            return serialized_graph
         else:
             return "Invalid user token"
     

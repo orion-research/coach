@@ -20,6 +20,10 @@ from flask import request
 # Database connection
 from neo4j.v1 import GraphDatabase, basic_auth
 
+# Semantic web framework
+import rdflib
+import sqlalchemy
+from rdflib_sqlalchemy.store import SQLAlchemy
 
 class KnowledgeRepository:
     
@@ -165,6 +169,40 @@ class KnowledgeRepository:
             self.query(q2, locals(), s)
         self.close_session(s)
         
+    def export_case_to_KR(self, case_graph, format):
+        """
+        Exports the data stored in the ontology graph to the Knowledge Repository database.
+        """            
+        #if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+        # Namespace objects cannot be stored as object attributes, since they collide with the microservice mechanisms
+        #orion_ns = rdflib.Namespace(self.orion_ns)
+        #data_ns = rdflib.Namespace(self.data_ns)
+
+        #case_id = rdflib.URIRef(case_id)
+        #case_graph = self.graph.get_context(case_id)
+        #case_graph.bind("data", data_ns)
+        #case_graph.bind("orion", orion_ns)
+        ontology_graph = json.loads(case_graph, format).decode("utf8")
+                
+        for s, p, o in ontology_graph.triples( (None, None, None) ):
+            print('Subject: %s predicate: %s object: %s'%(s, p, o)) 
+         
+            # Storage into the knowledge repository
+            qs = """MERGE (dcs: CASE_DATA_NODE { name : { case_subject } } ) RETURN dcs"""
+            params = { "case_subject" :  str(s) }
+            subject_node = self.query(qs, params)
+             
+            qo = """MERGE (dcs: CASE_DATA_NODE { name : { case_object } } ) RETURN dcs"""
+            params = { "case_object" :  str(o) }
+            object_node = self.query(qo, params)
+                 
+            qp = """MATCH (dcs1: CASE_DATA_NODE), (dcs2: CASE_DATA_NODE) WHERE dcs1.name= { case_subject } AND dcs2.name= { case_object } CREATE (dcs1)-[p: PREDICATE {name: { case_predicate } }]->(dcs2)"""
+            params = { "case_subject" :  str(s), "case_object" :  str(o), "case_predicate" :  str(p) }
+            predicate_relation = self.query(qp, params)
+                 
+            print('Here ends the reading of the current case') 
+
+        
         
 class KnowledgeRepositoryService(Microservice):
 
@@ -198,4 +236,12 @@ class KnowledgeRepositoryService(Microservice):
         Endpoint for handling the addition of a new case to the KR.
         """
         self.KR.add_case(description)
+        return "Ok"
+    
+    @endpoint("/export_case", ["GET"], "application/json")    
+    def export_case(self, case_graph, format):
+        """
+        Endpoint for handling the storage of a complete case to the KR.
+        """
+        self.KR.export_case_to_KR(case_graph, format)
         return "Ok"
