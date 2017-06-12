@@ -927,9 +927,8 @@
     
 :intermediateCocomoACAP
     :name "ACAP" ;
-    :type "float" ;
-    :min "0.71" ;
-    :max "1.46" ;
+    :type "select" ;
+    :possibleValue ("0.71" "1" "1.46") ;
     :defaultValue "1" .
     
 :intermediateCocomoAEXP

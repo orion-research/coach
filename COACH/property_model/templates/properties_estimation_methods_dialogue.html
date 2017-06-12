@@ -93,13 +93,19 @@
 					{{parameter.name}}:
 					{% if parameter.type == "integer" %}
 						<input type="number" name="{{parameter.name}}_parameter" 
-								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required>
+								value="{{parameter.value}}" min="{{parameter.min}}" max= "{{parameter.max}}" required>
 					{% elif parameter.type == "float" %}
 						<input type="number" step="any" name="{{parameter.name}}_parameter" 
-								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required>
-					{% else %}
+								value="{{parameter.value}}" min="{{parameter.min}}" max= "{{parameter.max}}" required>
+					{% elif parameter.type == "text" %}
 						<input type="text" name="{{parameter.name}}_parameter" 
-								value='{{parameter.value}}' min="{{parameter.min}}" max= "{{parameter.max}}" required>
+								value="{{parameter.value}}" required>
+					{% else %}
+						<select name="{{parameter.name}}_parameter" required>
+							{% for possible_value in parameter.possible_values %}
+								<option>{{possible_value}}</option>
+							{% endfor %}
+						</select>
 					{% endif %}
 				</li>
 			{% endfor %}

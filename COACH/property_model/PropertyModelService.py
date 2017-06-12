@@ -559,7 +559,6 @@ class PropertyModelService(coach.Microservice):
         if len(result) != 1:
             raise RuntimeError("The property " + property_name + " must have exactly 1 type, but " + str(len(result)) + " were found.")
         
-        result[0] = result[0].strip()
         allowed_types = ["text", "float", "integer"]
         if result[0] not in allowed_types:
             raise RuntimeError("The property " + property_name + " have an unknown type (" + result[0] + "). Valid types are: "
@@ -722,7 +721,7 @@ class PropertyModelService(coach.Microservice):
         
         query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns},
                                                   initBindings = {"estimation_method_name": rdflib.Literal(estimation_method_name)})
-        result = [e.toPython().strip() for (e,) in query_result]
+        result = [e.toPython() for (e,) in query_result]
         if len(result) != 1:
             raise RuntimeError("There should be exactly one microservice name for the estimation method " + estimation_method_name 
                                + " but " + str(len(result)) + " were found.")
@@ -754,7 +753,7 @@ class PropertyModelService(coach.Microservice):
         query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, 
                                                   initBindings = {"property_ontology_uri": rdflib.URIRef(property_ontology_id)})
         
-        result = [e.toPython().strip() for (e,) in query_result]
+        result = [e.toPython() for (e,) in query_result]
         property_type = self._get_property_type(property_name)
         if property_type == "text":
             result.append("Expert estimate text")
@@ -874,21 +873,51 @@ class PropertyModelService(coach.Microservice):
                                                   initBindings = {"estimation_method_name": rdflib.Literal(estimation_method_name)})
         result = []
         for (parameter_name, parameter_type, parameter_default_value, parameter_min, parameter_max) in query_result:            
-            parameter_descriptor = {"name": parameter_name.toPython().strip(), "type": parameter_type.toPython().strip(), 
-                                     "value": parameter_default_value.toPython().strip()}
+            parameter_descriptor = {"name": parameter_name.toPython(), "type": parameter_type.toPython(), 
+                                     "value": parameter_default_value.toPython()}
             if parameter_min is not None:
-                parameter_descriptor["min"] = parameter_min.toPython().strip()
+                parameter_descriptor["min"] = parameter_min.toPython()
             if parameter_max is not None:
-                parameter_descriptor["max"] = parameter_max.toPython().strip()
+                parameter_descriptor["max"] = parameter_max.toPython()
                 
-            allowed_types = ["integer", "float", "text"]
+            allowed_types = ["integer", "float", "text", "select"]
             if parameter_descriptor["type"] not in allowed_types:
                 raise RuntimeError("The type of the parameter " + parameter_name + " (" + parameter_type + ") is unknown."
                                    + " Allowed types are : " + ", ".join(allowed_types))
+            if parameter_descriptor["type"] == "select":
+                parameter_descriptor["possible_values"] = self._get_estimation_method_parameter_possible_value(parameter_name, orion_ns)
                 
             result.append(parameter_descriptor)
         return result
     
+    def _get_estimation_method_parameter_possible_value(self, parameter_name, orion_ns):
+        """
+        DESCRIPTION:
+            Return the list of possible value for the provided parameter.
+        INPUT:
+            parameter_name: The name defining the parameter.
+            orion_ns: The namespace of the ontology.
+        OUTPUT:
+            A list with the possible value of the provided parameter.
+        """
+        query = """ SELECT ?parameter_possible_value
+                    WHERE {
+                        ?parameter_uri orion:name ?parameter_name .
+                        ?parameter_uri orion:possibleValue ?parameter_possible_value_list .
+                        ?parameter_possible_value_list rdf:rest*/rdf:first ?parameter_possible_value .
+                    }
+        """
+        
+        query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, initBindings = {"parameter_name": parameter_name})
+        log("query_result :", query_result)
+        log("list(query_result) :", list(query_result))
+        log("list(query_result)[0] :", list(query_result)[0])
+        log("list(query_result)[0][0] :", list(query_result)[0][0])
+        log("list(query_result)[0][0].toPython() :", list(query_result)[0][0].toPython())
+
+
+        return [e.toPython() for (e,) in query_result]
+
     def _get_estimation_method_used_properties(self, db_infos, alternative_name, property_name, estimation_method_name, 
                                                property_to_estimation_method_name_dict):
         """
@@ -984,7 +1013,7 @@ class PropertyModelService(coach.Microservice):
         query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, 
                                                   initBindings={"estimation_method_name": rdflib.Literal(estimation_method_name)})
         
-        return [e.toPython().strip() for (e,) in query_result]
+        return [e.toPython() for (e,) in query_result]
     
     def _get_estimation_value(self, db_infos, alternative_uri, property_name, estimation_method_name):
         """
