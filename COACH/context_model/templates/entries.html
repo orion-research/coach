@@ -1,22 +1,24 @@
-<div class="contextentry" title="{{ e['guideline'] }}">
-<i>{{ e["id"] + ": " + e["description"] }}</i>
-<br>
-{% if e["type"] == "text" %}
-<textarea name="{{e["id"]}}-text" cols="80" rows="2">{% if values[e['id']] %}{{values[e['id']]}}{% endif %}</textarea>
-{% elif e["type"] == "radio" %}
-<select name="{{e["id"]}}-radio">
-{% for a in e["alternatives"] %}
-  <option value="{{a}}"  {% if a == values[e['id']] %}selected{% endif %}>{{a}}</option>
-{% endfor %} 
-</select>
-{% elif e["type"] == "multi" %}
-<span style="color:red">Note: Currently only supports selection of one alternative!</span><br>
-<select name="{{e["id"]}}-multi" id="{{e["id"]}}-multi" multiple="multiple" {% if e["alternatives"]|length > 5 %}size=5{% else %}size={{e["alternatives"]|length}}{% endif %}>
-{% for a in e["alternatives"] %}
-  <option value="{{a}}" {% if a == values[e['id']] %}selected{% endif %}>{{a}}</option>
-{% endfor %}
-</select>
-{% elif e["type"] == "integer" %}
-<input name="{{e["id"]}}-integer" type="text" size="10" value="{% if values[e['id']] %}{{values[e['id']]}}{% endif %}"/>
-{% endif %} 
+<div class="contextentry" title="{{ e.guideline }}">
+	<i>{{ e.id }}: {{ e.description }}</i>
+	<br/>
+	{% if e.type == "text" %}
+		<textarea name="{{e.id}}_text" cols="80" rows="2">{% if values[e.id] %}{{values[e.id]}}{% endif %}</textarea>
+	{% elif e["type"] == "single_select" %}
+		<select name="{{e.id}}_radio">
+			{% for possible_value in e.possible_values %}
+		  		<option value="{{possible_value}}"  {% if possible_value == values[e.id] %}selected{% endif %}>{{possible_value}}</option>
+			{% endfor %} 
+		</select>
+	{% elif e.type == "multi_select" %}
+		<span style="color:red">Note: Currently only supports selection of one alternative!</span><br>
+		<select name="{{e.id}}_multi" id="{{e.id}}_multi" multiple="multiple" 
+				{% if e.possible_values | length > 5 %}size=5{% else %}size={{e.possible_values | length}}{% endif %}>
+			{% for possible_value in e.possible_values %}
+	  			<option value="{{possible_value}}" {% if possible_value == values[e.id] %}selected{% endif %}>{{possible_value}}</option>
+			{% endfor %}
+		</select>
+	{% elif e.type == "integer" %}
+		<input name="{{e.id}}_integer" type="number" size="10" value="{% if values[e.id] %}{{values[e.id]}}{% endif %}" 
+				min="{{e.min}}" max="{{e.max}}"/>
+	{% endif %} 
 </div>

@@ -33,8 +33,6 @@ import requests
 import rdflib
 
 # TODO: to suppress
-import types
-# TODO: to suppress
 from datetime import datetime
 import inspect
 
@@ -902,19 +900,14 @@ class PropertyModelService(coach.Microservice):
         """
         query = """ SELECT ?parameter_possible_value
                     WHERE {
+                        ?parameter_uri a orion:Parameter .
                         ?parameter_uri orion:name ?parameter_name .
                         ?parameter_uri orion:possibleValue ?parameter_possible_value_list .
                         ?parameter_possible_value_list rdf:rest*/rdf:first ?parameter_possible_value .
                     }
         """
-        
-        query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, initBindings = {"parameter_name": parameter_name})
-        log("query_result :", query_result)
-        log("list(query_result) :", list(query_result))
-        log("list(query_result)[0] :", list(query_result)[0])
-        log("list(query_result)[0][0] :", list(query_result)[0][0])
-        log("list(query_result)[0][0].toPython() :", list(query_result)[0][0].toPython())
 
+        query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, initBindings = {"parameter_name": parameter_name})
 
         return [e.toPython() for (e,) in query_result]
 

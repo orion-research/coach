@@ -338,6 +338,7 @@ class CaseDatabase(coach.GraphDatabaseService):
     @endpoint("/add_estimation", ["POST"], "application/json")
     def add_estimation(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id, value,
                        estimation_parameters, used_properties_to_estimation_method_ontology_id):
+        #TODO: Make of this method a single transaction (included sub methods call), with rollback if needed.
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):              
             orion_ns = rdflib.Namespace(self.orion_ns)
             case_id = rdflib.URIRef(case_id)

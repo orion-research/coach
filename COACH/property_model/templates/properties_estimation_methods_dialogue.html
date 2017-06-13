@@ -11,11 +11,9 @@
 	<label> Alternative: </label>
 	<select name="alternative_name" onchange="combo_box_change('main_combo_box')">
 		{% for alternative_name in alternatives_name_list %}
-			{% if alternative_name == selected_alternative_name %}
-				<option selected>{{alternative_name}}</option>
-			{% else %}
-				<option>{{alternative_name}}</option>
-			{% endif %}
+			<option {% if alternative_name == selected_alternative_name %} selected {% endif %}>
+				{{alternative_name}}
+			</option>	
 		{% endfor %}
 	</select>
 	<br/>
@@ -24,11 +22,9 @@
 	<label> Property: </label>
 	<select name="property_name" onchange="combo_box_change('main_combo_box')">
 		{% for property_name in properties_name_list %}
-			{% if property_name == selected_property_name %}
-				<option selected>{{property_name}}</option>
-			{% else %}
-				<option>{{property_name}}</option>
-			{% endif %}
+			<option {% if property_name == selected_property_name %} selected {% endif %}>
+				{{property_name}}
+			</option>
 		{% endfor %}
 	</select>
 	<br/>
@@ -37,11 +33,9 @@
 	<label> Estimation method: </label>
 	<select name="estimation_method_name" onchange="combo_box_change('main_combo_box')">
 		{% for estimation_method_name in estimation_methods_name_list %}
-			{% if estimation_method_name == selected_estimation_method_name %}
-				<option selected>{{estimation_method_name}}</option>
-			{% else %}
-				<option>{{estimation_method_name}}</option>
-			{% endif %}
+			<option {% if estimation_method_name == selected_estimation_method_name %} selected {% endif %}>
+				{{estimation_method_name}}
+			</option>
 		{% endfor %}
 	</select>
 	<br/>
@@ -58,11 +52,9 @@
 					{{used_property.name}}
 					<select name="{{used_property.name}}_selected_estimation_method" onchange="combo_box_change('main_combo_box')">
 						{% for estimation_method_name in used_property.estimation_methods_name %}
-							{% if estimation_method_name == used_property.selected %}
-								<option selected>{{estimation_method_name}}</option>
-							{% else %}
-								<option>{{estimation_method_name}}</option>
-							{% endif %}
+							<option {% if estimation_method_name == used_property.selected %} selected {% endif %}>
+								{{estimation_method_name}}
+							</option>
 						{% endfor %}
 					</select>
 					Value : 
@@ -103,7 +95,9 @@
 					{% else %}
 						<select name="{{parameter.name}}_parameter" required>
 							{% for possible_value in parameter.possible_values %}
-								<option>{{possible_value}}</option>
+								<option {% if parameter.value == possible_value %} selected {% endif %}>
+									{{possible_value}}
+								</option>
 							{% endfor %}
 						</select>
 					{% endif %}
@@ -124,17 +118,8 @@
 	{% endif %}
 	<br/>
 	
-	{% if enable_compute_button %}
-		<input name="submit_component" type="submit" value="Compute">
-	{% else %}
-		<input name="submit_component" type="submit" value="Compute" disabled>
-	{% endif %}
-	
-	{% if enable_delete_button %}
-		<input name="submit_component" type="submit" value="Delete">
-	{% else %}	
-		<input name="submit_component" type="submit" value="Delete" disabled>
-	{% endif %}
+	<input name="submit_component" type="submit" value="Compute" {% if not enable_compute_button %} disabled {% endif %}>
+	<input name="submit_component" type="submit" value="Delete" {% if not enable_delete_button %} disabled {% endif %}>
 	
 	 <!-- If the form is submitted with a button, this input will be ignored. Else, submit_component will 
 	 have the value of this input, which would have been modified by the submitting component to put its name -->

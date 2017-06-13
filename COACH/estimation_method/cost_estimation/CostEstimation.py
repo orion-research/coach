@@ -11,18 +11,6 @@ sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 from COACH.framework.coach import endpoint, EstimationMethodService
 
-# TODO: to suppress
-from datetime import datetime
-import inspect
-
-def log(*args):
-    message = datetime.now().strftime("%H:%M:%S") + " : "
-    message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
-    for arg in args:
-        message += str(arg) + " "
-    print(message)
-    sys.stdout.flush()
-
 class CostEstimation(EstimationMethodService):
     
     @endpoint("/compute", ["POST"], "application/json")
