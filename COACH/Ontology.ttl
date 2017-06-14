@@ -1852,7 +1852,7 @@
     :type "integer" ;
     :min "0" ;
     :max "100" ;
-    :defaultValut "0" .
+    :defaultValue "0" .
     
 :contextMethodOther
     a :DevelopmentMethodAndTechnologyProperty ;

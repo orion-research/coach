@@ -373,6 +373,7 @@ class Proxy():
                 # However, this will fail if an argument is not serializable in json.
                 kwargs_json = json.dumps(kwargs)
                 # Make the endpoint request
+                # TODO: change "data = kwargs_json" to "json = kwargs" ?
                 self.result = self.session.request(http_method, self.url + "/" + name, data = kwargs_json)
 
                 # If there was an error in the response, raise an exception

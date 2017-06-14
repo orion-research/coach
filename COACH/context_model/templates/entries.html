@@ -2,23 +2,26 @@
 	<i>{{ e.id }}: {{ e.description }}</i>
 	<br/>
 	{% if e.type == "text" %}
-		<textarea name="{{e.id}}_text" cols="80" rows="2">{% if values[e.id] %}{{values[e.id]}}{% endif %}</textarea>
-	{% elif e["type"] == "single_select" %}
-		<select name="{{e.id}}_radio">
+		<textarea name="{{e.id}}" cols="80" rows="2">{{e.value}}</textarea>
+	{% elif e.type == "single_select" %}
+		<select name="{{e.id}}">
 			{% for possible_value in e.possible_values %}
-		  		<option value="{{possible_value}}"  {% if possible_value == values[e.id] %}selected{% endif %}>{{possible_value}}</option>
+		  		<option value="{{possible_value}}"  {% if possible_value == e.value %}selected{% endif %}>{{possible_value}}</option>
 			{% endfor %} 
 		</select>
 	{% elif e.type == "multi_select" %}
-		<span style="color:red">Note: Currently only supports selection of one alternative!</span><br>
-		<select name="{{e.id}}_multi" id="{{e.id}}_multi" multiple="multiple" 
+		<select name="{{e.id}}" id="{{e.id}}" multiple="multiple" 
 				{% if e.possible_values | length > 5 %}size=5{% else %}size={{e.possible_values | length}}{% endif %}>
 			{% for possible_value in e.possible_values %}
-	  			<option value="{{possible_value}}" {% if possible_value == values[e.id] %}selected{% endif %}>{{possible_value}}</option>
+	  			<option value="{{possible_value}}" 
+	  				{% if possible_value == e.value or possible_value in e.value %}selected{% endif %}>{{possible_value}}</option>
 			{% endfor %}
 		</select>
 	{% elif e.type == "integer" %}
-		<input name="{{e.id}}_integer" type="number" size="10" value="{% if values[e.id] %}{{values[e.id]}}{% endif %}" 
+		<input name="{{e.id}}" type="number" size="10" value="{{e.value}}" 
 				min="{{e.min}}" max="{{e.max}}"/>
-	{% endif %} 
+	{% elif e.type == "float" %}
+		<input name="{{e.id}}" type="number" step="any" size="10" value="{{e.value}}" 
+				min="{{e.min}}" max="{{e.max}}"/>
+	{% endif %}
 </div>

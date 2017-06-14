@@ -178,7 +178,14 @@ class InteractionService(coach.Microservice):
         It always passes the current decision case database url and case id as a parameter in the request.
         """
         context_service = self.get_setting("context_service")
-        params = request.values.to_dict()
+
+        # Using request.value is not good, because when there are multiple value for one argument, only the first one is used instead
+        # of creating a list.
+        params = dict(request.form)
+        params.update(request.args)
+        if len(params) != len(request.args) + len(request.form):
+            raise RuntimeError("Overlapping arguments between args and form")
+
         del params["endpoint"]
         params["user_id"] = session["user_id"]
         params["user_token"] = session["user_token"]

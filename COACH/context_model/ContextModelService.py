@@ -5,6 +5,7 @@ Created on June 22, 2016
 
 The context model service
 """
+from COACH.build_coach_deployments import context_model
 
 """
 TODO:
@@ -143,51 +144,7 @@ class ContextModelService(coach.Microservice):
 
         return "Context information (general) saved."     
 
-    def edit_context_category(self, user_id, user_token, case_db, case_id, category):
-        # Write the new context information to the database.
-        case_db_proxy = self.create_proxy(case_db)
-        for e in category :
-            case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_"+e['id'], value = request.values[e['id']+'-'+e['type']] if e['id']+'-'+e['type'] in request.values else "")
-
-    @endpoint("/edit_context_organization", ["POST"], "text/html")
-    def edit_context_organization(self, user_id, user_token, case_db, case_id):
-        self.edit_context_category(user_id, user_token, case_db, case_id, self.organization)
-        return "Context information (organization) saved."
-
-    @endpoint("/edit_context_product", ["POST"], "text/html")
-    def edit_context_product(self, user_id, user_token, case_db, case_id):
-        self.edit_context_category(user_id, user_token, case_db, case_id, self.product)
-        return "Context information (product) saved."
-
-    @endpoint("/edit_context_stakeholder", ["POST"], "text/html")
-    def edit_context_stakeholder(self, user_id, user_token, case_db, case_id):
-        self.edit_context_category(user_id, user_token, case_db, case_id, self.stakeholders)
-        return "Context information (stakeholder) saved."
-
-    @endpoint("/edit_context_methods", ["POST"], "text/html")
-    def edit_context_methods(self, user_id, user_token, case_db, case_id):
-        self.edit_context_category(user_id, user_token, case_db, case_id, self.methods)
-        return "Context information (developer methods and technology) saved."
-    
-    @endpoint("/edit_context_business", ["POST"], "text/html")
-    def edit_context_business(self, user_id, user_token, case_db, case_id):
-        self.edit_context_category(user_id, user_token, case_db, case_id, self.business)
-        return "Context information (market and business) saved."
-
-
-
-
-
-    """
-    Temporary to test the ontology stuff
-    """
-    
     def _context_category_dialogue(self, db_infos, category_name, category, edit_endpoint):
-        user_id = db_infos["user_id"]
-        user_token = db_infos["user_token"]
-        case_id = db_infos["case_id"]
-        case_db_proxy = db_infos["case_db_proxy"]
-        
         return render_template(
             "context_category_dialogue.html",
             category_name = category_name,
@@ -202,8 +159,11 @@ class ContextModelService(coach.Microservice):
         orion_ns = rdflib.Namespace(self.orion_ns)
         
         organization_context = self._get_context_from_ontology(db_infos, orion_ns.OrganizationProperty, orion_ns)
+        context_values = case_db_proxy.get_context(user_id=user_id, user_token=user_token, case_id=case_id, 
+                                                   context_predicate=orion_ns.organization)
+        self._update_context_description(context_values, organization_context)
         
-        return self._context_category_dialogue(db_infos, "Organization", organization_context, "/edit_context_organization")
+        return self._context_category_dialogue(db_infos, "Organization", organization_context, "edit_context_organization")
     
     @endpoint("/context_product_dialogue", ["GET"], "text/html")
     def context_product_dialogue(self, user_id, user_token, case_db, case_id):
@@ -212,8 +172,11 @@ class ContextModelService(coach.Microservice):
         orion_ns = rdflib.Namespace(self.orion_ns)
         
         product_context = self._get_context_from_ontology(db_infos, orion_ns.ProductProperty, orion_ns)
+        context_values = case_db_proxy.get_context(user_id=user_id, user_token=user_token, case_id=case_id, 
+                                                   context_predicate=orion_ns.product)
+        self._update_context_description(context_values, product_context)
         
-        return self._context_category_dialogue(db_infos, "Product", product_context, "/edit_context_product")
+        return self._context_category_dialogue(db_infos, "Product", product_context, "edit_context_product")
     
     @endpoint("/context_stakeholder_dialogue", ["GET"], "text/html")
     def context_stakeholder_dialogue(self, user_id, user_token, case_db, case_id):
@@ -222,8 +185,11 @@ class ContextModelService(coach.Microservice):
         orion_ns = rdflib.Namespace(self.orion_ns)
         
         stakeholder_context = self._get_context_from_ontology(db_infos, orion_ns.StakeholderProperty, orion_ns)
+        context_values = case_db_proxy.get_context(user_id=user_id, user_token=user_token, case_id=case_id, 
+                                                   context_predicate=orion_ns.stakeholder)
+        self._update_context_description(context_values, stakeholder_context)
         
-        return self._context_category_dialogue(db_infos, "Stakeholder", stakeholder_context, "/edit_context_stakeholder")
+        return self._context_category_dialogue(db_infos, "Stakeholder", stakeholder_context, "edit_context_stakeholder")
         
     @endpoint("/context_methods_dialogue", ["GET"], "text/html")
     def context_methods_dialogue(self, user_id, user_token, case_db, case_id):
@@ -232,8 +198,11 @@ class ContextModelService(coach.Microservice):
         orion_ns = rdflib.Namespace(self.orion_ns)
         
         methods_context = self._get_context_from_ontology(db_infos, orion_ns.DevelopmentMethodAndTechnologyProperty, orion_ns)
+        context_values = case_db_proxy.get_context(user_id=user_id, user_token=user_token, case_id=case_id, 
+                                                   context_predicate=orion_ns.method)
+        self._update_context_description(context_values, methods_context)
         
-        return self._context_category_dialogue(db_infos, "Development methods and Technology", methods_context, "/edit_context_methods")
+        return self._context_category_dialogue(db_infos, "Development methods and Technology", methods_context, "edit_context_methods")
         
     @endpoint("/context_business_dialogue", ["GET"], "text/html")
     def context_business_dialogue(self, user_id, user_token, case_db, case_id): 
@@ -242,8 +211,11 @@ class ContextModelService(coach.Microservice):
         orion_ns = rdflib.Namespace(self.orion_ns)
         
         business_context = self._get_context_from_ontology(db_infos, orion_ns.MarketAndBusinessProperty, orion_ns)
+        context_values = case_db_proxy.get_context(user_id=user_id, user_token=user_token, case_id=case_id, 
+                                                   context_predicate=orion_ns.business)
+        self._update_context_description(context_values, business_context)
         
-        return self._context_category_dialogue(db_infos, "Market and business", business_context, "/edit_context_business")
+        return self._context_category_dialogue(db_infos, "Market and business", business_context, "edit_context_business")
         
     def _get_context_from_ontology(self, db_infos, context_category, orion_ns):
         query = """ SELECT ?entry_ontology_uri ?entry_grade_id ?entry_description ?entry_guideline ?entry_type ?entry_default_value ?entry_min 
@@ -255,7 +227,7 @@ class ContextModelService(coach.Microservice):
                         ?entry_ontology_uri orion:guideline ?entry_guideline .
                         ?entry_ontology_uri orion:type ?entry_type .
                         OPTIONAL {
-                            ?entry_ontology_uri orion:default_value ?entry_default_value .
+                            ?entry_ontology_uri orion:defaultValue ?entry_default_value .
                         }
                         OPTIONAL {
                             ?entry_ontology_uri orion:min ?entry_min .
@@ -273,8 +245,7 @@ class ContextModelService(coach.Microservice):
         result = []
         for (entry_ontology_uri, entry_grade_id, entry_description, entry_guideline, entry_type, entry_default_value, entry_min, 
              entry_max) in result_query:
-            entry_descriptor = {"ontology_uri": entry_ontology_uri.toPython(),
-                                "id": entry_grade_id.toPython(),
+            entry_descriptor = {"id": entry_grade_id.toPython(),
                                 "description": entry_description.toPython(),
                                 "guideline": entry_guideline.toPython(),
                                 "type": entry_type.toPython()}
@@ -306,74 +277,74 @@ class ContextModelService(coach.Microservice):
         
         query_result = self.get_ontology().query(query, initNs = {"orion": orion_ns}, initBindings = {"entry_ontology_uri": entry_ontology_uri})
         return [e.toPython() for (e,) in query_result]
-
-    @endpoint("/test_edit_context_organization", ["POST"], "text/html")
-    def test_edit_context_organization(self, user_id, user_token, case_db, case_id):
-        
-        # Old stuff
-        
-        self.edit_context_category(user_id, user_token, case_db, case_id, self.organization)
-        
-        
-        # Ontology stuff
-        
+    
+    def _update_context_description(self, context_values, context_description):
+        for context_entry in context_description:
+            try:
+                if len(context_values[context_entry["id"]]) == 1:
+                    context_entry["value"] = context_values[context_entry["id"]][0]
+                else:
+                    context_entry["value"] = context_values[context_entry["id"]]
+            except KeyError:
+                pass
+    
+    def _get_context_values_dict_from_request(self):
+        contex_values_dict = dict(request.args)
+        del contex_values_dict["case_id"]
+        del contex_values_dict["knowledge_repository"]
+        del contex_values_dict["user_id"]
+        del contex_values_dict["user_token"]
+        del contex_values_dict["case_db"]
+        return contex_values_dict
+    
+    @endpoint("/edit_context_organization", ["POST"], "text/html")
+    def edit_context_organization(self, user_id, user_token, case_db, case_id):
         case_db_proxy = self.create_proxy(case_db)
-
-
+        context_values_dict = self._get_context_values_dict_from_request()
+        
         orion_ns = rdflib.Namespace(self.orion_ns)
-
-        # Does the case already have a Context element? If not, create it, and bind its url to context_url.
-        contexts = case_db_proxy.get_objects(user_id=user_id, user_token=user_token,
-                                               case_id=case_id, subject=case_id, predicate=orion_ns.context)
-        if contexts:
-            context_uri = contexts[0]
-        else:
-            context_uri = case_db_proxy.add_resource(user_id=user_id, user_token=user_token,
-                                                       case_id=case_id, resource_class=orion_ns.Context)
-            case_db_proxy.add_object_property(user_id=user_id, user_token=user_token,
-                                                   case_id=case_id, resource1=case_id, property_name=orion_ns.context,
-                                                   resource2=context_uri)
-
-        # Does the case already have a OrganizationContext element? If not, create it, and bind it.
-        organizationContexts = case_db_proxy.get_objects(user_id=user_id, user_token=user_token,
-                                               case_id=case_id, subject=context_uri, predicate=orion_ns.organizationContext)
-        if organizationContexts:
-            organizationContext_uri = organizationContexts[0]
-        else:
-            organizationContext_uri = case_db_proxy.add_resource(user_id=user_id, user_token=user_token,
-                                                       case_id=case_id, resource_class=orion_ns.OrganizationContext)
-            case_db_proxy.add_object_property(user_id=user_id, user_token=user_token,
-                                                   case_id=case_id, resource1=context_uri, property_name=orion_ns.organizationContext,
-                                                   resource2=organizationContext_uri)
-                                
-                                
-        # Remove any existing degreeOfDistribution values                                                 
-        case_db_proxy.remove_datatype_property(user_id=user_id, user_token=user_token, case_id=case_id,
-                                 resource=organizationContext_uri,
-                                 property_name=orion_ns.degreeOfDistribution)
-                                 
-        # Add new degreeOfDistribution value                       
-        case_db_proxy.add_datatype_property(user_id=user_id, user_token=user_token, case_id=case_id, 
-                              resource=organizationContext_uri,
-                              property_name=orion_ns.degreeOfDistribution,
-                              value=orion_ns.medium)
-                                        
-        # Remove any existing stabilityOfOrganization values                                                 
-        case_db_proxy.remove_datatype_property(user_id=user_id, user_token=user_token, case_id=case_id,
-                                 resource=organizationContext_uri,
-                                 property_name=orion_ns.stabilityOfOrganization)
-                                 
-        # Add new stabilityOfOrganization value                       
-        case_db_proxy.add_datatype_property(user_id=user_id, user_token=user_token, case_id=case_id, 
-                              resource=organizationContext_uri,
-                              property_name=orion_ns.stabilityOfOrganization,
-                              value=orion_ns.veryHigh)
-
-        
+        case_db_proxy.save_context(user_id=user_id, user_token=user_token, case_id=case_id, context_predicate=orion_ns.organization,
+                                   context_values_dict=context_values_dict)
         return "Context information (organization) saved."
-        
-        
 
+    @endpoint("/edit_context_product", ["POST"], "text/html")
+    def edit_context_product(self, user_id, user_token, case_db, case_id):
+        case_db_proxy = self.create_proxy(case_db)
+        context_values_dict = self._get_context_values_dict_from_request()
+        
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        case_db_proxy.save_context(user_id=user_id, user_token=user_token, case_id=case_id, context_predicate=orion_ns.product,
+                                   context_values_dict=context_values_dict)
+        return "Context information (product) saved."
 
+    @endpoint("/edit_context_stakeholder", ["POST"], "text/html")
+    def edit_context_stakeholder(self, user_id, user_token, case_db, case_id):
+        case_db_proxy = self.create_proxy(case_db)
+        context_values_dict = self._get_context_values_dict_from_request()
+        
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        case_db_proxy.save_context(user_id=user_id, user_token=user_token, case_id=case_id, context_predicate=orion_ns.stakeholder,
+                                   context_values_dict=context_values_dict)
+        return "Context information (stakeholder) saved."
+
+    @endpoint("/edit_context_methods", ["POST"], "text/html")
+    def edit_context_methods(self, user_id, user_token, case_db, case_id):
+        case_db_proxy = self.create_proxy(case_db)
+        context_values_dict = self._get_context_values_dict_from_request()
+        
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        case_db_proxy.save_context(user_id=user_id, user_token=user_token, case_id=case_id, context_predicate=orion_ns.method,
+                                   context_values_dict=context_values_dict)
+        return "Context information (method) saved."
+    
+    @endpoint("/edit_context_business", ["POST"], "text/html")
+    def edit_context_business(self, user_id, user_token, case_db, case_id):
+        case_db_proxy = self.create_proxy(case_db)
+        context_values_dict = self._get_context_values_dict_from_request()
+        
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        case_db_proxy.save_context(user_id=user_id, user_token=user_token, case_id=case_id, context_predicate=orion_ns.business,
+                                   context_values_dict=context_values_dict)
+        return "Context information (business) saved."
 if __name__ == '__main__':
     ContextModelService(sys.argv[1]).run()

@@ -24,6 +24,8 @@ from rdflib_sqlalchemy.store import SQLAlchemy
 
 from flask import request
 
+from collections import defaultdict
+
 class CaseDatabase(coach.GraphDatabaseService):
     
     """
@@ -338,7 +340,7 @@ class CaseDatabase(coach.GraphDatabaseService):
     @endpoint("/add_estimation", ["POST"], "application/json")
     def add_estimation(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id, value,
                        estimation_parameters, used_properties_to_estimation_method_ontology_id):
-        #TODO: Make of this method a single transaction (included sub methods call), with rollback if needed.
+        #TODO: Make of this method a single transaction (included sub methods call), with rollback if an error occurred.
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):              
             orion_ns = rdflib.Namespace(self.orion_ns)
             case_id = rdflib.URIRef(case_id)
@@ -657,6 +659,56 @@ class CaseDatabase(coach.GraphDatabaseService):
         else:
             return "Invalid user or delegate token"
         
+    @endpoint("/save_context", ["POST"], "application/json")
+    def save_context(self, user_id, user_token, case_id, context_predicate, context_values_dict):
+        if self.is_stakeholder(user_id, case_id) and self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            case_id = rdflib.URIRef(case_id)
+            case_graph = self.graph.get_context(case_id)
+
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            context_uri = case_graph.value(case_id, context_predicate, None, None)
+            if context_uri is None:
+                context_uri = self.new_uri()
+                case_graph.add((case_id, rdflib.URIRef(context_predicate), context_uri))
+            else:
+                case_graph.remove((context_uri, None, None))
+
+            for entry_id in context_values_dict:
+                entry_uri = self.new_uri()
+                case_graph.add((context_uri, orion_ns.entry, entry_uri))
+                case_graph.add((entry_uri, orion_ns.grade_id, rdflib.Literal(entry_id)))
+                for value in context_values_dict[entry_id]:
+                    case_graph.add((entry_uri, orion_ns.value, rdflib.Literal(value)))
+        else:
+            return "Invalid user token"
+
+    @endpoint("/get_context", ["GET"], "application/json")
+    def get_context(self, user_id, user_token, case_id, context_predicate):
+        if self.is_stakeholder(user_id, case_id) and self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            case_id = rdflib.URIRef(case_id)
+            case_graph = self.graph.get_context(case_id)
+            orion_ns = rdflib.Namespace(self.orion_ns)
+
+            context_uri = case_graph.value(case_id, context_predicate, None, None)
+            if context_uri is None:
+                return {}
+
+            query = """ SELECT ?entry_id ?entry_value
+                        WHERE {
+                            ?context_uri orion:entry ?entry_uri .
+                            ?entry_uri orion:grade_id ?entry_id .
+                            ?entry_uri orion:value ?entry_value .
+                        }
+            """
+            result_query = self.graph.query(query, initNs = {"orion": orion_ns}, initBindings = {"context_uri": context_uri})
+
+            result = defaultdict(list)
+            for (entry_id, entry_value) in result_query:
+                result[entry_id.toPython()].append(entry_value.toPython())
+            return result
+        else:
+            return "Invalid user token"
+
     
     @endpoint("/get_decision_alternatives", ["GET"], "application/json")
     def get_decision_alternatives(self, user_id, token, case_id):
