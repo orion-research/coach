@@ -902,7 +902,7 @@ class PropertyModelService(coach.Microservice):
                     WHERE {
                         ?parameter_uri a orion:Parameter .
                         ?parameter_uri orion:name ?parameter_name .
-                        ?parameter_uri orion:possibleValue ?parameter_possible_value_list .
+                        ?parameter_uri orion:possibleValues ?parameter_possible_value_list .
                         ?parameter_possible_value_list rdf:rest*/rdf:first ?parameter_possible_value .
                     }
         """

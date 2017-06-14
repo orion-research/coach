@@ -803,8 +803,7 @@
     :microserviceName "BasicCOCOMO" ;
     :description "" ;
     :belongTo :developmentEffort ;
-    :hasParameter :cocomoA ,
-        :cocomoB ;
+    :hasParameter :cocomoDevelopmentMode ;
     :useProperty :kloc ;
     :type "float" .
 
@@ -815,8 +814,7 @@
     :microserviceName "IntermediateCOCOMO" ;
     :description "" ;
     :belongTo :developmentEffort ;
-    :hasParameter :cocomoA ,
-        :cocomoB ,
+    :hasParameter :cocomoDevelopmentMode ,
         :intermediateCocomoRELY ,
         :intermediateCocomoDATA ,
         :intermediateCocomoCPLX ,
@@ -875,137 +873,117 @@
     :type "integer" ;
     :defaultValue "0" .
 
-:cocomoA
+:cocomoDevelopmentMode
     a :Parameter ;
-    :name "a" ;
-    :type "float" ;
-    :min "0" ;
-    :defaultValue "1" .
-
-:cocomoB
-    a :Parameter ;
-    :name "b" ;
-    :type "float" ;
-    :min "0" ;
-    :defaultValue "1" .
+    :name "developmentMode" ;
+    :type "select" ;
+    :possibleValues ("Organic" "Semi-detached" "Embedded") ;
+    :defaultValue "Organic" .
     
 :intermediateCocomoRELY
     a :Parameter ;
     :name "RELY" ;
-    :type "float" ;
-    :min "0.75" ;
-    :max "1.40" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoDATA
     a :Parameter ;
     :name "DATA" ;
-    :type "float" ;
-    :min "0.94" ;
-    :max "1.16" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Low" "Nominal" "High" "Very high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoCPLX
     a :Parameter ;
     :name "CPLX" ;
-    :type "float" ;
-    :min "0.70" ;
-    :max "1.65" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Very low" "Low" "Nominal" "High" "Very high" "Extra high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoTIME
     a :Parameter ;
     :name "TIME" ;
-    :type "float" ;
-    :min "1" ;
-    :max "1.66" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Nominal" "High" "Very high" "Extra high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoSTOR
     a :Parameter ;
     :name "STOR" ;
-    :type "float" ;
-    :min "1" ;
-    :max "1.56" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Nominal" "High" "Very high" "Extra high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoVIRT
     a :Parameter ;
     :name "VIRT" ;
-    :type "float" ;
-    :min "0.87" ;
-    :max "1.30" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Low" "Nominal" "High" "Very high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoTURN
     a :Parameter ;
     :name "TURN" ;
-    :type "float" ;
-    :min "0.87" ;
-    :max "1.15" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Low" "Nominal" "High" "Very high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoACAP
     a :Parameter ;
     :name "ACAP" ;
     :type "select" ;
-    :possibleValue ("0.71" "1" "1.46") ;
-    :defaultValue "1" .
+    :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoAEXP
+    a :Parameter ;
     :name "AEXP" ;
-    :type "float" ;
-    :min "0.82" ;
-    :max "1.29" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoPCAP
     a :Parameter ;
     :name "PCAP" ;
-    :type "float" ;
-    :min "0.70" ;
-    :max "1.42" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoVEXP
     a :Parameter ;
     :name "VEXP" ;
-    :type "float" ;
-    :min "0.90" ;
-    :max "1.21" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Very low" "Low" "Nominal" "High") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoLEXP
     a :Parameter ;
     :name "LEXP" ;
-    :type "float" ;
-    :min "0.95" ;
-    :max "1.14" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Very low" "Low" "Nominal" "High") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoMODP
     a :Parameter ;
     :name "MODP" ;
-    :type "float" ;
-    :min "0.82" ;
-    :max "1.24" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoTOOL
     a :Parameter ;
     :name "TOOL" ;
-    :type "float" ;
-    :min "0.83" ;
-    :max "1.24" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
+    :defaultValue "Nominal" .
     
 :intermediateCocomoSCED
     a :Parameter ;
     :name "SCED" ;
-    :type "float" ;
-    :min "1" ;
-    :max "1.23" ;
-    :defaultValue "1" .
+    :type "select" ;
+    :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
+    :defaultValue "Nominal" .
     
 :costEstimationSalary
     a :Parameter ;
@@ -1370,7 +1348,7 @@
 	a :OrganizationProperty ;
 	:gradeId "O02" ;
 	:description "Degree of distribution of the development site (consider factors such as local or global/distributed development with multiple development sites, multiple geographical locations, national or international)." ;
-	:guideline "Low distribution = same room or building\nMedium distribution = same area or within driving/commuting distance, locally distributed\nMedium to High distribution = large driving/commuting distance but within same time zone, locally distributed, on-shore\nHigh distribution = Within a 3-hour time zone difference, off-shore\nVery High distribution = Some are in areas with greater than 3 hours time zone difference, long off-shore" ;
+	:guideline "Low distribution = same room or building\nMedium distribution = same area or within driving/commuting distance, locally distributed\nMedium to High distribution = large driving/commuting distance but within same time zone, locally distributed, on-shore\nHigh distribution = Within a 3-hour time zone difference, off-shore\nVery high distribution = Some are in areas with greater than 3 hours time zone difference, long off-shore" ;
 	:type "single_select" ;
 	:possibleValues ("Low" "Medium" "High") .
 
@@ -1378,7 +1356,7 @@
 	a :OrganizationProperty ;
 	:gradeId "O03" ;
 	:description "Stability of the organization - frequency of changes in the organizational environment (structural, managerial, operational, strategic, etc.)." ;
-	:guideline "Very Low stability = frequent changes on strategic level\nLow stability = frequent changes on operational/managerial level\nMedium stability = changes occur every 1-3 years\nHigh stability = changes occur every 3-5 years\nVery High stability = changes are very rare" ;
+	:guideline "Very Low stability = frequent changes on strategic level\nLow stability = frequent changes on operational/managerial level\nMedium stability = changes occur every 1-3 years\nHigh stability = changes occur every 3-5 years\nVery high stability = changes are very rare" ;
 	:type "single_select" ;
 	:possibleValues ("Very low" "Low" "Medium" "High" "Very high") .
 
