@@ -74,34 +74,39 @@
 	{% endif %}
 	<br/>
 	
-	{% if 0 == selected_estimation_method_parameters_list | length %}
-		No parameters
+	{% if selected_estimation_method_parameters_list | length == 1 and selected_estimation_method_parameters_list[0].parameters | length == 0 %}
+		No parameter
 		<br/>
 	{% else %}
 		<label> Used parameters: </label>
 		<ul>
-			{% for parameter in selected_estimation_method_parameters_list %}
-				<li>
-					{{parameter.name}}:
-					{% if parameter.type == "integer" %}
-						<input type="number" name="{{parameter.name}}_parameter" 
-								value="{{parameter.value}}" min="{{parameter.min}}" max= "{{parameter.max}}" required>
-					{% elif parameter.type == "float" %}
-						<input type="number" step="any" name="{{parameter.name}}_parameter" 
-								value="{{parameter.value}}" min="{{parameter.min}}" max= "{{parameter.max}}" required>
-					{% elif parameter.type == "text" %}
-						<input type="text" name="{{parameter.name}}_parameter" 
-								value="{{parameter.value}}" required>
-					{% else %}
-						<select name="{{parameter.name}}_parameter" required>
-							{% for possible_value in parameter.possible_values %}
-								<option {% if parameter.value == possible_value %} selected {% endif %}>
-									{{possible_value}}
-								</option>
-							{% endfor %}
-						</select>
-					{% endif %}
-				</li>
+			{% for parameter_category in selected_estimation_method_parameters_list %}
+				{% if parameter_category.category_name %}
+					<strong>{{parameter_category.category_name}}</strong><br/>
+				{% endif %}
+				{% for parameter in parameter_category.parameters %}
+					<li>
+						{{parameter.name}}:
+						{% if parameter.type == "integer" %}
+							<input type="number" name="{{parameter.name}}_parameter" 
+									value="{{parameter.value}}" min="{{parameter.min}}" max= "{{parameter.max}}" required>
+						{% elif parameter.type == "float" %}
+							<input type="number" step="any" name="{{parameter.name}}_parameter" 
+									value="{{parameter.value}}" min="{{parameter.min}}" max= "{{parameter.max}}" required>
+						{% elif parameter.type == "text" %}
+							<input type="text" name="{{parameter.name}}_parameter" 
+									value="{{parameter.value}}" required>
+						{% else %}
+							<select name="{{parameter.name}}_parameter" required>
+								{% for possible_value in parameter.possible_values %}
+									<option {% if parameter.value == possible_value %} selected {% endif %}>
+										{{possible_value}}
+									</option>
+								{% endfor %}
+							</select>
+						{% endif %}
+					</li>
+				{% endfor %}
 			{% endfor %}
 		</ul>		
 	{% endif %}

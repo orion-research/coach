@@ -846,6 +846,20 @@
     
 # Estimation method's parameters
 # Each parameter's uri is: <estimation method name><parameter name>.
+# Each parameter must have the predicates
+#   - ":name" The name of the parameter.
+#   - ":type" The type of the parameter. Its value must be one among "integer", "text", "float", or "select". If the type is select, it should have the predicate ":possibleValues".
+#   - ":defaultValue" The default value of the parameter. If the type if "select", it should be a value from ":possibleValues" (see below). If the type is "integer" or "float", it must be a valid value. Moreover, if the predicate ":min" and/or ":max" are defined, it must be in the valid range of values.
+#   - "a" with the object ":Parameter".
+
+# Moreover, there are several optional predicates
+#   - ":min" The minimum value that the user can input. It will be used only if the type is "integer" or "float".
+#   - ":max" The maximum value that the user can input. It will be used only if the type is "integer" or "float".
+#   - ":possibleValues" The ordered list of all possible values for the selection. Types can be mixed inside the list.
+#   - ":category" The category of the parameter. A category has two attributes ":name" and ":rank". The rank will be used to sort parameters (see below).
+#   - ":rank" The rank of the parameter inside the category. It will be used to sort parameters (see below).
+
+#Sorting: The parameters are sorting first according to their category's rank, if any. If they have no category, they will be placed on top. Then, the parameters are sorting according to their rank. Finally, the parameters are sorting according to their name. 
 
 :parameter
     a owl:ObjectProperty ;
@@ -885,105 +899,135 @@
     :name "RELY" ;
     :type "select" ;
     :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoProduct ;
+    :rank 1 .
     
 :intermediateCocomoDATA
     a :Parameter ;
     :name "DATA" ;
     :type "select" ;
     :possibleValues ("Low" "Nominal" "High" "Very high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoProduct ;
+    :rank 2 .
     
 :intermediateCocomoCPLX
     a :Parameter ;
     :name "CPLX" ;
     :type "select" ;
     :possibleValues ("Very low" "Low" "Nominal" "High" "Very high" "Extra high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoProduct ;
+    :rank 3 .
     
 :intermediateCocomoTIME
     a :Parameter ;
     :name "TIME" ;
     :type "select" ;
     :possibleValues ("Nominal" "High" "Very high" "Extra high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoComputer ;
+    :rank 1 .
     
 :intermediateCocomoSTOR
     a :Parameter ;
     :name "STOR" ;
     :type "select" ;
     :possibleValues ("Nominal" "High" "Very high" "Extra high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoComputer ;
+    :rank 2 .
     
 :intermediateCocomoVIRT
     a :Parameter ;
     :name "VIRT" ;
     :type "select" ;
     :possibleValues ("Low" "Nominal" "High" "Very high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoComputer ;
+    :rank 3 .
     
 :intermediateCocomoTURN
     a :Parameter ;
     :name "TURN" ;
     :type "select" ;
     :possibleValues ("Low" "Nominal" "High" "Very high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoComputer ;
+    :rank 4 .
     
 :intermediateCocomoACAP
     a :Parameter ;
     :name "ACAP" ;
     :type "select" ;
     :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoPersonnel ;
+    :rank 1 .
     
 :intermediateCocomoAEXP
     a :Parameter ;
     :name "AEXP" ;
     :type "select" ;
     :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoPersonnel ;
+    :rank 2 .
     
 :intermediateCocomoPCAP
     a :Parameter ;
     :name "PCAP" ;
     :type "select" ;
     :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoPersonnel ;
+    :rank 3 .
     
 :intermediateCocomoVEXP
     a :Parameter ;
     :name "VEXP" ;
     :type "select" ;
     :possibleValues ("Very low" "Low" "Nominal" "High") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoPersonnel ;
+    :rank 4 .
     
 :intermediateCocomoLEXP
     a :Parameter ;
     :name "LEXP" ;
     :type "select" ;
     :possibleValues ("Very low" "Low" "Nominal" "High") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoPersonnel ;
+    :rank 5 .
     
 :intermediateCocomoMODP
     a :Parameter ;
     :name "MODP" ;
     :type "select" ;
     :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoProject ;
+    :rank 1 .
     
 :intermediateCocomoTOOL
     a :Parameter ;
     :name "TOOL" ;
     :type "select" ;
     :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoProject ;
+    :rank 2 .
     
 :intermediateCocomoSCED
     a :Parameter ;
     :name "SCED" ;
     :type "select" ;
     :possibleValues ("Very low" "Low" "Nominal" "High" "Very high") ;
-    :defaultValue "Nominal" .
+    :defaultValue "Nominal" ;
+    :category :intermediateCocomoProject ;
+    :rank 3 .
     
 :costEstimationSalary
     a :Parameter ;
@@ -991,6 +1035,27 @@
     :type "float" ;
     :min "0" ;
     :defaultValue "0" .
+
+# Parameter's category
+# Each parameter can have up to one category, which has a name and a rank. Then, the parameters will be group by category, 
+# and each category will be ordered by category rank
+
+:intermediateCocomoProduct
+    :name "Product" ;
+    :rank 1 .
+
+:intermediateCocomoComputer
+    :name "Computer" ;
+    :rank 2 .
+    
+:intermediateCocomoPersonnel
+    :name "Personnel" ;
+    :rank 3 .
+
+:intermediateCocomoProject
+    :name "Project" ;
+    :rank 4 .
+    
 
 ### Asset usage
 
@@ -1909,6 +1974,4 @@
     :description "Other... (please describe the missing aspect(s))" ;
     :guideline "" ;
     :type "text" .
-	
-	
 

@@ -6,13 +6,6 @@ Created on May 9, 2017
 The property model service
 """
 
-"""
-TODO:
-
-
-
-"""
-
 # Set python import path to include COACH top directory
 import os
 import sys
@@ -581,7 +574,6 @@ class PropertyModelService(coach.Microservice):
                     but no value has been computed yet.
               - The value which has been computed.
         """
-        # TODO: add a fourth possible value, if the value has been computed, but a used property's value has been changed?
         user_id = db_infos["user_id"]
         user_token = db_infos["user_token"]
         case_id = db_infos["case_id"]
@@ -765,30 +757,20 @@ class PropertyModelService(coach.Microservice):
     def _get_estimation_method_parameters(self, db_infos, alternative_name, property_name, estimation_method_name):
         """
         DESCRIPTION:
-            Returns a list in which each element is a dictionary representing a parameter used by the provided estimation.
+            Return the list of parameters used by the provided estimation method (see documentation of 
+            _get_estimation_method_parameters_from_ontology to the detailed structure of the list).
             An estimation is defined by a triplet (alternative, property, estimation method).
         INTPUT:
             alternative_name: The name of the alternative in the triplet.
             property_name: The name of the property in the triplet.
             estimation_method_ontology_id: The ontology id of the estimation method in the triplet.
         OUTPUT:
-            A list in which each element is a dictionary representing a parameter used by the provided estimation.
-            Each dictionary is: {
-                                    "name": <parameter_name>, 
-                                    "type": <parameter_type>,
-                                    "value": <parameter_value>,
-                                    ["min": <parameter_min_value>],
-                                    ["max": <parameter_max_value>]
-                                 }
-                <parameter_name> is the name of the parameter.
-                <paramter_type> is a string describing the type of the parameter. It could be "integer", "float" or "text".
-                <parameter_value> is the value of the parameter used for the last computation of this estimation. If this estimation has
-                    not yet been computed, the default value defined by the ontology is used.
-                If there is a "min" field in the ontology, the key min will be in the dictionary. <parameter_min_value> is this field's value.
-                If there is a "max" field in the ontology, the key max will be in the dictionary. <parameter_max_value> is this field's value.
-                The field "min" and "max" can only be present if the type is "integer" or "float".
+            The list of parameters used by the provided estimation method (see documentation of 
+            _get_estimation_method_parameters_from_ontology to the detailed structure of the list).
+            The value of each parameter is the value it has for the last computation of the provided estimation.
+            If no estimation has been computed yet, its value is the default value from the ontology.
         ERROR:
-            Raise a RuntimeError if there is parameters in the database, but their number is different from the number of
+            Raise a RuntimeError if there is parameters in the database, but their number or their name is different from the number of
             parameters used by the estimation method.
         """
         user_id = db_infos["user_id"]
@@ -813,43 +795,80 @@ class PropertyModelService(coach.Microservice):
         if len(database_parameters) == 0:
             return parameters
         
-        # TODO: Check names of the parameters too?
         if len(database_parameters) != len(parameters):
             raise RuntimeError("Parameters stored in the database do not match with those of the estimation method.")
         
-        for parameter in parameters:
-            try:
-                parameter["value"] = database_parameters[parameter["name"]]
-            except KeyError:
-                raise RuntimeError("Parameter " + parameter["value"] + " is not stored in the database.")
+        for parameter_category in parameters:
+            for parameter in parameter_category["parameters"]:
+                try:
+                    parameter["value"] = database_parameters[parameter["name"]]
+                except KeyError:
+                    raise RuntimeError("Parameter " + parameter["value"] + " is not stored in the database.")
             
         return parameters
     
     def _get_estimation_method_parameters_from_ontology(self, estimation_method_name):
         """
         DESCRIPTION:
-            Returns a list in which each element is a dictionary representing a parameter used by the provided estimation method.
+            Return a list in which each element is a dictionary representing a category of parameters. Each category contains
+            a key "category_name" with the name of the category, and a key "parameters", with the list of the parameters used by 
+            the provided estimation method for this category. The first category's name is always None. It is the only category
+            which can have an empty list of parameters. Consequently, if there is no parameters, the returned list is:
+            [{"category_name": None, "parameters":[]}]
         INPUT:
             estimation_method_name: The name of the estimation method for which the parameters are retrieved.
         OUTPUT:
-            A list in which each element is a dictionary representing a parameter used by the provided estimation method.
+            A list in which each element is a dictionary representing a category. Each category is:
+            {
+                "category_name": <category_name>,
+                "parameters": <parameter_list>
+            }
+            The name of the first category is always None (parameters without a category). It is the only category which can have
+            an empty list of parameters.
+            <parameter_list> is a list in which each element is a dictionary representing a parameter used by the provided 
+            estimation method.
             Each dictionary is: {
                                     "name": <parameter_name>, 
                                     "type": <parameter_type>,
                                     "value": <parameter_default_value>,
                                     ["min": <parameter_min_value>],
                                     ["max": <parameter_max_value>]
+                                    ["possible_values": <parameter_possible_values_list>]
                                  }
                 <parameter_name> is the name of the parameter in the ontology.
-                <paramter_type> is a string describing the type of the parameter. It could be "integer", "float" or "text".
+                <paramter_type> is a string describing the type of the parameter. It could be "integer", "float" or "text" or "select".
                 <parameter_default_value> is the default value of the parameter in the ontology.
                 If there is a "min" field in the ontology, the key min will be in the dictionary. <parameter_min_value> is this field's value.
                 If there is a "max" field in the ontology, the key max will be in the dictionary. <parameter_max_value> is this field's value.
-                The field "min" and "max" can only be present if the type is "integer" or "float".
-            The list is sorted according to the name of the parameters (ascendent sort)
+                If the type is "select", and there is a "possibleValues" field in the ontology, the key possible_values will be in the 
+                dictionary. <parameter_possible_values_list> will be this field's list, in the same order. 
+        
+            The category's list is sorted according to the rank of the category in the ontology.
+            The parameter's list in each category is sorted according to the rank of the parameter in the ontology.
+            If two parameters have the same category and the same rank, they are sorting according to their name.
+            All sorts are ascendent.
+        EXAMPLE:
+            If there is no parameter, the return is:
+            [{ "category_name": None, "parameters": [] }]
+            
+            If there are two parameters in a category, and one parameter without category, the return is:
+            [
+                {
+                    "category_name": None,
+                    "parameters": [{ "name": "a", "type": "text", "value": "" }]
+                },
+                {
+                    "category_name": "cat1",
+                    "parameters": [
+                        {"name": "b", "type": "integer", "value": 0, "min": 0 },
+                        {"name": "c", "type": "select", "value": "Low", "possible_values: ["Low", "Medium", "High"] }
+                    ]
+                }
+            ]
         """
         orion_ns = rdflib.Namespace(self.orion_ns)
-        query = """ SELECT ?parameter_name ?parameter_type ?parameter_default_value ?parameter_min ?parameter_max
+        query = """ SELECT ?parameter_name ?parameter_type ?parameter_default_value ?parameter_min ?parameter_max 
+                            ?parameter_category_name
                     WHERE {
                         ?estimation_method_ontology_uri a orion:EstimationMethod .
                         ?estimation_method_ontology_uri orion:title ?estimation_method_name .
@@ -857,20 +876,26 @@ class PropertyModelService(coach.Microservice):
                         ?estimation_method_parameter_uri orion:name ?parameter_name .
                         ?estimation_method_parameter_uri orion:type ?parameter_type .
                         ?estimation_method_parameter_uri orion:defaultValue ?parameter_default_value .
+                        OPTIONAL { ?estimation_method_parameter_uri orion:min ?parameter_min . }
+                        OPTIONAL { ?estimation_method_parameter_uri orion:max ?parameter_max . }
                         OPTIONAL {
-                            ?estimation_method_parameter_uri orion:min ?parameter_min .
+                            ?estimation_method_parameter_uri orion:category ?estimation_method_parameter_category_uri .
+                            ?estimation_method_parameter_category_uri orion:rank ?estimation_method_parameter_category_rank .
+                            ?estimation_method_parameter_category_uri orion:name ?parameter_category_name .
                         }
-                        OPTIONAL {
-                            ?estimation_method_parameter_uri orion:max ?parameter_max .
-                        }
+                        OPTIONAL { ?estimation_method_parameter_uri orion:rank ?estimation_method_parameter_rank . }
                     }
-                    ORDER BY ?parameter_name
+                    ORDER BY ?estimation_method_parameter_category_rank ?estimation_method_parameter_rank ?parameter_name
                 """
-                    
+                
         query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, 
                                                   initBindings = {"estimation_method_name": rdflib.Literal(estimation_method_name)})
-        result = []
-        for (parameter_name, parameter_type, parameter_default_value, parameter_min, parameter_max) in query_result:            
+        
+        previous_parameter_category_name = None
+        result = [{"category_name": None, "parameters":[]}]
+        for (parameter_name, parameter_type, parameter_default_value, parameter_min, parameter_max, 
+             parameter_category_name) in query_result:
+                
             parameter_descriptor = {"name": parameter_name.toPython(), "type": parameter_type.toPython(), 
                                      "value": parameter_default_value.toPython()}
             if parameter_min is not None:
@@ -882,10 +907,16 @@ class PropertyModelService(coach.Microservice):
             if parameter_descriptor["type"] not in allowed_types:
                 raise RuntimeError("The type of the parameter " + parameter_name + " (" + parameter_type + ") is unknown."
                                    + " Allowed types are : " + ", ".join(allowed_types))
+                
             if parameter_descriptor["type"] == "select":
                 parameter_descriptor["possible_values"] = self._get_estimation_method_parameter_possible_value(parameter_name, orion_ns)
+            
+            if parameter_category_name != previous_parameter_category_name:
+                result.append({"category_name": parameter_category_name.toPython(), "parameters": []})
+                previous_parameter_category_name = parameter_category_name
                 
-            result.append(parameter_descriptor)
+            result[-1]["parameters"].append(parameter_descriptor)
+                
         return result
     
     def _get_estimation_method_parameter_possible_value(self, parameter_name, orion_ns):
@@ -946,17 +977,14 @@ class PropertyModelService(coach.Microservice):
 
         alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
-        #TODO: remove try/catch?
-        try:
-            estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
-            estimation_uri = case_db_proxy.get_estimation_uri(user_id=user_id, user_token=user_token, case_id=case_id,
-                                                              alternative_uri=alternative_uri, property_uri=property_uri,
-                                                              estimation_method_ontology_id=estimation_method_ontology_id)
-            properties_used_to_estimation_method = case_db_proxy.get_estimation_used_properties(user_id=user_id, user_token=user_token,
-                                                                                                case_id=case_id, 
-                                                                                                estimation_uri=estimation_uri)
-        except MicroserviceException:
-            properties_used_to_estimation_method = {}
+
+        estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
+        estimation_uri = case_db_proxy.get_estimation_uri(user_id=user_id, user_token=user_token, case_id=case_id,
+                                                          alternative_uri=alternative_uri, property_uri=property_uri,
+                                                          estimation_method_ontology_id=estimation_method_ontology_id)
+        properties_used_to_estimation_method = case_db_proxy.get_estimation_used_properties(user_id=user_id, user_token=user_token,
+                                                                                            case_id=case_id, 
+                                                                                            estimation_uri=estimation_uri)
         
         result = []
         for current_property_name in used_properties_name:
