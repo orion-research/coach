@@ -1,23 +1,13 @@
-<!DOCTYPE HTML>
-<HTML>
-<HEAD>
-<TITLE>COACH</TITLE>
-</HEAD>
+<h2>Edit decision case description</h2>
 
-<BODY>
-<H1>Edit decision case description</H1>
-
-<FORM action="/change_case_description" method="post" accept-charset="UTF-8">
+<form action="/change_case_description" method="post" accept-charset="UTF-8">
 Title: 
-<BR>
-<INPUT type="text" name="title" value="{{title}}"required>
-<BR>
+<br>
+<input type="text" name="title" value="{{title}}"required>
+<br>
 Description: 
-<BR>
-<TEXTAREA name="description" rows="20" cols="80" required>{{description}}</TEXTAREA>
-<BR>
-<INPUT type="submit" value="Change description">
-</FORM>
-
-</BODY>
-</HTML>
+<br>
+<textarea name="description" rows="20" cols="80" required>{{description}}</TEXTAREA>
+<br>
+<input type="submit" value="Change description">
+</form>

@@ -78,7 +78,7 @@ class CaseDatabase(coach.GraphDatabaseService):
         print("Contexts = " + str([c.identifier for c in self.graph.contexts()]))
         print("Ontology context = " + str(self.graph.get_context(ontology_context)))
         print("Number of statements in the database: " + str(len(self.graph)))
-        print("Namespaces in database: " + str([ns for ns in self.graph.namespaces()]))
+        #print("Namespaces in database: " + str([ns for ns in self.graph.namespaces()]))
 
         # Remove the ontology data, and reload it to ensure that it is updated to latest version
         self.ontology = self.graph.get_context(ontology_context)
@@ -86,20 +86,20 @@ class CaseDatabase(coach.GraphDatabaseService):
             print("Removing context triples from ontology")
             self.ontology.remove((None, None, None))
             print("Number of statements in the database after removing ontology: " + str(len(self.graph)))
-            print("Namespaces in database after removing ontology: " + str([ns for ns in self.graph.namespaces()]))
+            #print("Namespaces in database after removing ontology: " + str([ns for ns in self.graph.namespaces()]))
         else:
             print("Creating new ontology")
             self.ontology = rdflib.Graph(store = self.store, identifier = ontology_context)
 
         print("Loading new ontology data")
         ontology_path = os.path.join(self.working_directory, os.pardir, "Ontology.ttl")
-        print("Namespaces in ontology: " + str([ns for ns in self.ontology.namespaces()]))
+        #print("Namespaces in ontology: " + str([ns for ns in self.ontology.namespaces()]))
         # An error message is produced when parsing, but the data is still read.
         # It appears to relate to the binding of namespaces in the ontology.
         # It could possibly be the addition of a default namespace when one already exists.
         self.ontology.parse(source = ontology_path, format = "ttl")
         print("Number of statements in the database after (re)loading ontology: " + str(len(self.graph)))
-        print("Namespaces in ontology after (re)loading: " + str([ns for ns in self.ontology.namespaces()]))
+        #print("Namespaces in ontology after (re)loading: " + str([ns for ns in self.ontology.namespaces()]))
 
         self.ontology.bind("data", data_ns, override = True)
         self.ontology.bind("orion", orion_ns, override = True)
@@ -862,7 +862,7 @@ class CaseDatabase(coach.GraphDatabaseService):
         It is only available internally in the CaseDB to set up elements from the ontology.
         """
         q = """MERGE (r:$class:$label { uri : { uri } } ) RETURN r"""
-        result = self.query(q, { "class" : resource_class, "uri" : uri })
+        self.query(q, { "class" : resource_class, "uri" : uri })
 
     
     @endpoint("/remove_resource", ["GET", "POST"], "application/json")

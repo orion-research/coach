@@ -416,9 +416,9 @@ class PropertyModelService(coach.Microservice):
     def _get_properties_name_list(self, db_infos):
         """
         DESCRIPTION:
-            Returns a list containing the name of all properties from the ontology.
+            Returns a list containing the name of all properties from the ontology, sorted by name.
         OUTPUT:
-            A list containing the name of all properties from the ontology.
+            A list containing the name of all properties from the ontology, sorted by name.
         """
         orion_ns = rdflib.Namespace(self.orion_ns)
         

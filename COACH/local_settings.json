@@ -121,14 +121,14 @@
         "name": "IntermediateCOCOMO estimation method",
         "description": "Settings for IntermediateCOCOMO"
     },
-     "AdvancedCOCOMO": {
-        "port": 5016,
-        "name": "AdvancedCOCOMO estimation method",
-        "description": "Settings for AdvancedCOCOMO"
-    },
      "CostEstimation": {
         "port": 5017,
         "name": "CostEstimation estimation method",
         "description": "Settings for CostEstimation"
+    },
+    "BaseTest": {
+        "port": 5018,
+        "name": "TestGlobal test",
+        "description": "Settings for TestGlobal"
     }
 }

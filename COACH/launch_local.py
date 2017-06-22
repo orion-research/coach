@@ -35,8 +35,9 @@ def run_all():
     PughService.PughService().run()
 
     SimpleDecisionProcessService.SimpleDecisionProcessService().run()
-
-    CaseDatabase().run()
+    
+    cd = CaseDatabase()
+    cd.run()
 
     AverageOfTwo.AverageOfTwo().run()
 
@@ -59,6 +60,8 @@ def run_all():
     BasicCOCOMO().run()
     IntermediateCOCOMO().run()
     CostEstimation().run()
+    
+    return cd
 
 if __name__ == '__main__':
     run_all()

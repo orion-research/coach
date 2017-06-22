@@ -46,7 +46,7 @@
 		<br/>
 	{% else %}
 		Used properties:
-		<ul>
+		<ul id="used_properties">
 			{% for used_property in used_properties %}
 				<li>
 					{{used_property.name}}
@@ -79,7 +79,7 @@
 		<br/>
 	{% else %}
 		<label> Used parameters: </label>
-		<ul>
+		<ul id="used_parameters">
 			{% for parameter_category in selected_estimation_method_parameters_list %}
 				{% if parameter_category.category_name %}
 					<strong>{{parameter_category.category_name}}</strong><br/>
