@@ -367,7 +367,7 @@ class Proxy():
                 for p in kwargs.keys():
                     if p not in self.api[name]["params"]:
                         raise TypeError("Parameter " + p + " is not defined for proxy method " + name + ". " +
-                                        "Allowed parameters are " + ", ".join(kwargs.keys()) + ".")
+                                        "Allowed parameters are " + ", ".join(self.api[name]["params"]) + ".")
 
                 # The arguments are send in json to handle complex structure (nested dictionary, list...). 
                 # However, this will fail if an argument is not serializable in json.

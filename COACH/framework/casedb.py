@@ -65,7 +65,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             self.store.open(rdflib.Literal(self.db_uri), create = False)
 
         self.orion_ns = "http://www.orion-research.se/ontology#"  # The name space for the ontology used
-        self.data_ns = self.get_setting("protocol") + "://" + self.host + ":" + str(self.port) + "/data#"  # The name space for this data source
+        self.data_ns = self.get_setting("protocol") + "://" + self.host + ":" + str(self.port) + "/data#"  # The namespace for this data source
         self.ns = { self.orion_ns : rdflib.Namespace(self.orion_ns),
                     self.data_ns : rdflib.Namespace(self.data_ns) }
 
@@ -101,8 +101,10 @@ class CaseDatabase(coach.GraphDatabaseService):
         print("Number of statements in the database after (re)loading ontology: " + str(len(self.graph)))
         print("Namespaces in ontology after (re)loading: " + str([ns for ns in self.ontology.namespaces()]))
 
+        
         self.ontology.bind("data", data_ns, override = True)
         self.ontology.bind("orion", orion_ns, override = True)
+        
 
         print("Loaded " + self.orion_ns + " ontology with " + str(len(self.ontology)) + " statements")
 
@@ -783,9 +785,6 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_id = rdflib.URIRef(case_id)
             case_graph = self.graph.get_context(case_id)
             return case_graph.serialize(format = format).decode("utf-8")
-#             serialized_graph = case_graph.serialize(format = format).decode("utf-8")
-#             self.kr_db_proxy.export_case(case_graph = serialized_graph, format = format)
-#             return serialized_graph
         else:
             return "Invalid user token"
     

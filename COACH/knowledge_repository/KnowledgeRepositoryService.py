@@ -10,6 +10,7 @@ Knowledge repository for storing data about finished decision cases to use for g
 import json
 import os
 import sys
+import traceback
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 from COACH.framework.coach import Microservice
@@ -22,6 +23,7 @@ from neo4j.v1 import GraphDatabase, basic_auth
 
 # Semantic web framework
 import rdflib
+from rdflib.namespace import split_uri
 import sqlalchemy
 from rdflib_sqlalchemy.store import SQLAlchemy
 
@@ -33,15 +35,14 @@ class KnowledgeRepository:
     TODO: This class copies some generic methods for Neo4j access from CaseDB, probably should be a common base class instead.
     """
     
-    def __init__(self, url, username, password, label):
+    def __init__(self, url, username, password):
         """
         Initiates the database at the provided url using the provided credentials.
         label indicates a label attached to all nodes used by this database, to distinguish them from nodes created by 
         other databases in the same DBMS.
         """
         self._db = GraphDatabase.driver("bolt://localhost", auth=basic_auth(username, password))
-        self.label = label
-
+        self.ONTOLOGY_NAMESPACE = "http://www.orion-research.se/ontology#"
 
     def open_session(self):
         """
@@ -49,15 +50,13 @@ class KnowledgeRepository:
         """    
         return self._db.session()
     
-    
     def close_session(self, s):
         """
         Closes a database session.
         """
         s.close()
         
-
-    def query(self, q, context = {}, session = None):
+    def query(self, query, context = {}, session = None):
         """
         Function encapsulating the query interface to the database.
         q is the query string, and context is an optional dictionary containing variables to be substituted into q.
@@ -65,143 +64,58 @@ class KnowledgeRepository:
         for the query, and then closed again.
         """
         # Add the label to the context, so that it can be used in queries
-        context["label"] = self.label
         if session:
-            return session.run(q.format(**context))
+            return session.run(query, context)
         else:
             # If no session was provided, create one for this query and close it when done
             s = self.open_session()
-            result = s.run(q.format(**context))
+            result = s.run(query, context)
             self.close_session(s)
             return result
         
-    
-    def add_case(self, case_description):
-        """
-        Adds a case to the KR from a description provided as a json string.
-        
-        NOTES: This is just a stub, it should go through the description and add it to the KR on its internal format
-        using Neo4j queries.
-        - if a case already exists its information is updated
-        - the addition is done in pieces without exploiting a proper transaction
-        """
-        # Retrieves case data from JSON format
-        c_descr = json.loads(case_description)
-        # Retrieves case node attributes and writes them into the KR. Then it retrieves the case_id
-        case_node = c_descr.get('case')
-        node_properties = case_node.get('properties')
-        q = """\
-        MERGE (c:Case:{label} {{id: "{case_node[id]}"}})
-        SET c.title = "{node_properties[title]}", c.description = "{node_properties[description]}" 
-        RETURN id(c) AS case_id"""
-        case_id = next(iter(self.query(q, locals())))["case_id"]
-        # Retrieves stakeholders information
-        c_stakeholders = c_descr.get('stakeholders')
-        # Stores stakeholders data into the KR
-        self.add_stakeholders(case_id, c_stakeholders)
-        # Retrieves alternatives information
-        c_alternatives = c_descr.get('alternatives')
-        # Stores stakeholders data into the KR
-        self.add_alternatives(case_id, c_alternatives)
-        
-        
-    def asset_origins(self):
-        """
-        Queries the knowledge repository database and returns an iterable of all asset origins options.
-        """
-        q = """MATCH (ao:Origin:{label}) RETURN ao.name AS asset_origin"""
-        return [result["asset_origin"] for result in self.query(q, locals())]
-    
-    
-    def add_stakeholders(self, c_id, c_stakeholders):
-        """
-        Adds stakeholders to the case c_id.
-        
-        NOTES:
-        - the decision role of the stakeholder is added as a property of the stakeholder relationship
-        - the stakeholder is named with her user_id
-        - a stakeholder with multiple decision roles and/or involvement in multiple decisions is not duplicated
-        """
-        s = self.open_session()
-        # Iterate over the list elements and get appropriate attributes
-        for l_idx in range(len(c_stakeholders)):
-            s_id = c_stakeholders[l_idx].get('id')
-            s_prop = c_stakeholders[l_idx].get('properties')
-            role = c_stakeholders[l_idx].get('role')
-            # Create a new stakeholder if she does not exist, and get it's id
-            q1 = """MERGE (s:Stakeholder:{label} {{id: "{s_id}", name: "{s_prop[user_id]}"}}) RETURN id(s) AS sh_id"""
-            new_stakeholder = next(iter(self.query(q1, locals(), s)))["sh_id"]
-        
-            # Creates a corresponding new stakeholder relationship
-            q2 = """\
-            MATCH (c:Case:{label}), (ns:Stakeholder:{label})
-            WHERE id(c) = {c_id} AND id(ns) = {new_stakeholder}
-            MERGE (c) -[r:Stakeholder {{role: "{role}"}}]-> (ns)
-            """
-            self.query(q2, locals(), s)
-        self.close_session(s)
-        
-
-    def add_alternatives(self, c_id, c_alternatives):
-        """
-        Adds alternatives to the case c_id.
-        
-        NOTES:
-        - the title of the alternative is considered as the asset origin identifier
-        - as a consequence title and id are supposed to be unique
-        """
-        s = self.open_session()
-        # Iterate over the list elements and get appropriate attributes
-        for l_idx in range(len(c_alternatives)):
-            a_id = c_alternatives[l_idx].get('id')
-            a_prop = c_alternatives[l_idx].get('properties')
-            # Create a new alternative if it does not exist, and get it's id
-            q1 = """\
-            MERGE (ao:ASSET_ORIGIN:{label} {{name: "{a_prop[title]}"}}) RETURN id(ao) AS ao_id"""
-            new_alternative = next(iter(self.query(q1, locals(), s)))["ao_id"]
-        
-            # Creates a corresponding new alternative relationship
-            q2 = """\
-            MATCH (c:Case:{label}), (da:ASSET_ORIGIN:{label})
-            WHERE id(c) = {c_id} AND id(da) = {new_alternative}
-            MERGE (c) -[a:Alternative]-> (da)
-            """
-            self.query(q2, locals(), s)
-        self.close_session(s)
-        
-    def export_case_to_KR(self, case_graph, format):
+    def export_case_to_KR(self, graph_description, format_):
         """
         Exports the data stored in the ontology graph to the Knowledge Repository database.
         """            
-        #if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
-        # Namespace objects cannot be stored as object attributes, since they collide with the microservice mechanisms
-        #orion_ns = rdflib.Namespace(self.orion_ns)
-        #data_ns = rdflib.Namespace(self.data_ns)
-
-        #case_id = rdflib.URIRef(case_id)
-        #case_graph = self.graph.get_context(case_id)
-        #case_graph.bind("data", data_ns)
-        #case_graph.bind("orion", orion_ns)
-        ontology_graph = json.loads(case_graph, format).decode("utf8")
+        try:
+            case_graph = rdflib.Graph()
+            case_graph.parse(data=graph_description, format=format_)
+            session = self.open_session()
+            
+            for s, p, o in case_graph.triples((None, None, None)):
                 
-        for s, p, o in ontology_graph.triples( (None, None, None) ):
-            print('Subject: %s predicate: %s object: %s'%(s, p, o)) 
-         
-            # Storage into the knowledge repository
-            qs = """MERGE (dcs: CASE_DATA_NODE { name : { case_subject } } ) RETURN dcs"""
-            params = { "case_subject" :  str(s) }
-            subject_node = self.query(qs, params)
-             
-            qo = """MERGE (dcs: CASE_DATA_NODE { name : { case_object } } ) RETURN dcs"""
-            params = { "case_object" :  str(o) }
-            object_node = self.query(qo, params)
-                 
-            qp = """MATCH (dcs1: CASE_DATA_NODE), (dcs2: CASE_DATA_NODE) WHERE dcs1.name= { case_subject } AND dcs2.name= { case_object } CREATE (dcs1)-[p: PREDICATE {name: { case_predicate } }]->(dcs2)"""
-            params = { "case_subject" :  str(s), "case_object" :  str(o), "case_predicate" :  str(p) }
-            predicate_relation = self.query(qp, params)
-                 
-            print('Here ends the reading of the current case') 
+                if isinstance(s, rdflib.term.Literal):
+                    raise RuntimeError("A subject must not be a Literal")
+                
+                predicate_name = split_uri(p)[1]
+                if predicate_name == "type":
+                    if not str(o).startswith(self.ONTOLOGY_NAMESPACE):
+                        raise RuntimeError("The type of a node must be in the ontology namespace")
+                    label = str(o)[len(self.ONTOLOGY_NAMESPACE):]
+                    # Can not use a parameter for label, as it is not supported in neo4j
+                    # TODO: Malicious code injection might be possible
+                    query = "MERGE (node {uri: $uri}) SET node :" + label
+                    self.query(query, {"uri": str(s)}, session)
+                    continue
+                    
+                if isinstance(o, rdflib.Literal):
+                    # Can not use the name of the property as a parameter, as it is not supported in neo4j
+                    # TODO: Malicious code injection might be possible
+                    query = "MERGE (node {uri: $uri}) SET node." + predicate_name + " = $value"
+                    self.query(query, {"uri": str(s), "value":o.toPython()}, session)
+                    continue
+                
+                query = """ MERGE (subject_node {uri: $subject_uri}) 
+                            MERGE (object_node {uri: $object_uri})
+                            MERGE (subject_node) -[:""" + predicate_name.upper() +"""]-> (object_node)
+                        """
+                self.query(query, {"subject_uri": str(s), "object_uri": str(o)}, session)
 
+        except Exception as e:
+            print(traceback.format_exc())
+            raise e
+        finally:
+            self.close_session(session)
         
         
 class KnowledgeRepositoryService(Microservice):
@@ -223,13 +137,12 @@ class KnowledgeRepositoryService(Microservice):
         try:
             self.KR = KnowledgeRepository(self.get_setting("database"), 
                                           secret_data["neo4j_user_name"], 
-                                          secret_data["neo4j_password"],
-                                          "KR")
+                                          secret_data["neo4j_password"])
+            
             self.ms.logger.info("Knowledge repository successfully connected")
         except:
             self.ms.logger.error("Fatal error: Knowledge repository cannot be accessed. Make sure that Neo4j is running!")
 
-            
     @endpoint("/add_case", ["POST"], "application/json")    
     def add_case(self, description):
         """
@@ -239,9 +152,11 @@ class KnowledgeRepositoryService(Microservice):
         return "Ok"
     
     @endpoint("/export_case", ["GET"], "application/json")    
-    def export_case(self, case_graph, format):
+    def export_case(self, case_graph, format_):
         """
         Endpoint for handling the storage of a complete case to the KR.
         """
-        self.KR.export_case_to_KR(case_graph, format)
+        self.KR.export_case_to_KR(case_graph, format_)
         return "Ok"
+    
+    

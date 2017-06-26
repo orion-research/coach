@@ -64,6 +64,7 @@ class InteractionService(coach.Microservice):
 
         # Store case database connection, using user_id and user_token as default parameters to all endpoint calls.
         self.case_db_proxy = self.create_proxy(self.get_setting("database"))
+        self.knowledge_repository_proxy = self.create_proxy(self.get_setting("knowledge_repository"))
 
         # Store point to service directories
         self.service_directory_proxies = [self.create_proxy(sd) for sd in self.get_setting("service_directories")]
@@ -644,13 +645,13 @@ class InteractionService(coach.Microservice):
         Exports the current case to the knowledge repository.
         """
         description = self.case_db_proxy.export_case_data(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"], format = "n3")
-        requests.post(self.get_setting("knowledge_repository") + "/add_case", data = {"description": json.dumps(description)})
         print(description)
+        self.knowledge_repository_proxy.export_case(case_graph=description, format_="n3")
         description = description.replace("&", "&amp;")
         description = description.replace("<", "&lt;")
         description = description.replace(">", "&gt;")
         message = "Exported case to knowledge repository, with the following data:\n\n"
-        message += "<DIV style=\"white-space: pre-wrap;\"><CODE>" + description + "</CODE></DIV>"
+        message += '<div style="white-space: pre-wrap;"><code>' + description + "</code></div>"
         return self.main_menu_transition(main_dialogue = message)
         
 

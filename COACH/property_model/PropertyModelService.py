@@ -29,11 +29,13 @@ import rdflib
 from datetime import datetime
 import inspect
 
-def log(*args):
-    message = datetime.now().strftime("%H:%M:%S") + " : "
-    message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
+def log(*args, verbose = True):
+    message = "::"
+    if verbose:
+        message = datetime.now().strftime("%H:%M:%S") + " : "
+        message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
     for arg in args:
-        message += str(arg) + " "
+        message += str(arg).replace("\n", "\n::") + " "
     print(message)
     sys.stdout.flush()
 

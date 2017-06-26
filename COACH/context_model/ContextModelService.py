@@ -48,18 +48,6 @@ from flask import request
 # Linked data
 import rdflib
 
-# TODO: to suppress
-from datetime import datetime
-import inspect
-
-def log(*args):
-    message = datetime.now().strftime("%H:%M:%S") + " : "
-    message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
-    for arg in args:
-        message += str(arg) + " "
-    print(message)
-    sys.stdout.flush()
-
 class ContextModelService(coach.Microservice):
       
       
