@@ -49,8 +49,8 @@ class InteractionService(coach.Microservice):
 
         # Read secret data file
         secret_data_file_name = self.get_setting("secret_data_file_name")
-        with open(os.path.join(self.working_directory, os.path.normpath(secret_data_file_name)), "r") as file:
-            fileData = file.read()
+        with open(os.path.join(self.working_directory, os.path.normpath(secret_data_file_name)), "r") as file_:
+            fileData = file_.read()
         secret_data = json.loads(fileData)
 
         # Setup encryption for settings cookies
@@ -227,14 +227,15 @@ class InteractionService(coach.Microservice):
     @endpoint("/open_case_dialogue", ["GET"], "text/html")
     def open_case_dialogue_transition(self):
         # Create links to the user's cases
-        user_cases = self.case_db_proxy.user_cases(user_id = session["user_id"], user_token = session["user_token"])
+        user_cases_db = self.case_db_proxy.user_cases(user_id = session["user_id"], user_token = session["user_token"])
+        user_cases_kr = self.knowledge_repository_proxy.get_cases(user_id = session["user_id"])
+        user_cases = user_cases_db + [user_case for user_case in user_cases_kr if user_case not in user_cases_db]
         dialogue = render_template("open_case_dialogue.html", user_cases = user_cases)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     @endpoint("/case_status_dialogue", ["GET"], "text/html")
     def case_status_dialogue_transition(self):
         # Shows the case status
-        status = {}
         activities = {}
         """
          Get case description
@@ -347,7 +348,6 @@ class InteractionService(coach.Microservice):
 
         # Define the relevant ontology namespaces
         orion_ns = rdflib.Namespace(self.orion_ns)
-        data_ns = rdflib.Namespace(self.case_db_proxy.get_data_namespace())
         user_ns = rdflib.Namespace(self.authentication_service_proxy.get_user_namespace())
         
         # Get the uris of the users who are currently stakeholders in the case
@@ -552,8 +552,25 @@ class InteractionService(coach.Microservice):
     def open_case(self, case_id):
         # TODO: Instead of showing case id on screen, it should be the case name + id
         session["case_id"] = case_id
+        user_id = session["user_id"]
+        user_token = session["user_token"]
+        if not self.case_db_proxy.is_case_in_database(user_id=user_id, user_token=user_token, case_id=case_id):
+            case_information = self.knowledge_repository_proxy.import_case(case_uri=case_id, format_="n3")
+            case_graph_description = case_information["case_graph_description"]
+            case_uri = case_information["case_uri"]
+            self.case_db_proxy.import_graph(user_id=user_id, user_token=user_token, graph_description=case_graph_description, format_="n3",
+                                            case_id=case_uri)
+            
         return self.case_status_dialogue_transition()
-        
+    
+    @endpoint("/close_case", ["GET"], "text/html")
+    def close_case(self):
+        case_description = self.case_db_proxy.export_case_data(user_id = session["user_id"], user_token = session["user_token"], 
+                                                               case_id = session["case_id"], format = "n3")
+        self.knowledge_repository_proxy.export_case(graph_description=case_description, format_="n3")
+        self.case_db_proxy.remove_case(user_id=session["user_id"], user_token=session["user_token"], case_id=session["case_id"])
+        del session["case_id"]
+        return self.main_menu_transition()
 
     @endpoint("/logout", ["GET"], "text/html")
     def logout(self):
@@ -601,16 +618,6 @@ class InteractionService(coach.Microservice):
         dialogue = render_template("user_profile_dialogue.html", user_profile = user_profile)
         return self.main_menu_transition(main_dialogue = dialogue)
 
- #   @endpoint("/test_user_profile_dialogue", ["GET"], "text/html")
- #   def test_user_profile_dialogue_transition(self):
- #       # Create links to the user's profile
- #       user_profile = {'user_name': self.authentication_service_proxy.get_user_name(user_id = session["user_id"]),
- #                       'email': self.authentication_service_proxy.get_user_email(user_id = session["user_id"]),
- #                       'company_name': self.authentication_service_proxy.get_company_name(user_id = session["user_id"])}
- #       dialogue = render_template("test_user_profile_dialogue.html", user_profile = user_profile)
- #       return self.main_menu_transition(main_dialogue = dialogue)
-
-
     @endpoint("/edit_user_profile", ["POST"], "text/html")
     def edit_user_profile(self, user_name, company_name, email, skype_id, user_phone, location, user_bio):
         self.authentication_service_proxy.set_user_profile(user_id = session["user_id"], user_name = user_name, company_name = company_name, 
@@ -646,7 +653,7 @@ class InteractionService(coach.Microservice):
         """
         description = self.case_db_proxy.export_case_data(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"], format = "n3")
         print(description)
-        self.knowledge_repository_proxy.export_case(case_graph=description, format_="n3")
+        self.knowledge_repository_proxy.export_case(graph_description=description, format_="n3")
         description = description.replace("&", "&amp;")
         description = description.replace("<", "&lt;")
         description = description.replace(">", "&gt;")

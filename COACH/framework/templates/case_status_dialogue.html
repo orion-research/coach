@@ -20,12 +20,16 @@
 		{% include "case_status_activity.html" %}
 	    {% set activity = activities["properties"] %}
 		{% include "case_status_activity.html" %}
-	</ul></li>
+	</ul>
 	{% set activity = activities["tradeoff"] %}
 	{% include "case_status_activity.html" %}
 	{% set activity = activities["close"] %}
 	{% include "case_status_activity.html" %}
 </ul>
+
+<form action="/close_case" method="get">
+	<input type="submit" value="Close case">
+</form>
 
 </BODY>
 </HTML>

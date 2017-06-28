@@ -91,6 +91,7 @@
     },
     "KnowledgeRepositoryService": {
         "database": "http://127.0.0.1:7474/db/data/",
+        "authentication_service": "http://127.0.0.1:5009",
         "port": 5005,
         "secret_data_file_name": "../framework/settings/root_secret_data.json",
         "name": "Knowledge repository microservice for the ORION project",

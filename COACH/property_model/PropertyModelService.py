@@ -30,7 +30,7 @@ from datetime import datetime
 import inspect
 
 def log(*args, verbose = True):
-    message = "::"
+    message = "" if verbose else "::"
     if verbose:
         message = datetime.now().strftime("%H:%M:%S") + " : "
         message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName

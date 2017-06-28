@@ -26,6 +26,7 @@ from flask import request
 
 from collections import defaultdict
 
+
 class CaseDatabase(coach.GraphDatabaseService):
     
     """
@@ -167,9 +168,9 @@ class CaseDatabase(coach.GraphDatabaseService):
         Each case is represented by a pair indicating case id and case title.
         """
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
-            q = "SELECT ?case_id ?case_title WHERE { ?case_id orion:role ?r . ?r orion:person ?user_id . ?case_id orion:title ?case_title }"
+            q = "SELECT ?case_id ?case_title WHERE { ?case_id orion:role ?r . ?r orion:person ?user_uri . ?case_id orion:title ?case_title }"
             result = self.graph.query(q, initNs = { "orion": rdflib.Namespace(self.orion_ns)},
-                                      initBindings = { "user_id": self.authentication_service_proxy.get_user_uri(user_id = user_id) })
+                                      initBindings = { "user_uri": self.authentication_service_proxy.get_user_uri(user_id = user_id) })
             return list(result)
         else:
             return "Invalid user token"
@@ -788,7 +789,32 @@ class CaseDatabase(coach.GraphDatabaseService):
         else:
             return "Invalid user token"
     
+    @endpoint("/is_case_in_database", ["GET"], "application/json")
+    def is_case_in_database(self, user_id, user_token, case_id):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            query = " ASK WHERE { ?case_uri a orion:Case .} "
+            query_result = self.graph.query(query, initNs={"orion": rdflib.Namespace(self.orion_ns)},
+                                            initBindings={"case_uri": case_id})
+            return query_result.askAnswer
+        else:
+            return "Invalid user token"
         
+    @endpoint("/import_graph", ["POST"], "application/json")
+    def import_graph(self, user_id, user_token, graph_description, format_, case_id):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            case_graph = rdflib.Graph(store = self.store, identifier = rdflib.URIRef(case_id))
+            case_graph.parse(data=graph_description, format=format_)
+        else:
+            return "Invalid user token"
+        
+    @endpoint("/remove_case", ["GET", "POST"], "application/json")
+    def remove_case(self, user_id, user_token, case_id):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            case_graph = self.graph.get_context(case_id)
+            case_graph.remove((None, None, None))
+        else:
+            return "Invalid user token"
+    
     #### NEW API FOR LINKED DATA #########################################################################
     
     def uri_to_id(self, uri):
@@ -817,8 +843,7 @@ class CaseDatabase(coach.GraphDatabaseService):
         case_db_term = rdflib.URIRef(self.data_ns + "case_db")
         id_counter_term = rdflib.URIRef(self.data_ns + "id_counter")
         id_counter = int(self.graph.value(case_db_term, id_counter_term, None, "0"))
-        self.graph.remove((case_db_term, id_counter_term, None))
-        self.graph.add((case_db_term, id_counter_term, rdflib.Literal(id_counter + 1)))
+        self.graph.set((case_db_term, id_counter_term, rdflib.Literal(id_counter + 1)))
         self.graph.commit()
         return rdflib.URIRef(self.data_ns + str(id_counter))
     
