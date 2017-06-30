@@ -914,10 +914,6 @@ class CaseDatabase(coach.GraphDatabaseService):
         else:
             return "Invalid user token"
     
-    @endpoint("/clean_db", ["GET", "POST"], "application/json")
-    def clean_db(self):
-        self.graph.remove((None, None, None))
-    
     #### NEW API FOR LINKED DATA #########################################################################
     
     def uri_to_id(self, uri):
