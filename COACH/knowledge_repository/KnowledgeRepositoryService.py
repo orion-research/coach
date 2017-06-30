@@ -26,20 +26,6 @@ import rdflib
 from rdflib.namespace import split_uri
 import sqlalchemy
 from rdflib_sqlalchemy.store import SQLAlchemy   
-
-# TODO: to suppress
-from datetime import datetime
-import inspect
-
-def log(*args, verbose = True):
-    message = "" if verbose else "::"
-    if verbose:
-        message = datetime.now().strftime("%H:%M:%S") + " : "
-        message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
-    for arg in args:
-        message += str(arg).replace("\n", "\n::") + " "
-    print(message)
-    sys.stdout.flush()
         
 class KnowledgeRepositoryService(Microservice):
 
@@ -91,14 +77,6 @@ class KnowledgeRepositoryService(Microservice):
             result = s.run(query, context)
             self.close_session(s)
             return result
-
-    @endpoint("/add_case", ["POST"], "application/json")    
-    def add_case(self, description):
-        """
-        Endpoint for handling the addition of a new case to the KR.
-        """
-        self.KR.add_case(description)
-        return "Ok"
     
     def delete_case(self, case_uri, session=None):
         delete_case_query = """ Match (:Case {uri:$uri})-[:ROLE]->(:Role)-[:PERSON]->(person)
@@ -155,6 +133,7 @@ class KnowledgeRepositoryService(Microservice):
             if isinstance(o, rdflib.Literal):
                 # Can not use the name of the property as a parameter, as it is not supported in neo4j
                 # TODO: Malicious code injection might be possible
+                # TODO: Update query to handle multiple value with the same predicate name
                 query = "MERGE (node {uri: $uri}) SET node." + predicate_name + " = $value"
                 self.query(query, {"uri": str(s), "value":o.toPython()}, session)
                 continue
@@ -167,7 +146,7 @@ class KnowledgeRepositoryService(Microservice):
             self.query(query, {"subject_uri": str(s), "object_uri": str(o)}, session)
             
             self.close_session(session)
-    
+        
     @endpoint("/get_cases", ["GET"], "application/json")
     def get_cases(self, user_id):
         query = """ Match ({uri: $user_uri}) <-[:PERSON]- (:Role) <-[:ROLE]- (case:Case)

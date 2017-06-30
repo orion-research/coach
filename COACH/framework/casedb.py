@@ -661,6 +661,99 @@ class CaseDatabase(coach.GraphDatabaseService):
             return value
         else:
             return "Invalid user or delegate token"
+    
+    @endpoint("/get_general_context", ["GET"], "application/json")
+    def get_general_context(self, user_id, user_token, case_id):
+        if self.is_stakeholder(user_id, case_id) and self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_graph = self.graph.get_context(case_id)
+            
+            general_context_uri = case_graph.value(case_id, orion_ns.context, None, None)
+            if general_context_uri is None:
+                return ["", "", "", "", "", ""]
+            
+            result = []
+            result.append(case_graph.value(general_context_uri, orion_ns.description, None, ""))
+            
+            categories = [{"name": "organization", "general_id": "O00"},
+                          {"name": "product", "general_id": "P00"},
+                          {"name": "stakeholder", "general_id": "S00"},
+                          {"name": "method", "general_id": "M00"},
+                          {"name": "business", "general_id": "B00"},]
+            query = """ SELECT ?general_category_value
+                            WHERE {
+                                ?general_context_uri ?predicate ?category_context_uri .
+                                ?category_context_uri orion:entry ?entry_uri .
+                                ?entry_uri orion:grade_id ?general_id .
+                                ?entry_uri orion:value ?general_category_value .
+                            }
+                """
+                
+            for category in categories:
+                query_result = case_graph.query(query, initNs={"orion": orion_ns}, 
+                                                initBindings={"predicate": orion_ns[category["name"]], "general_id": category["general_id"]})
+                query_result = [e for e in query_result]
+
+                if len(query_result) > 1:
+                    raise RuntimeError("There must be at most one value for the general description of the context " + category["name"])
+                try:
+                    result.append(query_result[0][0].toPython())
+                except IndexError:
+                    result.append("")
+            return result
+        else:
+            return "Invalid user token"
+    
+    @endpoint("/save_general_context", ["POST"], "application/json")
+    def save_general_context(self, user_id, user_token, case_id, general_context_list):
+        if self.is_stakeholder(user_id, case_id) and self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_id = rdflib.URIRef(case_id)
+            case_graph = self.graph.get_context(case_id)
+            
+            general_context_uri = case_graph.value(case_id, orion_ns.context, None, None)
+            if general_context_uri is None:
+                general_context_uri = self.new_uri()
+                case_graph.add((case_id, orion_ns.context, general_context_uri))
+            case_graph.set((general_context_uri, orion_ns.description, rdflib.Literal(general_context_list[0])))
+            
+            
+            categories = [{"name": "organization", "general_id": "O00"},
+                          {"name": "product", "general_id": "P00"},
+                          {"name": "stakeholder", "general_id": "S00"},
+                          {"name": "method", "general_id": "M00"},
+                          {"name": "business", "general_id": "B00"},]
+                
+            for category, value in zip(categories, general_context_list[1:]):
+                context_category_uri = case_graph.value(general_context_uri, orion_ns[category["name"]], None, None)
+                if context_category_uri is None:
+                    context_category_uri = self.new_uri()
+                    case_graph.add((general_context_uri, orion_ns[category["name"]], context_category_uri))
+                
+                query = """ SELECT ?general_entry_uri
+                            WHERE {
+                                ?context_category_uri orion:entry ?general_entry_uri .
+                                ?general_entry_uri orion:grade_id ?general_entry_id .
+                            }
+                        """
+                query_result = case_graph.query(query, initNs={"orion": orion_ns}, initBindings={"context_category_uri": context_category_uri, 
+                                                                                                 "general_entry_id": category["general_id"]})
+                query_result = [e for e in query_result]
+                
+                if len(query_result) > 1:
+                    raise RuntimeError("There must be at most one general entry for the context category " + category["name"])
+                
+                try:
+                    general_entry_uri = query_result[0][0]
+                except IndexError:
+                    general_entry_uri = self.new_uri()
+                    case_graph.add((context_category_uri, orion_ns.entry, general_entry_uri))
+                    case_graph.add((general_entry_uri, orion_ns.grade_id, rdflib.Literal(category["general_id"])))
+                
+                case_graph.set((general_entry_uri, orion_ns.value, rdflib.Literal(value)))
+        else:
+            return "Invalid user token"        
+        
         
     @endpoint("/save_context", ["POST"], "application/json")
     def save_context(self, user_id, user_token, case_id, context_predicate, context_values_dict):
@@ -669,11 +762,19 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph = self.graph.get_context(case_id)
 
             orion_ns = rdflib.Namespace(self.orion_ns)
-            context_uri = case_graph.value(case_id, context_predicate, None, None)
+            general_context_uri = case_graph.value(case_id, orion_ns.context, None, None)
+            if general_context_uri is None:
+                general_context_uri = self.new_uri()
+                case_graph.add((case_id, orion_ns.context, general_context_uri))
+            
+            context_uri = case_graph.value(general_context_uri, context_predicate, None, None)
             if context_uri is None:
                 context_uri = self.new_uri()
-                case_graph.add((case_id, rdflib.URIRef(context_predicate), context_uri))
+                case_graph.add((general_context_uri, rdflib.URIRef(context_predicate), context_uri))
             else:
+                entries = case_graph.objects(context_uri, orion_ns.entry)
+                for entry in entries:
+                    case_graph.remove((entry, None, None))
                 case_graph.remove((context_uri, None, None))
 
             for entry_id in context_values_dict:
@@ -692,18 +793,17 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph = self.graph.get_context(case_id)
             orion_ns = rdflib.Namespace(self.orion_ns)
 
-            context_uri = case_graph.value(case_id, context_predicate, None, None)
-            if context_uri is None:
-                return {}
-
             query = """ SELECT ?entry_id ?entry_value
                         WHERE {
+                            ?case_id orion:context ?general_context_uri .
+                            ?general_context_uri ?context_predicate ?context_uri .
                             ?context_uri orion:entry ?entry_uri .
                             ?entry_uri orion:grade_id ?entry_id .
                             ?entry_uri orion:value ?entry_value .
                         }
             """
-            result_query = self.graph.query(query, initNs = {"orion": orion_ns}, initBindings = {"context_uri": context_uri})
+            result_query = case_graph.query(query, initNs = {"orion": orion_ns}, 
+                                            initBindings = {"case_id": case_id, "context_predicate": context_predicate})
 
             result = defaultdict(list)
             for (entry_id, entry_value) in result_query:
@@ -711,7 +811,6 @@ class CaseDatabase(coach.GraphDatabaseService):
             return result
         else:
             return "Invalid user token"
-
     
     @endpoint("/get_decision_alternatives", ["GET"], "application/json")
     def get_decision_alternatives(self, user_id, token, case_id):
@@ -814,6 +913,10 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.remove((None, None, None))
         else:
             return "Invalid user token"
+    
+    @endpoint("/clean_db", ["GET", "POST"], "application/json")
+    def clean_db(self):
+        self.graph.remove((None, None, None))
     
     #### NEW API FOR LINKED DATA #########################################################################
     

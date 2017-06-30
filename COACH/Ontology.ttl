@@ -1366,17 +1366,24 @@
 # (For all elements in the context, the :gradeId refers to the context model ids rather than GRADE ids.)
  
 :Context
-	rdfs:subClassOf :Class .
+    rdfs:subClassOf :Class .
 
 ### Organization context
 
 :organizationProperty
-	a owl:ObjectProperty ;
-	rdfs:domain :Context ;
-	rdfs:range :OrganizationProperty .
+    a owl:ObjectProperty ;
+    rdfs:domain :Context ;
+    rdfs:range :OrganizationProperty .
 
 :OrganizationProperty
-	rdfs:subClassOf :Class .
+    rdfs:subClassOf :Class .
+
+:generalOrganization
+    a :OrganizationProperty ;
+    :gradeId "O00" ;
+    :description "Information concerning the structure of the organization(s) and the people in it where the decision was made." ;
+    :guideline "" ;
+    :type "text" .
 
 :applicationDomain
     a :OrganizationProperty ;
@@ -1410,46 +1417,46 @@
                     ) .
 
 :degreeOfDistribution
-	a :OrganizationProperty ;
-	:gradeId "O02" ;
-	:description "Degree of distribution of the development site (consider factors such as local or global/distributed development with multiple development sites, multiple geographical locations, national or international)." ;
-	:guideline "Low distribution = same room or building\nMedium distribution = same area or within driving/commuting distance, locally distributed\nMedium to High distribution = large driving/commuting distance but within same time zone, locally distributed, on-shore\nHigh distribution = Within a 3-hour time zone difference, off-shore\nVery high distribution = Some are in areas with greater than 3 hours time zone difference, long off-shore" ;
-	:type "single_select" ;
-	:possibleValues ("Low" "Medium" "High") .
+    a :OrganizationProperty ;
+    :gradeId "O02" ;
+    :description "Degree of distribution of the development site (consider factors such as local or global/distributed development with multiple development sites, multiple geographical locations, national or international)." ;
+    :guideline "Low distribution = same room or building\nMedium distribution = same area or within driving/commuting distance, locally distributed\nMedium to High distribution = large driving/commuting distance but within same time zone, locally distributed, on-shore\nHigh distribution = Within a 3-hour time zone difference, off-shore\nVery high distribution = Some are in areas with greater than 3 hours time zone difference, long off-shore" ;
+    :type "single_select" ;
+    :possibleValues ("Low" "Medium" "High") .
 
 :stabilityOfOrganization
-	a :OrganizationProperty ;
-	:gradeId "O03" ;
-	:description "Stability of the organization - frequency of changes in the organizational environment (structural, managerial, operational, strategic, etc.)." ;
-	:guideline "Very Low stability = frequent changes on strategic level\nLow stability = frequent changes on operational/managerial level\nMedium stability = changes occur every 1-3 years\nHigh stability = changes occur every 3-5 years\nVery high stability = changes are very rare" ;
-	:type "single_select" ;
-	:possibleValues ("Very low" "Low" "Medium" "High" "Very high") .
+    a :OrganizationProperty ;
+    :gradeId "O03" ;
+    :description "Stability of the organization - frequency of changes in the organizational environment (structural, managerial, operational, strategic, etc.)." ;
+    :guideline "Very Low stability = frequent changes on strategic level\nLow stability = frequent changes on operational/managerial level\nMedium stability = changes occur every 1-3 years\nHigh stability = changes occur every 3-5 years\nVery high stability = changes are very rare" ;
+    :type "single_select" ;
+    :possibleValues ("Very low" "Low" "Medium" "High" "Very high") .
 
 :strategyOrGoal
-	a :OrganizationProperty ;
-	:gradeId "O04" ;
-	:description "The current business strategy or goal of the organization - referring to what the organization wants to achieve in the near future." ;
-	:guideline "" ;
-	:type "text" .
+    a :OrganizationProperty ;
+    :gradeId "O04" ;
+    :description "The current business strategy or goal of the organization - referring to what the organization wants to achieve in the near future." ;
+    :guideline "" ;
+    :type "text" .
 
 :organizationSize
-	a :OrganizationProperty ;
-	:gradeId "O05.1" ;
-	:description "The size of the organization (development site) in terms of the number of people." ;
-	:guideline "" ;
-	:type "integer" ;
-	:min "0" ;
-	:defaultValue "0" .
+    a :OrganizationProperty ;
+    :gradeId "O05.1" ;
+    :description "The size of the organization (development site) in terms of the number of people." ;
+    :guideline "" ;
+    :type "integer" ;
+    :min "0" ;
+    :defaultValue "0" .
 
 :teamSize
-	a :OrganizationProperty ;
-	:gradeId "O05.2" ;
-	:description "The size of your team in terms of the number of people." ;
-	:guideline "" ;
-	:type "integer" ;
-	:min "0" ;
-	:defaultValue "0" .
-	
+    a :OrganizationProperty ;
+    :gradeId "O05.2" ;
+    :description "The size of your team in terms of the number of people." ;
+    :guideline "" ;
+    :type "integer" ;
+    :min "0" ;
+    :defaultValue "0" .
+
 :maturityAndProcessCertification
     a :OrganizationProperty ;
     :gradeId "O06" ;
@@ -1531,12 +1538,19 @@
 ### Product context
 
 :productProperty
-	a owl:ObjectProperty ;
-	rdfs:domain :Context ;
-	rdfs:range :ProductProperty .
+    a owl:ObjectProperty ;
+    rdfs:domain :Context ;
+    rdfs:range :ProductProperty .
 
 :ProductProperty
-	rdfs:subClassOf :Class .
+    rdfs:subClassOf :Class .
+
+:generalProduct
+    a :ProductProperty ;
+    :gradeId "P00" ;
+    :description "Information concerning the product for which the decision was made (product = software-intensive system)." ;
+    :guideline "" ;
+    :type "text" .
 
 :maturityOfTheProduct
     a :ProductProperty ;
@@ -1587,9 +1601,9 @@
     a :ProductProperty ;
     :gradeId "P04" ;
     :description "Complexity of the system (considering factors such as size in term of lines of code, number of sub-systems, structural complexity of the control flow, complexity of data structures)." ;
-	:guideline "Low complexity: Small scale applications and systems, usually few sub-systems or individual systems\nMedium complexity: Systems of either large scale in terms of size or consisting of multiple systems (system of systems)\nHigh complexity: Systems of large scale in terms of size and consisting of multiple systems (system of systems) with complex interactions and dependencies" ;
-	:type "single_select" ;
-	:possibleValues ("Low" "Medium" "High") .
+    :guideline "Low complexity: Small scale applications and systems, usually few sub-systems or individual systems\nMedium complexity: Systems of either large scale in terms of size or consisting of multiple systems (system of systems)\nHigh complexity: Systems of large scale in terms of size and consisting of multiple systems (system of systems) with complex interactions and dependencies" ;
+    :type "single_select" ;
+    :possibleValues ("Low" "Medium" "High") .
 
 :degreeOfReusability
     a :ProductProperty ;
@@ -1705,17 +1719,24 @@
     :description "Other... (please describe the missing aspect(s))" ;
     :guideline "" ;
     :type "text" .
-	
+
 ### Stakeholder context
 
 :stakeholderProperty
-	a owl:ObjectProperty ;
-	rdfs:domain :Context ;
-	rdfs:range :StakeholderProperty .
+    a owl:ObjectProperty ;
+    rdfs:domain :Context ;
+    rdfs:range :StakeholderProperty .
 
 :StakeholderProperty
-	rdfs:subClassOf :Class .
-	
+    rdfs:subClassOf :Class .
+
+:generalStakeholder
+    a :StakeholderProperty ;
+    :gradeId "S00" ;
+    :description "Information concerning stakeholders that affected or were affected by the decision." ;
+    :guideline "" ;
+    :type "text" .
+
 :stakeholderRole
     a :StakeholderProperty ;
     :gradeId "S01" ;
@@ -1786,16 +1807,23 @@
     :description "Other... (please describe the missing aspect(s))" ;
     :guideline "" ;
     :type "text" .
-	
+
 ### Development method and technology context
 
 :developmentMethodAndTechnologyProperty
-	a owl:ObjectProperty ;
-	rdfs:domain :Context ;
-	rdfs:range :DevelopmentMethodAndTechnologyProperty .
+    a owl:ObjectProperty ;
+    rdfs:domain :Context ;
+    rdfs:range :DevelopmentMethodAndTechnologyProperty .
 
 :DevelopmentMethodAndTechnologyProperty
-	rdfs:subClassOf :Class .
+    rdfs:subClassOf :Class .
+
+:developmentMethodAndTechnologyGeneral
+    a :DevelopmentMethodAndTechnologyProperty ;
+    :gradeId "M00" ;
+    :description "Information concerning systematic approaches that were used in the development of the product." ;
+    :guideline "" ;
+    :type "text" .
 
 :developmentMethods
     a :DevelopmentMethodAndTechnologyProperty ;
@@ -1822,7 +1850,7 @@
     a :DevelopmentMethodAndTechnologyProperty ;
     :gradeId "M02" ;
     :description "Development practices." ;
-    :guideline "Up-front documentation of requirements: Requirements are fully documented and as complete as possible\nDetailed up-front architecture design: Detailed and extensive design of entire software architecture, documentation-heavy\nBig bang integration and infrequent releases: Most of the implementation artifacts, such as code and modules, are integrated at once before milestones; releases are done at least once per 4 months or more\nExtensive time planning: Fully specified Gantt charts with fixed milestones for the entire project, complete work breakdown structure decomposition,\nSequential flow of project phases: When one phase is finished, it is closed, e.g., requirements, design, construction, testing, delivery.\nDetailed management plans and process documentation: Formal and plan-based quality, risk, resource, change, and configuration management\nRepeatable development process: The process is formally defined and followed, it is repeatable, its flexibility and abilities to adapt to projects are limited\nFace-to-face communication: Team sits together, open space office facilitating interaction, video conferences if the team is distributed\nTechnical excellence: Ongoing refactoring of the code, simplest solution design, following coding standards\nSmall self-organizing cross-functional teams\nOn-site customer: Continuous user involvement in the development process, customer can be consulted anytime if it is needed\nFrequent planning/reporting: Everyday meetings to discuss what was and what is going to be done, reporting the progress on a burn-down chart, burn-up chart, informative workshops\nPrioritized list of requirements: Tasks in a backlog as features/user stories—short statements of the functionality, system metaphors—stories about how the system works\nPair-programming: Two developers work together at one workstation, they switch roles\nTime-boxing: Fixed time of iterations, meetings, working hours limited to 40 h weekly—employees hardly ever work overtime, no ‘‘death march’’ projects, team members avoid burnout, etc.\nContinuous integration with testing: Software is built frequently, even few times a day, accompanied with testing (e.g., ten-minute builds, automated unit, regression, etc.)\nShort iterations and releases: Frequent releases of the software, at most 3–4 months, early and continuous delivery of partial but fully functional software\nIteration reviews, retrospectives: The entire team participates in selecting features to be implemented in the following iteration, estimating resources required to implement them, consensus based, e.g., planning game, the Wideband Delphi Estimation, planning poker, etc.\nIteration reviews, retrospectives: Meetings after each iteration to review the project, discuss threats to process efficiency, modify, and improve, build up the software development process\nTest-driven development: Writing automated test cases for functionalities and then implementing the tested functionalities until the tests are passed successfully\nCollective code ownership: Everybody in the team can change the code of other developers in case of maintenance, bug fixing or other development activities teams: The team is independent, takes full responsibility; small with no more than 10 members\nContinuous deployment: Changes to the system are continuously deployed in the target environment of the user\nComponent based development: Software built from independent software components with explicit dependencies\nModel-driven development: Models are the main development artifact, from which code is generated" ;
+    :guideline "Up-front documentation of requirements: Requirements are fully documented and as complete as possible\nDetailed up-front architecture design: Detailed and extensive design of entire software architecture, documentation-heavy\nBig bang integration and infrequent releases: Most of the implementation artifacts, such as code and modules, are integrated at once before milestones; releases are done at least once per 4 months or more\nExtensive time planning: Fully specified Gantt charts with fixed milestones for the entire project, complete work breakdown structure decomposition,\nSequential flow of project phases: When one phase is finished, it is closed, e.g., requirements, design, construction, testing, delivery.\nDetailed management plans and process documentation: Formal and plan-based quality, risk, resource, change, and configuration management\nRepeatable development process: The process is formally defined and followed, it is repeatable, its flexibility and abilities to adapt to projects are limited\nFace-to-face communication: Team sits together, open space office facilitating interaction, video conferences if the team is distributed\nTechnical excellence: Ongoing refactoring of the code, simplest solution design, following coding standards\nSmall self-organizing cross-functional teams\nOn-site customer: Continuous user involvement in the development process, customer can be consulted anytime if it is needed\nFrequent planning/reporting: Everyday meetings to discuss what was and what is going to be done, reporting the progress on a burn-down chart, burn-up chart, informative workshops\nPrioritized list of requirements: Tasks in a backlog as features/user stories-short statements of the functionality, system metaphors-stories about how the system works\nPair-programming: Two developers work together at one workstation, they switch roles\nTime-boxing: Fixed time of iterations, meetings, working hours limited to 40 h weekly-employees hardly ever work overtime, no 'death march' projects, team members avoid burnout, etc.\nContinuous integration with testing: Software is built frequently, even few times a day, accompanied with testing (e.g., ten-minute builds, automated unit, regression, etc.)\nShort iterations and releases: Frequent releases of the software, at most 3–4 months, early and continuous delivery of partial but fully functional software\nIteration reviews, retrospectives: The entire team participates in selecting features to be implemented in the following iteration, estimating resources required to implement them, consensus based, e.g., planning game, the Wideband Delphi Estimation, planning poker, etc.\nIteration reviews, retrospectives: Meetings after each iteration to review the project, discuss threats to process efficiency, modify, and improve, build up the software development process\nTest-driven development: Writing automated test cases for functionalities and then implementing the tested functionalities until the tests are passed successfully\nCollective code ownership: Everybody in the team can change the code of other developers in case of maintenance, bug fixing or other development activities teams: The team is independent, takes full responsibility; small with no more than 10 members\nContinuous deployment: Changes to the system are continuously deployed in the target environment of the user\nComponent based development: Software built from independent software components with explicit dependencies\nModel-driven development: Models are the main development artifact, from which code is generated" ;
     :type "multi_select" ;
     :possibleValues ("Up-front documentation of requirements"
                     "Detailed up-front architecture design"
@@ -1903,17 +1931,24 @@
     :description "Other... (please describe the missing aspect(s))" ;
     :guideline "" ;
     :type "text" .
-	
+
 ### Market and business context
 
 :marketAndBusinessProperty
-	a owl:ObjectProperty ;
-	rdfs:domain :Context ;
-	rdfs:range :MarketAndBusinessProperty .
+    a owl:ObjectProperty ;
+    rdfs:domain :Context ;
+    rdfs:range :MarketAndBusinessProperty .
 
 :MarketAndBusinessProperty
-	rdfs:subClassOf :Class .
-	
+    rdfs:subClassOf :Class .
+
+:marketAndBusinessGeneral
+    a :MarketAndBusinessProperty ;
+    :gradeId "B00" ;
+    :description "Information concerning external factors that affected the decision from market, business, society etc." ;
+    :guideline "" ;
+    :type "text" .
+
 :typeOfMarket
     a :MarketAndBusinessProperty ;
     :gradeId "B01" ;
@@ -1967,7 +2002,7 @@
     :guideline "Stable = signed at the start of the project and remain fixed over a period of time, \nFlexible and adaptable = contracts/agreements change during the project" ;
     :type "single_select" ;
     :possibleValues ("Stable contracts and agreements" "Flexible and adaptable contracts and agreements") .
-	
+
 :contextBusinessOther
     a :MarketAndBusinessProperty ;
     :gradeId "B08" ;

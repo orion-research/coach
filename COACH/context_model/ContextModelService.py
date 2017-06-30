@@ -48,6 +48,7 @@ from flask import request
 # Linked data
 import rdflib
 
+
 class ContextModelService(coach.Microservice):
       
       
@@ -71,68 +72,43 @@ class ContextModelService(coach.Microservice):
             self.ontology = rdflib.ConjunctiveGraph()
             self.ontology.parse(data = case_db_proxy.get_ontology(format = "ttl"), format = "ttl")
         return self.ontology
-        
-        
 
     @endpoint("/edit_context_dialogue", ["GET"], "text/html")
     def edit_context_dialogue_transition(self, user_id, user_token, case_db, case_id):
         """
         Endpoint which lets the user edit general context information.
         """
-        
         case_db_proxy = self.create_proxy(case_db)
-       
-        values = {'C' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_C"),
-                  'O' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_O"),
-                  'P' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_P"),
-                  'S' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_S"),
-                  'M' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_M"),
-                  'B' : case_db_proxy.get_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_B")
-                  }
+        db_infos = {"case_id": case_id, "user_id": user_id, "user_token": user_token, "case_db_proxy": case_db_proxy}
         
-        return render_template("edit_context_dialogue.html", values = values)     
+        general_context_list = self._get_general_context_from_ontology(db_infos)
+        general_context_values_list = case_db_proxy.get_general_context(user_id=user_id, user_token=user_token, case_id=case_id)
+        for context_category_dict, general_context_value in zip(general_context_list, general_context_values_list):
+            context_category_dict["value"] = general_context_value
+        
+        return render_template("edit_context_dialogue.html", entries = general_context_list)     
 
 
 
-    @endpoint("/edit_context", ["POST"], "text/html")
-    def edit_context(self, user_id, user_token, case_db, case_id):
-        """
-        This method is called using POST when the user presses the save button in the edit_context_dialogue_transition.
-        It gets several form parameters: 
-        case_id : The ID of the current case
-        context_text : The text entered in the main context text area
-        It writes the new context information to the database, and then returns a status message to be shown in the main dialogue window.
-        """
-        # DEBUGGING
-        print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-        print("XXXX str(request.values)) XXX")
-        print(str(request.values))
-        print("XXXX request.form XXX")
-        print(request.form)
-        print("XXXX request.args XXX")
-        print(request.args)
-        print("XXXX request.data XXX")
-        print(request.data)
-        print("XXXX request.headers XXX")
-        print(request.headers)
-        print("XXXX request.method XXX")
-        print(request.method)
-        print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-        
-        
-        # Write the new context information to the database.
+    @endpoint("/edit_general_context", ["POST"], "text/html")
+    def edit_general_context(self, user_id, user_token, case_db, case_id):
         case_db_proxy = self.create_proxy(case_db)
         
-        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_C", value = request.values["C-text"] if "C-text" in request.values else "")
-        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_O", value = request.values["O-text"] if "O-text" in request.values else "")
-        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_P", value = request.values["P-text"] if "P-text" in request.values else "")
-        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_S", value = request.values["S-text"] if "S-text" in request.values else "")
-        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_M", value = request.values["M-text"] if "M-text" in request.values else "")
-        case_db_proxy.change_case_property(user_id = user_id, token = user_token, case_id = case_id, name = "context_B", value = request.values["B-text"] if "B-text" in request.values else "")
-
+        context_value_dict = self._get_context_values_dict_from_request()
+        context_value_dict = {key: context_value_dict[key][0] for key in context_value_dict}
+        
+        general_context_list=[]
+        general_context_list.append(context_value_dict["General"])
+        general_context_list.append(context_value_dict["O00"])
+        general_context_list.append(context_value_dict["P00"])
+        general_context_list.append(context_value_dict["S00"])
+        general_context_list.append(context_value_dict["M00"])
+        general_context_list.append(context_value_dict["B00"])
+        
+        case_db_proxy.save_general_context(user_id=user_id, case_id=case_id, user_token=user_token, general_context_list=general_context_list)
         return "Context information (general) saved."     
 
-    def _context_category_dialogue(self, db_infos, category_name, category, edit_endpoint):
+    def _context_category_dialogue(self, category_name, category, edit_endpoint):
         return render_template(
             "context_category_dialogue.html",
             category_name = category_name,
@@ -151,7 +127,7 @@ class ContextModelService(coach.Microservice):
                                                    context_predicate=orion_ns.organization)
         self._update_context_description(context_values, organization_context)
         
-        return self._context_category_dialogue(db_infos, "Organization", organization_context, "edit_context_organization")
+        return self._context_category_dialogue("Organization", organization_context, "edit_context_organization")
     
     @endpoint("/context_product_dialogue", ["GET"], "text/html")
     def context_product_dialogue(self, user_id, user_token, case_db, case_id):
@@ -164,7 +140,7 @@ class ContextModelService(coach.Microservice):
                                                    context_predicate=orion_ns.product)
         self._update_context_description(context_values, product_context)
         
-        return self._context_category_dialogue(db_infos, "Product", product_context, "edit_context_product")
+        return self._context_category_dialogue("Product", product_context, "edit_context_product")
     
     @endpoint("/context_stakeholder_dialogue", ["GET"], "text/html")
     def context_stakeholder_dialogue(self, user_id, user_token, case_db, case_id):
@@ -177,7 +153,7 @@ class ContextModelService(coach.Microservice):
                                                    context_predicate=orion_ns.stakeholder)
         self._update_context_description(context_values, stakeholder_context)
         
-        return self._context_category_dialogue(db_infos, "Stakeholder", stakeholder_context, "edit_context_stakeholder")
+        return self._context_category_dialogue("Stakeholder", stakeholder_context, "edit_context_stakeholder")
         
     @endpoint("/context_methods_dialogue", ["GET"], "text/html")
     def context_methods_dialogue(self, user_id, user_token, case_db, case_id):
@@ -190,7 +166,7 @@ class ContextModelService(coach.Microservice):
                                                    context_predicate=orion_ns.method)
         self._update_context_description(context_values, methods_context)
         
-        return self._context_category_dialogue(db_infos, "Development methods and Technology", methods_context, "edit_context_methods")
+        return self._context_category_dialogue("Development methods and Technology", methods_context, "edit_context_methods")
         
     @endpoint("/context_business_dialogue", ["GET"], "text/html")
     def context_business_dialogue(self, user_id, user_token, case_db, case_id): 
@@ -203,7 +179,32 @@ class ContextModelService(coach.Microservice):
                                                    context_predicate=orion_ns.business)
         self._update_context_description(context_values, business_context)
         
-        return self._context_category_dialogue(db_infos, "Market and business", business_context, "edit_context_business")
+        return self._context_category_dialogue("Market and business", business_context, "edit_context_business")
+    
+    def _get_general_context_from_ontology(self, db_infos):
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        query = """ SELECT ?entry_grade_id ?entry_description
+                    WHERE {
+                        ?entry_ontology_uri a ?context_category .
+                        ?entry_ontology_uri orion:gradeId ?entry_grade_id .
+                        ?entry_ontology_uri orion:description ?entry_description .
+                    }
+                """
+        query_parameters = [{"context_category": orion_ns.OrganizationProperty, "entry_grade_id": rdflib.Literal("O00")},
+                            {"context_category": orion_ns.ProductProperty, "entry_grade_id": rdflib.Literal("P00")},
+                            {"context_category": orion_ns.StakeholderProperty, "entry_grade_id": rdflib.Literal("S00")},
+                            {"context_category": orion_ns.DevelopmentMethodAndTechnologyProperty, "entry_grade_id": rdflib.Literal("M00")},
+                            {"context_category": orion_ns.MarketAndBusinessProperty, "entry_grade_id": rdflib.Literal("B00")}]
+        
+        result = [{"id": "General", "description": "General information concerning the context in which the decision is made"}]
+        for params in query_parameters:
+            query_result = self.get_ontology(db_infos).query(query, initNs={"orion": orion_ns}, initBindings=params)
+            if len(query_result) != 1:
+                raise RuntimeError("There should be exactly one general context in the ontology for the category " + params["context_category"])
+            query_result = [e for e in query_result]
+            result.append({"id": query_result[0][0].toPython(), "description": query_result[0][1].toPython()})
+        
+        return result
         
     def _get_context_from_ontology(self, db_infos, context_category, orion_ns):
         query = """ SELECT ?entry_ontology_uri ?entry_grade_id ?entry_description ?entry_guideline ?entry_type ?entry_default_value ?entry_min 
@@ -277,13 +278,13 @@ class ContextModelService(coach.Microservice):
                 pass
     
     def _get_context_values_dict_from_request(self):
-        contex_values_dict = dict(request.args)
-        del contex_values_dict["case_id"]
-        del contex_values_dict["knowledge_repository"]
-        del contex_values_dict["user_id"]
-        del contex_values_dict["user_token"]
-        del contex_values_dict["case_db"]
-        return contex_values_dict
+        context_values_dict = dict(request.args)
+        del context_values_dict["case_id"]
+        del context_values_dict["knowledge_repository"]
+        del context_values_dict["user_id"]
+        del context_values_dict["user_token"]
+        del context_values_dict["case_db"]
+        return context_values_dict
     
     @endpoint("/edit_context_organization", ["POST"], "text/html")
     def edit_context_organization(self, user_id, user_token, case_db, case_id):
