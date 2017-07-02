@@ -19,6 +19,7 @@ import json
 
 # Semantic web framework
 import rdflib
+from rdflib.namespace import split_uri
 import sqlalchemy
 from rdflib_sqlalchemy.store import SQLAlchemy
 
@@ -673,25 +674,30 @@ class CaseDatabase(coach.GraphDatabaseService):
                 return ["", "", "", "", "", ""]
             
             result = []
-            result.append(case_graph.value(general_context_uri, orion_ns.description, None, ""))
+            try:
+                result.append(case_graph.value(general_context_uri, orion_ns.description, None, "").toPython())
+            except AttributeError:
+                result.append("")
+                
+            categories = [{"name": "organization", "general_id": "o00"},
+                          {"name": "product", "general_id": "p00"},
+                          {"name": "stakeholder", "general_id": "s00"},
+                          {"name": "method", "general_id": "m00"},
+                          {"name": "business", "general_id": "b00"},]
             
-            categories = [{"name": "organization", "general_id": "O00"},
-                          {"name": "product", "general_id": "P00"},
-                          {"name": "stakeholder", "general_id": "S00"},
-                          {"name": "method", "general_id": "M00"},
-                          {"name": "business", "general_id": "B00"},]
             query = """ SELECT ?general_category_value
                             WHERE {
                                 ?general_context_uri ?predicate ?category_context_uri .
-                                ?category_context_uri orion:entry ?entry_uri .
-                                ?entry_uri orion:grade_id ?general_id .
+                                ?category_context_uri ?general_id ?entry_uri .
                                 ?entry_uri orion:value ?general_category_value .
                             }
                 """
                 
             for category in categories:
                 query_result = case_graph.query(query, initNs={"orion": orion_ns}, 
-                                                initBindings={"predicate": orion_ns[category["name"]], "general_id": category["general_id"]})
+                                                initBindings={"general_context_uri": general_context_uri,
+                                                              "predicate": orion_ns[category["name"]], 
+                                                              "general_id": orion_ns[category["general_id"]]})
                 query_result = [e for e in query_result]
 
                 if len(query_result) > 1:
@@ -700,6 +706,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                     result.append(query_result[0][0].toPython())
                 except IndexError:
                     result.append("")
+                    
             return result
         else:
             return "Invalid user token"
@@ -718,11 +725,11 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.set((general_context_uri, orion_ns.description, rdflib.Literal(general_context_list[0])))
             
             
-            categories = [{"name": "organization", "general_id": "O00"},
-                          {"name": "product", "general_id": "P00"},
-                          {"name": "stakeholder", "general_id": "S00"},
-                          {"name": "method", "general_id": "M00"},
-                          {"name": "business", "general_id": "B00"},]
+            categories = [{"name": "organization", "general_id": "o00"},
+                          {"name": "product", "general_id": "p00"},
+                          {"name": "stakeholder", "general_id": "s00"},
+                          {"name": "method", "general_id": "m00"},
+                          {"name": "business", "general_id": "b00"},]
                 
             for category, value in zip(categories, general_context_list[1:]):
                 context_category_uri = case_graph.value(general_context_uri, orion_ns[category["name"]], None, None)
@@ -730,29 +737,14 @@ class CaseDatabase(coach.GraphDatabaseService):
                     context_category_uri = self.new_uri()
                     case_graph.add((general_context_uri, orion_ns[category["name"]], context_category_uri))
                 
-                query = """ SELECT ?general_entry_uri
-                            WHERE {
-                                ?context_category_uri orion:entry ?general_entry_uri .
-                                ?general_entry_uri orion:grade_id ?general_entry_id .
-                            }
-                        """
-                query_result = case_graph.query(query, initNs={"orion": orion_ns}, initBindings={"context_category_uri": context_category_uri, 
-                                                                                                 "general_entry_id": category["general_id"]})
-                query_result = [e for e in query_result]
+                general_context_description_uri = case_graph.value(context_category_uri, orion_ns[category["general_id"]], None, None)
+                if general_context_description_uri is None:
+                    general_context_description_uri = self.new_uri()
+                    case_graph.add((context_category_uri, orion_ns[category["general_id"]], general_context_description_uri))
                 
-                if len(query_result) > 1:
-                    raise RuntimeError("There must be at most one general entry for the context category " + category["name"])
-                
-                try:
-                    general_entry_uri = query_result[0][0]
-                except IndexError:
-                    general_entry_uri = self.new_uri()
-                    case_graph.add((context_category_uri, orion_ns.entry, general_entry_uri))
-                    case_graph.add((general_entry_uri, orion_ns.grade_id, rdflib.Literal(category["general_id"])))
-                
-                case_graph.set((general_entry_uri, orion_ns.value, rdflib.Literal(value)))
+                case_graph.set((general_context_description_uri, orion_ns.value, rdflib.Literal(value)))
         else:
-            return "Invalid user token"        
+            return "Invalid user token"      
         
         
     @endpoint("/save_context", ["POST"], "application/json")
@@ -772,16 +764,15 @@ class CaseDatabase(coach.GraphDatabaseService):
                 context_uri = self.new_uri()
                 case_graph.add((general_context_uri, rdflib.URIRef(context_predicate), context_uri))
             else:
-                entries = case_graph.objects(context_uri, orion_ns.entry)
-                for entry in entries:
+                entries = case_graph.predicate_objects(context_uri)
+                for (_, entry) in entries:
                     case_graph.remove((entry, None, None))
-                case_graph.remove((context_uri, None, None))
-
+                case_graph.remove((context_uri, None, None))                    
+                    
             for entry_id in context_values_dict:
-                entry_uri = self.new_uri()
-                case_graph.add((context_uri, orion_ns.entry, entry_uri))
-                case_graph.add((entry_uri, orion_ns.grade_id, rdflib.Literal(entry_id)))
                 for value in context_values_dict[entry_id]:
+                    entry_uri = self.new_uri()
+                    case_graph.add((context_uri, orion_ns[entry_id.lower()], entry_uri))
                     case_graph.add((entry_uri, orion_ns.value, rdflib.Literal(value)))
         else:
             return "Invalid user token"
@@ -797,8 +788,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                         WHERE {
                             ?case_id orion:context ?general_context_uri .
                             ?general_context_uri ?context_predicate ?context_uri .
-                            ?context_uri orion:entry ?entry_uri .
-                            ?entry_uri orion:grade_id ?entry_id .
+                            ?context_uri ?entry_id ?entry_uri .
                             ?entry_uri orion:value ?entry_value .
                         }
             """
@@ -807,7 +797,8 @@ class CaseDatabase(coach.GraphDatabaseService):
 
             result = defaultdict(list)
             for (entry_id, entry_value) in result_query:
-                result[entry_id.toPython()].append(entry_value.toPython())
+                entry_id = split_uri(entry_id)[1].upper()
+                result[entry_id].append(entry_value.toPython())
             return result
         else:
             return "Invalid user token"

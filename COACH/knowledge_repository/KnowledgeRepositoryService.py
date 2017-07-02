@@ -10,7 +10,6 @@ Knowledge repository for storing data about finished decision cases to use for g
 import json
 import os
 import sys
-import traceback
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 from COACH.framework.coach import Microservice
@@ -25,7 +24,7 @@ from neo4j.v1 import GraphDatabase, basic_auth
 import rdflib
 from rdflib.namespace import split_uri
 import sqlalchemy
-from rdflib_sqlalchemy.store import SQLAlchemy   
+from rdflib_sqlalchemy.store import SQLAlchemy
         
 class KnowledgeRepositoryService(Microservice):
 
@@ -79,12 +78,10 @@ class KnowledgeRepositoryService(Microservice):
             return result
     
     def delete_case(self, case_uri, session=None):
-        delete_case_query = """ Match (:Case {uri:$uri})-[:ROLE]->(:Role)-[:PERSON]->(person)
-                                With collect(person.uri) as person_uri_list
-                                Match (case:Case {uri:$uri})-[*]->(n)
-                                Where not n.uri in person_uri_list
-                                Detach delete n, case
-                            """
+        delete_case_relations_query =   """ Match (:Case {uri: $uri}) -[r*]-> ()
+                                            UNWIND r AS rs
+                                            DETACH DELETE rs
+                                        """
         delete_detached_node_query = """Match (n)
                                         Where not (n) -- ()
                                         Delete n
@@ -94,7 +91,7 @@ class KnowledgeRepositoryService(Microservice):
         if session is None:
             close_session = True
             session = self.open_session()
-        self.query(delete_case_query, {"uri": case_uri}, session)
+        self.query(delete_case_relations_query, {"uri": case_uri}, session)
         self.query(delete_detached_node_query, session=session)
         if close_session:
             self.close_session(session)
@@ -105,11 +102,29 @@ class KnowledgeRepositoryService(Microservice):
         """
         Endpoint for handling the storage of a complete case to the KR.
         """
-        session = self.open_session()
         case_graph = rdflib.Graph()
         case_graph.parse(data=graph_description, format=format_)
         
-        # The case is deleted from the knowledge repository to handle suppress nodes from the database
+        check_unique_literal_query = """SELECT ?s ?p (count(?o) as ?count)
+                                        WHERE {
+                                            ?s ?p ?o .
+                                            FILTER(isLiteral(?o))
+                                        }
+                                        GROUP BY ?s ?p
+                                        HAVING (count(?o) > 1)
+                                    """
+        query_result = list(case_graph.query(check_unique_literal_query))
+        if len(query_result) != 0:
+            subjet_uri = str(query_result[0][0].toPython())
+            predicate = str(query_result[0][1].toPython())
+            literal_count = str(query_result[0][2].toPython())
+            other_uri_predicate_pair_count = str(len(query_result) - 1)
+            raise RuntimeError("The graph must not contain an uri linked to several literals with the same predicate, but the uri " +
+                               subjet_uri + " is linked to " + literal_count + " literals by the predicate " + predicate +
+                               ". There is " + other_uri_predicate_pair_count + " other uri-predicate pair in the same case in the graph.")
+        
+        session = self.open_session()
+        # The case is deleted from the knowledge repository to handle suppressed nodes from the database
         orion_ns = rdflib.Namespace(self.orion_ns)
         case_uri = case_graph.query("SELECT ?case_uri WHERE {?case_uri a orion:Case.}", initNs={"orion": orion_ns})
         case_uri = list(case_uri)[0][0].toPython()
@@ -120,32 +135,34 @@ class KnowledgeRepositoryService(Microservice):
                 raise RuntimeError("A subject must not be a Literal")
             
             predicate_name = split_uri(p)[1]
+            if not predicate_name.islower():
+                raise RuntimeError("The predicate " + predicate_name + " contains upper cases letters.")
+            
             if predicate_name == "type":
                 if not str(o).startswith(self.orion_ns):
                     raise RuntimeError("The type of a node must be in the ontology namespace")
                 label = str(o)[len(self.orion_ns):]
                 # Can not use a parameter for label, as it is not supported in neo4j
                 # TODO: Malicious code injection might be possible
-                query = "MERGE (node {uri: $uri}) SET node :" + label
+                query = "MERGE (node {uri: $uri}) SET node :`" + label + "`"
                 self.query(query, {"uri": str(s)}, session)
                 continue
                 
             if isinstance(o, rdflib.Literal):
                 # Can not use the name of the property as a parameter, as it is not supported in neo4j
                 # TODO: Malicious code injection might be possible
-                # TODO: Update query to handle multiple value with the same predicate name
-                query = "MERGE (node {uri: $uri}) SET node." + predicate_name + " = $value"
+                query = "MERGE (node {uri: $uri}) SET node.`" + predicate_name + "` = $value"
                 self.query(query, {"uri": str(s), "value":o.toPython()}, session)
                 continue
             
             # TODO: Malicious code injection might be possible
             query = """ MERGE (subject_node {uri: $subject_uri}) 
                         MERGE (object_node {uri: $object_uri})
-                        MERGE (subject_node) -[:""" + predicate_name.upper() + """]-> (object_node)
+                        MERGE (subject_node) -[:`""" + predicate_name.upper() + """`]-> (object_node)
                     """
             self.query(query, {"subject_uri": str(s), "object_uri": str(o)}, session)
             
-            self.close_session(session)
+        self.close_session(session)
         
     @endpoint("/get_cases", ["GET"], "application/json")
     def get_cases(self, user_id):

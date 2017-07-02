@@ -26,7 +26,6 @@ import requests
 # Linked data
 import rdflib
 
-
 class InteractionService(coach.Microservice):
     
     """
@@ -723,7 +722,7 @@ class InteractionService(coach.Microservice):
             goal_uri = goals[0]
         else:
             goal_uri = self.case_db_proxy.add_resource(user_id=session["user_id"], user_token=session["user_token"],
-                                                       case_id=case_id, resource_class=orion_ns.Goal)
+                                                       case_id=case_id, resource_class="Goal")
             self.case_db_proxy.add_object_property(user_id=session["user_id"], user_token=session["user_token"],
                                                    case_id=case_id, resource1=case_id, property_name=orion_ns.goal,
                                                    resource2=goal_uri)
@@ -747,17 +746,21 @@ class InteractionService(coach.Microservice):
         orion_ns = rdflib.Namespace(self.orion_ns)
         
         # Does the case already have a Goal element? If not, create it, and bind its url to goal_url.
-        goals = self.case_db_proxy.get_objects(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, subject = case_id, predicate = orion_ns.goal)
+        goals = self.case_db_proxy.get_objects(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, 
+                                               subject = case_id, predicate = orion_ns.goal)
         if goals:
             goal_uri = goals[0]
         else:
-            goal_uri = self.case_db_proxy.add_resource(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, resource_class = orion_ns.Goal)
-            self.case_db_proxy.add_object_property(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, resource1 = case_id, property_name = orion_ns.goal, resource2 = goal_uri)
+            goal_uri = self.case_db_proxy.add_resource(user_id = session["user_id"], user_token = session["user_token"], 
+                                                       case_id = case_id, resource_class = "Goal")
+            self.case_db_proxy.add_object_property(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, 
+                                                   resource1 = case_id, property_name = orion_ns.goal, resource2 = goal_uri)
         
         class_title = self.get_ontology().value(orion_ns[class_name], orion_ns.title, None)
 
         # Which goal subcategories are selected?
-        checked = self.case_db_proxy.get_objects(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, subject = goal_uri, predicate = orion_ns[property_name])
+        checked = self.case_db_proxy.get_objects(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, 
+                                                 subject = goal_uri, predicate = orion_ns[property_name])
 
         # Instances contains all uri:s in the ontology that are linked from a subject of class class_name with the predicate property_name.
         # The gradeId, title and description are also provided. The last field indicates if the item has been selected.
