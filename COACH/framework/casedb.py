@@ -30,6 +30,7 @@ from collections import defaultdict
 
 class CaseDatabase(coach.GraphDatabaseService):
     
+    
     """
     The case database provides the interface to the database for storing case information. 
     It wraps an API around a standard graph DBMS.
@@ -186,7 +187,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             q = "SELECT ?user_id WHERE { ?case_id orion:role ?r . ?r orion:person ?user_id . }"
             result = self.graph.query(q, initNs = { "orion": rdflib.Namespace(self.orion_ns)},
                                       initBindings = { "case_id": case_id })
-            return [u for (u,) in result]
+            return [u.toPython() for (u,) in result]
         else:
             return "Invalid user token"
         
@@ -268,10 +269,10 @@ class CaseDatabase(coach.GraphDatabaseService):
         
 
     @endpoint("/add_stakeholder", ["POST"], "application/json")
-    def add_stakeholder(self, user_id, user_token, case_id, stakeholder, role):
+    def add_stakeholder(self, user_id, user_token, case_id, stakeholder):
         """
-        Adds a user as a stakeholder with the provided role to the case. 
-        If the user is already a stakeholder, nothing is changed. 
+        Adds a user as a stakeholder to the case. 
+        TODO: Implements "if the user is already a stakeholder, nothing is changed" ?
         """
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             orion_ns = rdflib.Namespace(self.orion_ns)
@@ -288,7 +289,58 @@ class CaseDatabase(coach.GraphDatabaseService):
             return "Ok"
         else:
             return "Invalid user token"
-
+        
+    @endpoint("/change_stakeholder", ["POST"], "application/json")
+    def change_stakeholder(self, user_id, user_token, case_id, role_property, stakeholder, values_list):   
+        case_id = rdflib.URIRef(case_id)
+        case_graph = self.graph.get_context(case_id)
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        
+        query = """\
+        SELECT ?role_uri
+        WHERE {
+            ?case_id orion:role ?role_uri .
+            ?role_uri orion:person ?stakeholder_uri .
+        }
+        """
+        query_result = case_graph.query(query, initNs={"orion": orion_ns},
+                                        initBindings={"case_id": case_id, "stakeholder_uri": rdflib.URIRef(stakeholder)})
+        if len(query_result) > 1 or len(query_result) == 0:
+            raise RuntimeError("There must be exactly one role for the person " + str(stakeholder) + " but " +
+                               str(len(query_result)) + " were found.")
+        
+        role_uri = list(query_result)[0][0]
+        role_property = rdflib.URIRef(role_property)
+        case_graph.remove((role_uri, role_property, None))
+        for value in values_list:
+            case_graph.add((role_uri, role_property, rdflib.URIRef(value)))
+        
+    @endpoint("/get_stakeholder", ["GET"], "application/json")
+    def get_stakeholder(self, user_id, user_token, case_id, role_properties_list):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):              
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_id = rdflib.URIRef(case_id)
+            case_graph = self.graph.get_context(case_id)
+            
+            query = """\
+            SELECT ?person_uri ?person_role
+            WHERE {
+                ?case_id orion:role ?role_uri .
+                ?role_uri orion:person ?person_uri .
+                ?role_uri ?role_property ?person_role .
+            }
+            """
+            result = defaultdict(lambda: defaultdict(list))
+            for role_property in role_properties_list:
+                query_result = case_graph.query(query, initNs={"orion": orion_ns},
+                                                initBindings={"case_id": case_id, "role_property": rdflib.URIRef(role_property)})
+                
+                for (person_uri, person_role) in query_result:
+                    result[person_uri.toPython()][role_property].append(person_role.toPython())
+                    
+            return result
+        else:
+            return "Invalid user token"
 
     @endpoint("/add_alternative", ["POST"], "application/json")    
     def add_alternative(self, user_id, user_token, title, description, case_id):

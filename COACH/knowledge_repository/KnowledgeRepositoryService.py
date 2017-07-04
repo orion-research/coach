@@ -10,6 +10,7 @@ Knowledge repository for storing data about finished decision cases to use for g
 import json
 import os
 import sys
+import traceback
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 from COACH.framework.coach import Microservice
@@ -123,50 +124,49 @@ class KnowledgeRepositoryService(Microservice):
                                subjet_uri + " is linked to " + literal_count + " literals by the predicate " + predicate +
                                ". There is " + other_uri_predicate_pair_count + " other uri-predicate pair in the same case in the graph.")
         
-        session = self.open_session()
-        # The case is deleted from the knowledge repository to handle suppressed nodes from the database
-        orion_ns = rdflib.Namespace(self.orion_ns)
-        case_uri = case_graph.query("SELECT ?case_uri WHERE {?case_uri a orion:Case.}", initNs={"orion": orion_ns})
-        case_uri = list(case_uri)[0][0].toPython()
-        self.delete_case(case_uri, session)
-        
-        for s, p, o in case_graph:
-            if isinstance(s, rdflib.term.Literal):
-                raise RuntimeError("A subject must not be a Literal")
+        with self.open_session() as session:
+            # The case is deleted from the knowledge repository to handle suppressed nodes from the database
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_uri = case_graph.query("SELECT ?case_uri WHERE {?case_uri a orion:Case.}", initNs={"orion": orion_ns})
+            case_uri = list(case_uri)[0][0].toPython()
+            self.delete_case(case_uri, session)
             
-            predicate_name = split_uri(p)[1]
-            if not predicate_name.islower():
-                raise RuntimeError("The predicate " + predicate_name + " contains upper cases letters.")
-            
-            if predicate_name == "type":
-                if not str(o).startswith(self.orion_ns):
-                    raise RuntimeError("The type of a node must be in the ontology namespace")
-                label = str(o)[len(self.orion_ns):]
-                # Can not use a parameter for label, as it is not supported in neo4j
-                # TODO: Malicious code injection might be possible
-                query = "MERGE (node {uri: $uri}) SET node :`" + label + "`"
-                self.query(query, {"uri": str(s)}, session)
-                continue
+            for s, p, o in case_graph:
+                if isinstance(s, rdflib.term.Literal):
+                    raise RuntimeError("A subject must not be a Literal")
                 
-            if isinstance(o, rdflib.Literal):
-                # Can not use the name of the property as a parameter, as it is not supported in neo4j
+                predicate_name = split_uri(p)[1]
+#                     if not predicate_name.islower():
+#                         raise RuntimeError("The predicate " + predicate_name + " contains upper cases letters.")
+                
+                if predicate_name == "type":
+                    if not str(o).startswith(self.orion_ns):
+                        raise RuntimeError("The type of a node must be in the ontology namespace")
+                    label = str(o)[len(self.orion_ns):]
+                    # Can not use a parameter for label, as it is not supported in neo4j
+                    # TODO: Malicious code injection might be possible
+                    query = "MERGE (node {uri: $uri}) SET node :`" + label + "`"
+                    self.query(query, {"uri": str(s)}, session)
+                    continue
+                    
+                if isinstance(o, rdflib.Literal):
+                    # Can not use the name of the property as a parameter, as it is not supported in neo4j
+                    # TODO: Malicious code injection might be possible
+                    query = "MERGE (node {uri: $uri}) SET node.`" + predicate_name + "` = $value"
+                    self.query(query, {"uri": str(s), "value":o.toPython()}, session)
+                    continue
+                
                 # TODO: Malicious code injection might be possible
-                query = "MERGE (node {uri: $uri}) SET node.`" + predicate_name + "` = $value"
-                self.query(query, {"uri": str(s), "value":o.toPython()}, session)
-                continue
-            
-            # TODO: Malicious code injection might be possible
-            query = """ MERGE (subject_node {uri: $subject_uri}) 
-                        MERGE (object_node {uri: $object_uri})
-                        MERGE (subject_node) -[:`""" + predicate_name.upper() + """`]-> (object_node)
-                    """
-            self.query(query, {"subject_uri": str(s), "object_uri": str(o)}, session)
-            
-        self.close_session(session)
+                query = """ MERGE (subject_node {uri: $subject_uri}) 
+                            MERGE (object_node {uri: $object_uri})
+                            MERGE (subject_node) -[:`""" + predicate_name + """`]-> (object_node)
+                        """
+                self.query(query, {"subject_uri": str(s), "object_uri": str(o)}, session)
+                
         
     @endpoint("/get_cases", ["GET"], "application/json")
     def get_cases(self, user_id):
-        query = """ Match ({uri: $user_uri}) <-[:PERSON]- (:Role) <-[:ROLE]- (case:Case)
+        query = """ Match ({uri: $user_uri}) <-[:person]- (:Role) <-[:role]- (case:Case)
                     Return case
                 """
         user_uri = self.authentication_proxy.get_user_uri(user_id=user_id)
@@ -201,7 +201,7 @@ class KnowledgeRepositoryService(Microservice):
             for relation in relations_list:
                 subject_uri = id_to_uri[relation.start]
                 object_uri = id_to_uri[relation.end]
-                predicate = self.orion_ns + relation.type.lower()
+                predicate = self.orion_ns + relation.type
                 graph_description += "<" + subject_uri + "> <" + predicate + "> <" + object_uri + "> .\n"
         
         case_graph = rdflib.Graph()

@@ -1,6 +1,6 @@
 <h1>Stakeholders</h1>
 
-<br>
+<br/>
 
 <script>
 	function add_stakeholder() {
@@ -16,61 +16,62 @@
 		xhttp.send("stakeholder=" + user_id);
 	}
 	
-	function change_stakeholder_role(role) {
-	    var params = document.getElementById("change_stakeholder_" + role).value;
-		var xhttp = new XMLHttpRequest();
-		xhttp.onreadystatechange = function() {
-		};
-		xhttp.open("POST", "/change_stakeholder_role", true);
-		xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-		xhttp.send(params);
+	function change_stakeholder_role(role_property, stakeholder) {
+		document.getElementById("role_property_input").value = role_property;
+		document.getElementById("stakeholder_input").value = stakeholder;
+		document.getElementById("stakeholder_form").submit();
 	}
 </script>
 
-<table style="width:100%">
 
-	<tr>
-		<th>Person</th>
-		{% for category in column_labels %}
-			<th>{{ category[0] | safe }}</th>
-		{% endfor %}
-	</tr>
-	
-	{% for user in row_labels %}
-	<tr>
-		<td> {{ user[0] | safe }} </td>
-		
-		{% for property in column_labels %}
-		<td>
-			<select id="change_stakeholder_{{ property[1] | safe }}" 
-				    onchange="change_stakeholder_role(&quot;{{ property[1] | safe }}&quot;)">
-				{% if not current_cell_values[user[1]][property[1]] %}
-					<option disabled selected value></option>
-				{% endif %}
+<form id="stakeholder_form" method="post" action="/change_stakeholder_role">
 
-				{% for possible_value in possible_column_values[property[1]] %}
-					<option value="property={{ property[1] | safe }}&stakeholder={{ user[1] | safe }}&value={{ possible_value[1] | safe }}"
-					{% if current_cell_values[user[1]][property[1]] and current_cell_values[user[1]][property[1]][0] == possible_value[1] %}
-						selected 
-					{% endif %}
-					> {{ possible_value[0] | safe }} </option>
-				{% endfor %}
-			</select>
-		</td>
+	<table style="width:100%">
+	
+		<tr>
+			<th>Person</th>
+			{% for category in column_labels %}
+				<th>{{ category[0] | safe }}</th>
+			{% endfor %}
+		</tr>
+		
+		{% for user in row_labels %}
+		<tr>
+			<td> {{ user[0] | safe }} </td>
+			
+			{% for property in column_labels %}
+			<td>
+				<select name="select_{{property[1]}}_{{user[1]}}" onchange="change_stakeholder_role('{{property[1]}}', '{{user[1]}}')" multiple>
+					{% for possible_value in possible_column_values[property[1]] %}
+						<option value="{{ possible_value[1] | safe }}"
+						{% if current_cell_values[user[1]] and current_cell_values[user[1]][property[1]] and 
+								possible_value[1] in current_cell_values[user[1]][property[1]] %}
+							selected 
+						{% endif %}
+						> {{ possible_value[0] | safe }} </option>
+					{% endfor %}
+				</select>
+			</td>
+			{% endfor %}
+			
+		</tr>
 		{% endfor %}
 		
-	</tr>
-	{% endfor %}
+		<tr>
+			<td>
+				<select id="select_new_stakeholder" onchange="add_stakeholder()">
+					<option disabled selected value>Add...</option>
+					{% for u in new_users %}
+						<option value="{{ u[1] | safe }}"> {{ u[0] | safe }} </option>
+					{% endfor %}
+				</select>
+			</td>
+		</tr>
+		
+	</table>
 	
-	<tr>
-		<td>
-			<select id="select_new_stakeholder" onchange="add_stakeholder()">
-				<option disabled selected value>Add...</option>
-				{% for u in new_users %}
-					<option value="{{ u[2] | safe }}"> {{ u[1] | safe }} </option>
-				{% endfor %}
-			</select>
-		</td>
-	</tr>
-	
-</table>
+	<input id="role_property_input" type="hidden" name="role_property">
+	<input id="stakeholder_input" type="hidden" name="stakeholder">
+</form>
+
+

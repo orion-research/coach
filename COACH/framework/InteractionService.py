@@ -336,32 +336,31 @@ class InteractionService(coach.Microservice):
         }
         ORDER BY ?grade_id
         """
-        result = self.get_ontology().query(q, initNs = { "orion": orion_ns }, initBindings = { "?class_name": class_name })
-        return list(result)
+        query_result = self.get_ontology().query(q, initNs = { "orion": orion_ns }, initBindings = { "?class_name": rdflib.URIRef(class_name) })
+        result = [(inst.toPython(), grade_id.toPython(), title.toPython(), description.toPython()) for (inst, grade_id, title, description)
+                  in query_result]
+        return result
 
     
     @endpoint("/add_stakeholder_dialogue", ["GET"], "text/html")
     def add_stakeholder_dialogue_transition(self):
-
+        user_id = session["user_id"]
+        user_token = session["user_token"]
         case_id = session["case_id"]
-
+        
         # Define the relevant ontology namespaces
         orion_ns = rdflib.Namespace(self.orion_ns)
         user_ns = rdflib.Namespace(self.authentication_service_proxy.get_user_namespace())
         
         # Get the uris of the users who are currently stakeholders in the case
-        case_users = self.case_db_proxy.case_users(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id)
-        
-        # Get all user ids of the users who exist both in the authentication list
-        user_ids = [u for u in self.case_db_proxy.user_ids(user_id = session["user_id"], user_token = session["user_token"])]
+        case_users = self.case_db_proxy.case_users(user_id=user_id, user_token=user_token, case_id=case_id)
+        user_ids = self.case_db_proxy.user_ids(user_id=user_id, user_token=user_token)
 
         # Separate all existing users into those that are in the case, and those that are not. 
-        # Create a list of each, consisting of (user_id, user name, uri).
-        current_users = [(u, self.authentication_service_proxy.get_user_name(user_id = u),
-                          user_ns[u].replace("#", "%23")) 
+        # Create a list of each, consisting of (user name, uri).
+        current_users = [(self.authentication_service_proxy.get_user_name(user_id=u), str(user_ns[u]))
                          for u in user_ids if str(user_ns[u]) in case_users]
-        new_users = [(u, self.authentication_service_proxy.get_user_name(user_id = u), 
-                     user_ns[u].replace("#", "%23")) 
+        new_users = [(self.authentication_service_proxy.get_user_name(user_id=u), str(user_ns[u]))
                      for u in user_ids if str(user_ns[u]) not in case_users]
         
         # From the ontology, get all the options for orion:RoleType, orion:RoleFunction, orion:RoleLevel and orion:RoleTitle.
@@ -379,97 +378,50 @@ class InteractionService(coach.Microservice):
         }
         """
         role_categories = self.get_ontology().query(q, initNs = { "orion": orion_ns, "owl": rdflib.OWL })
-
-        role_values = dict()
-        for (role_property, role_class, _) in role_categories:
-            role_values[str(role_property)] = self.get_ontology_instances(role_class)
-        print("role_values = " + str(role_values))
+        role_categories = [(rc[0].toPython(), rc[1].toPython(), rc[2].toPython().lower().replace(" ", "_")) for rc in role_categories]
         
-        # Create the entries in the matrix, based on the selected value for each property and person
-        # Get all the role nodes linked to the case node with case_id.
-        roles = self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, resource = case_id, property_name = orion_ns.role)
-        # For each role node, go through all the properties
-        role_properties = dict()
-        for role in roles:
-            # Find the person of the role and get the user_id
-            role_person = self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, resource = role, property_name = orion_ns.person)[0]
-            person_user_id = role_person.replace("#", "%23")
-            # Create a matrix where for each person and property name, the selected property value (if any) is stored
-            role_properties[person_user_id] = dict()
-            for property_name in role_values.keys():
-                # The matrix value is a list of uri:s, where an empty list means that no value was found
-                ps = self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, resource = role, property_name = property_name)
-                role_properties[person_user_id][property_name.replace("#", "%23")] = [p.replace("#", "%23") for p in ps] 
         
-        print("role_properties = " + str(role_properties))
+        role_properties = [role_property for (role_property, _, _) in role_categories]
+        current_roles_dictionary = self.case_db_proxy.get_stakeholder(user_id=user_id, user_token=user_token, case_id=case_id,
+                                                                      role_properties_list=role_properties)
 
-        ##### New principles for dialogue rendering
-
-        def fix_uri(uri): return str(uri).replace("#", "%23")
-
-        # Row labels consist of the role category title and uri
-        row_labels = [(u[1], fix_uri(u[2])) for u in current_users]
-        
-        # Column labels consist of user name and uri
-        column_labels = [(rc[2], fix_uri(rc[0])) for rc in role_categories]
+        # Column labels consist of the role category title and uri
+        column_labels = [(rc[2], rc[0]) for rc in role_categories]
         
         # Possible column values consists of a mapping from column label uri to a list of option title and uri
         possible_column_values = dict()
         for (role_property, role_class, _) in role_categories:
-            values = [(str(rv[2]), fix_uri(rv[0])) for rv in self.get_ontology_instances(role_class)]
-            possible_column_values[fix_uri(role_property)] = values
-        print("possible_column_values = " + str(possible_column_values))
+            values = [(rv[2], rv[0]) for rv in self.get_ontology_instances(role_class)]
+            possible_column_values[role_property] = values
             
-        # Current cell values consists of a mapping from a row uri to a column uri to a list of value title and uri
-        current_cell_values = dict()
-        for row in row_labels:
-            current_cell_values[fix_uri(row[1])] = dict()
-            for col in column_labels:
-                value = role_properties[fix_uri(row[1])][fix_uri(col[1])]
-                current_cell_values[fix_uri(row[1])][fix_uri(col[1])] = value
-        print("current_cell_values = " + str(current_cell_values))
-
-         
         # Render the dialogue
-        dialogue = render_template("add_stakeholder_dialogue.html", current_users = current_users, new_users = new_users,
-                                   role_values = role_values, role_properties = role_properties,
-                                   row_labels = row_labels, column_labels = column_labels, 
-                                   possible_column_values = possible_column_values, current_cell_values = current_cell_values)
-        return self.main_menu_transition(main_dialogue = dialogue)
-
+        dialogue = render_template("add_stakeholder_dialogue.html", new_users=new_users, row_labels=current_users, column_labels=column_labels,
+                                   possible_column_values=possible_column_values, current_cell_values=current_roles_dictionary)
+        return self.main_menu_transition(main_dialogue=dialogue)
     
     @endpoint("/add_stakeholder", ["POST", "GET"], "text/html")
     def add_stakeholder(self, stakeholder):
         """
         Adds a Stakeholder relationship between the current case and the user given as argument, with the role contributor.
         """
-        self.case_db_proxy.add_stakeholder(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"], stakeholder = stakeholder, role = "contributor")
+        self.case_db_proxy.add_stakeholder(user_id=session["user_id"], user_token=session["user_token"], case_id=session["case_id"], 
+                                           stakeholder=stakeholder)
         return self.main_menu_transition(main_dialogue = "Stakeholder added!")
 
-    @endpoint("/change_stakeholder_role", ["POST", "GET"], "text/plain")
-    def change_stakeholder_role(self, property, stakeholder, value):
+    @endpoint("/change_stakeholder_role", ["POST", "GET"], "text/html")
+    def change_stakeholder_role(self, role_property, stakeholder):
         """
         Changes a role property of a stakeholder.
         """
-        # Define the relevant ontology namespaces
-        orion_ns = rdflib.Namespace(self.orion_ns)
+        user_id = session["user_id"]
+        user_token = session["user_token"]
         case_id = session["case_id"]
 
-        # Find the appropriate role node for the case_id and stakeholder.
-        # Get all the role nodes linked to the case node with case_id.
-        roles = self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, resource = case_id, property_name = orion_ns.role)
-        # Now filter the list of roles for nodes which are linked to a person with the right id
-        for r in roles:
-            role_person = self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, resource = r, property_name = orion_ns.person)[0]
-            if role_person == stakeholder:
-                # Right role found, so remove previous property values and add the new one
-                previous_values = self.case_db_proxy.get_object_properties(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, resource = r, property_name = property)
-                for p in previous_values:
-                    self.case_db_proxy.remove_object_property(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, resource1 = r, property_name = property, resource2 = p)
-                self.case_db_proxy.add_object_property(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, resource1 = r, property_name = property, resource2 = value)
-                return "Ok"
-        return "Ok"
-    
+        request_args = dict(request.form)
+        values_list = request_args["select_" + role_property + "_" + stakeholder]
+        self.case_db_proxy.change_stakeholder(user_id=user_id, user_token=user_token, case_id=case_id, role_property=role_property,
+                                              stakeholder=stakeholder, values_list=values_list)
+        return self.add_stakeholder_dialogue_transition()
 
     @endpoint("/add_alternative_dialogue", ["GET"], "text/html")
     def add_alternative_dialogue_transition(self):

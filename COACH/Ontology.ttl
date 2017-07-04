@@ -859,7 +859,7 @@
 #   - ":category" The category of the parameter. A category has two attributes ":name" and ":rank". The rank will be used to sort parameters (see below).
 #   - ":rank" The rank of the parameter inside the category. It will be used to sort parameters (see below).
 
-#Sorting: The parameters are sorting first according to their category's rank, if any. If they have no category, they will be placed on top. Then, the parameters are sorting according to their rank. Finally, the parameters are sorting according to their name. 
+#Sorting: The parameters are sorted first according to their category's rank, if any. If they have no category, they will be placed on top. Then, the parameters are sorted according to their rank. Finally, the parameters are sorted according to their name. 
 
 :parameter
     a owl:ObjectProperty ;
