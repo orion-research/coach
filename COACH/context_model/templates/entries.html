@@ -5,6 +5,7 @@
 		<textarea name="{{e.id}}_text" cols="80" rows="2">{{e.value}}</textarea>
 	{% elif e.type == "single_select" %}
 		<select name="{{e.id}}_single_select" required>
+			<option disabled selected value> -- select an option -- </option>
 			<option value="Unknown">Unknown</option>
 			{% for possible_value in e.possible_values %}
 		  		<option value="{{possible_value}}"  {% if possible_value == e.value %}selected{% endif %}>{{possible_value}}</option>
