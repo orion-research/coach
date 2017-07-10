@@ -2,15 +2,16 @@
 	<i>{{ e.id }}: {{ e.description }}</i>
 	<br/>
 	{% if e.type == "text" %}
-		<textarea name="{{e.id}}" cols="80" rows="2">{{e.value}}</textarea>
+		<textarea name="{{e.id}}_text" cols="80" rows="2">{{e.value}}</textarea>
 	{% elif e.type == "single_select" %}
-		<select name="{{e.id}}">
+		<select name="{{e.id}}_single_select" required>
+			<option value="Unknown">Unknown</option>
 			{% for possible_value in e.possible_values %}
 		  		<option value="{{possible_value}}"  {% if possible_value == e.value %}selected{% endif %}>{{possible_value}}</option>
 			{% endfor %} 
 		</select>
 	{% elif e.type == "multi_select" %}
-		<select name="{{e.id}}" id="{{e.id}}" multiple="multiple" 
+		<select name="{{e.id}}_multi_select" id="{{e.id}}" multiple="multiple" 
 				{% if e.possible_values | length > 5 %}size=5{% else %}size={{e.possible_values | length}}{% endif %}>
 			{% for possible_value in e.possible_values %}
 	  			<option value="{{possible_value}}" 
@@ -18,10 +19,10 @@
 			{% endfor %}
 		</select>
 	{% elif e.type == "integer" %}
-		<input name="{{e.id}}" type="number" size="10" value="{{e.value}}" 
+		<input name="{{e.id}}_integer" type="number" size="10" value="{{e.value}}" 
 				min="{{e.min}}" max="{{e.max}}"/>
 	{% elif e.type == "float" %}
-		<input name="{{e.id}}" type="number" step="any" size="10" value="{{e.value}}" 
+		<input name="{{e.id}}_float" type="number" step="any" size="10" value="{{e.value}}" 
 				min="{{e.min}}" max="{{e.max}}"/>
 	{% endif %}
 </div>

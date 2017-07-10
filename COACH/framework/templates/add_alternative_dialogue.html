@@ -1,23 +1,43 @@
-<!DOCTYPE HTML>
-<HTML>
-<HEAD>
-	<TITLE>COACH</TITLE>
-</HEAD>
+<h2>Add new decision alternative</h2>
 
-<BODY>
-<H1>Add new decision alternative</H1>
-
-<FORM action="/add_alternative" method="post" accept-charset="UTF-8">
-Title: 
-<BR>
-<INPUT type="text" name="title" required>
-<BR>
-Description: 
-<BR>
-<TEXTAREA name="description" rows="20" cols="80" required></TEXTAREA>
-<BR>
-<INPUT type="submit" value="Add alternative">
-</FORM>
-
-</BODY>
-</HTML>
+<form action="/add_alternative" method="post" accept-charset="UTF-8">
+	Title:<br/>
+	<input type="text" name="title" required>
+	<br/>
+	
+	Description:<br/>
+	<textarea name="description" rows="10" cols="80" required></textarea>
+	<br/>
+	
+	Usage: 
+	<select name="asset_usage" required>
+		<option disabled selected value> -- select an option -- </option>
+		<option>Unknown</option>
+		{% for asset_usage in asset_usage_list %}
+			<option value="{{asset_usage[0]}}">{{asset_usage[1]}}</option>
+		{% endfor %}
+	</select>
+	<br/>
+	
+	Origin:
+	<select name="asset_origin" required>
+		<option disabled selected value> -- select an option -- </option>
+		<option>Unknown</option>
+		{% for origin_option in origin_options_list %}
+			<option value="{{origin_option[0]}}">{{origin_option[1]}}</option>
+		{% endfor %}
+	</select>
+	<br/>
+	
+	Type:
+	<select name="asset_type" multiple>
+		{% for type in types_list %}
+			<option value="{{type[0]}}">{{type[1]}}</option>
+		{% endfor %}
+	</select>
+	<br/>
+	<br/>
+	
+	<input type="submit" value="Add alternative">
+	
+</form>

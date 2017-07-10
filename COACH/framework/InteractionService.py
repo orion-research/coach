@@ -228,8 +228,8 @@ class InteractionService(coach.Microservice):
         # Create links to the user's cases
         user_cases_db = self.case_db_proxy.user_cases(user_id = session["user_id"], user_token = session["user_token"])
         user_cases_kr = self.knowledge_repository_proxy.get_cases(user_id = session["user_id"])
-        user_cases = user_cases_db + [user_case for user_case in user_cases_kr if user_case not in user_cases_db]
-        dialogue = render_template("open_case_dialogue.html", user_cases = user_cases)
+        user_cases_kr_not_in_db = [user_case for user_case in user_cases_kr if user_case not in user_cases_db]
+        dialogue = render_template("open_case_dialogue.html", open_cases = user_cases_db, close_cases = user_cases_kr_not_in_db)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     @endpoint("/case_status_dialogue", ["GET"], "text/html")
@@ -319,13 +319,20 @@ class InteractionService(coach.Microservice):
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
-    def get_ontology_instances(self, class_name):
+    def get_ontology_instances(self, class_name = None, class_name_list = None, returned_information= (0, 1, 2, 3)):
         """
         Returns a list containing all the instances of the given class in the ontology.
         The result is a list of tuples, where the tuple elements are the instances' uri, gradeID, title, and description.
         The list is sorted according to gradeId.
         """
+        if (class_name is None and class_name_list is None) or (class_name is not None and class_name_list is not None):
+            raise RuntimeError("Exactly one argument among class_name and class_name_list must be provided")
+        
+        if class_name is not None:
+            class_name_list = [class_name]
+        
         orion_ns = rdflib.Namespace(self.orion_ns)
+        result = []
         q = """\
         SELECT ?inst ?grade_id ?title ?description
         WHERE {
@@ -336,9 +343,17 @@ class InteractionService(coach.Microservice):
         }
         ORDER BY ?grade_id
         """
-        query_result = self.get_ontology().query(q, initNs = { "orion": orion_ns }, initBindings = { "?class_name": rdflib.URIRef(class_name) })
-        result = [(inst.toPython(), grade_id.toPython(), title.toPython(), description.toPython()) for (inst, grade_id, title, description)
-                  in query_result]
+        
+        for class_name in class_name_list:
+            query_result = self.get_ontology().query(q, initNs = { "orion": orion_ns }, 
+                                                     initBindings = { "?class_name": rdflib.URIRef(class_name) })
+#             result += [(inst.toPython(), grade_id.toPython(), title.toPython(), description.toPython()) 
+#                        for (inst, grade_id, title, description) in query_result]
+            class_result = []
+            for line in query_result:
+                class_result.append([line[index].toPython() for index in returned_information])
+            result += class_result
+            
         return result
 
     
@@ -425,7 +440,19 @@ class InteractionService(coach.Microservice):
 
     @endpoint("/add_alternative_dialogue", ["GET"], "text/html")
     def add_alternative_dialogue_transition(self):
-        dialogue = render_template("add_alternative_dialogue.html")
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        asset_usage_list = self.get_ontology_instances(orion_ns.AssetUsage, returned_information=[0, 2])
+        
+        origin_options_list = self.get_ontology_instances(class_name_list=(orion_ns.ExternalOriginOption, orion_ns.InternalOriginOption),
+                                                          returned_information=[0, 1, 2])
+        origin_options_list = [[e[0], e[2]] for e in origin_options_list if e[1].startswith("AO")] #Open source is both a Origin option and a sub option.
+        
+        types_list = self.get_ontology_instances(class_name_list=(orion_ns.HardwareElement, orion_ns.InformationElement, 
+                                                                  orion_ns.ServiceElement, orion_ns.SoftwareElement, orion_ns.SystemElement),
+                                                 returned_information=[0, 2])
+        
+        dialogue = render_template("add_alternative_dialogue.html", asset_usage_list=asset_usage_list, origin_options_list=origin_options_list,
+                                   types_list=types_list)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
@@ -514,11 +541,19 @@ class InteractionService(coach.Microservice):
             
         return self.case_status_dialogue_transition()
     
-    @endpoint("/close_case", ["GET"], "text/html")
-    def close_case(self):
-        case_description = self.case_db_proxy.export_case_data(user_id = session["user_id"], user_token = session["user_token"], 
-                                                               case_id = session["case_id"], format = "n3")
-        self.knowledge_repository_proxy.export_case(graph_description=case_description, format_="n3")
+    @endpoint("/close_case_dialogue", ["GET"], "text/html")
+    def close_case_dialogue(self):
+        dialogue = render_template("close_case_dialogue.html")
+        return self.main_menu_transition(main_dialogue = dialogue)
+    
+    @endpoint("/close_case", ["POST"], "text/html")
+    def close_case(self, export_to_kr_checkbox = False):
+        if export_to_kr_checkbox == "on":
+            #TODO: add a confirmation window
+            case_description = self.case_db_proxy.export_case_data(user_id = session["user_id"], user_token = session["user_token"], 
+                                                                   case_id = session["case_id"], format = "n3")
+            self.knowledge_repository_proxy.export_case(graph_description=case_description, format_="n3")
+            
         self.case_db_proxy.remove_case(user_id=session["user_id"], user_token=session["user_token"], case_id=session["case_id"])
         del session["case_id"]
         return self.main_menu_transition()
@@ -589,11 +624,23 @@ class InteractionService(coach.Microservice):
 
 
     @endpoint("/add_alternative", ["POST"], "text/html")
-    def add_alternative(self, title, description):
+    def add_alternative(self, title, description, asset_usage, asset_origin):
         """
         Adds a new decision alternative and adds a relation from the case to the alternative.
         """
-        self.case_db_proxy.add_alternative(user_id = session["user_id"], user_token = session["user_token"], title = title, description = description, case_id = session["case_id"])
+        try:
+            asset_type_list = dict(request.form)["asset_type"]
+        except KeyError:
+            asset_type_list = []
+        
+        asset_characteristics = [("asset_type", asset_type) for asset_type in asset_type_list]
+        if asset_usage != "Unknown":
+            asset_characteristics.append(("asset_usage", asset_usage))
+        if asset_origin != "Unknown":
+            asset_characteristics.append(("asset_origin", asset_origin))
+            
+        self.case_db_proxy.add_alternative(user_id=session["user_id"], user_token=session["user_token"], case_id=session["case_id"], 
+                                           title=title, description=description, asset_characteristics=asset_characteristics)
         return self.main_menu_transition(main_dialogue = "New alternative added!")
 
 

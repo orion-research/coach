@@ -48,7 +48,6 @@ from flask import request
 # Linked data
 import rdflib
 
-
 class ContextModelService(coach.Microservice):
       
       
@@ -83,8 +82,12 @@ class ContextModelService(coach.Microservice):
         
         general_context_list = self._get_general_context_from_ontology(db_infos)
         general_context_values_list = case_db_proxy.get_general_context(user_id=user_id, user_token=user_token, case_id=case_id)
-        for context_category_dict, general_context_value in zip(general_context_list, general_context_values_list):
+        context_title_list = ["General", "Organization", "Product", "Stakeholder", "Development methods and technology",
+                              "Market and business"]
+        for context_category_dict, general_context_value, context_title in zip(general_context_list, general_context_values_list, 
+                                                                               context_title_list):
             context_category_dict["value"] = general_context_value
+            context_category_dict["title"] = context_title
         
         return render_template("edit_context_dialogue.html", entries = general_context_list)     
 
@@ -284,7 +287,35 @@ class ContextModelService(coach.Microservice):
         del context_values_dict["user_id"]
         del context_values_dict["user_token"]
         del context_values_dict["case_db"]
-        return context_values_dict
+        
+        SINGLE_SELECT_SUFFIX = "_single_select"
+        SINGLE_SELECT_SUFFIX_LENGTH = len(SINGLE_SELECT_SUFFIX)
+        MULTI_SELECT_SUFFIX = "_multi_select"
+        MULTI_SELECT_SUFFIX_LENGTH = len(MULTI_SELECT_SUFFIX)
+        TEXT_SUFFIX = "_text"
+        TEXT_SUFFIX_LENGTH = len(TEXT_SUFFIX)
+        INTEGER_SUFFIX = "_integer"
+        INTEGER_SUFFIX_LENGTH = len(INTEGER_SUFFIX)
+        FLOAT_SUFFIX = "_float"
+        FLOAT_SUFFIX_LENGTH = len(FLOAT_SUFFIX)
+        UNKNOWN_SINGLE_SELECT = "Unknown"
+        result = {}
+        for key in context_values_dict:
+            if key.endswith(SINGLE_SELECT_SUFFIX):
+                if context_values_dict[key][0] != UNKNOWN_SINGLE_SELECT:
+                    result[key[:-SINGLE_SELECT_SUFFIX_LENGTH]] = context_values_dict[key]
+            elif key.endswith(MULTI_SELECT_SUFFIX):
+                result[key[:-MULTI_SELECT_SUFFIX_LENGTH]] = context_values_dict[key]
+            elif key.endswith(TEXT_SUFFIX):
+                result[key[:-TEXT_SUFFIX_LENGTH]] = context_values_dict[key]
+            elif key.endswith(INTEGER_SUFFIX):
+                result[key[:-INTEGER_SUFFIX_LENGTH]] = context_values_dict[key]
+            elif key.endswith(FLOAT_SUFFIX):
+                result[key[:-FLOAT_SUFFIX_LENGTH]] = context_values_dict[key]
+            else:
+                raise RuntimeError("Unknown suffix of key " + key)
+            
+        return result
     
     @endpoint("/edit_context_organization", ["POST"], "text/html")
     def edit_context_organization(self, user_id, user_token, case_db, case_id):

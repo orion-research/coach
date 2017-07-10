@@ -803,7 +803,7 @@
     :microserviceName "BasicCOCOMO" ;
     :description "" ;
     :belongTo :developmentEffort ;
-    :hasParameter :cocomoDevelopmentMode ;
+    :hasParameter :basicCocomoDevelopmentMode ;
     :useProperty :kloc ;
     :type "float" .
 
@@ -814,7 +814,7 @@
     :microserviceName "IntermediateCOCOMO" ;
     :description "" ;
     :belongTo :developmentEffort ;
-    :hasParameter :cocomoDevelopmentMode ,
+    :hasParameter :basicCocomoDevelopmentMode ,
         :intermediateCocomoRELY ,
         :intermediateCocomoDATA ,
         :intermediateCocomoCPLX ,
@@ -887,7 +887,7 @@
     :type "integer" ;
     :defaultValue "0" .
 
-:cocomoDevelopmentMode
+:basicCocomoDevelopmentMode
     a :Parameter ;
     :name "developmentMode" ;
     :type "select" ;

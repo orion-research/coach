@@ -30,7 +30,6 @@ from collections import defaultdict
 
 class CaseDatabase(coach.GraphDatabaseService):
     
-    
     """
     The case database provides the interface to the database for storing case information. 
     It wraps an API around a standard graph DBMS.
@@ -343,7 +342,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             return "Invalid user token"
 
     @endpoint("/add_alternative", ["POST"], "application/json")    
-    def add_alternative(self, user_id, user_token, title, description, case_id):
+    def add_alternative(self, user_id, user_token, case_id, title, description, asset_characteristics):
         """
         Adds a decision alternative and links it to the case.
         """
@@ -356,8 +355,11 @@ class CaseDatabase(coach.GraphDatabaseService):
             alternative = self.new_uri()
             case_graph.add((case_id, orion_ns.alternative, alternative))
             case_graph.add((alternative, rdflib.RDF.type, orion_ns.Alternative))
+            
             case_graph.add((alternative, orion_ns.title, rdflib.Literal(title)))
             case_graph.add((alternative, orion_ns.description, rdflib.Literal(description)))
+            for (predicate_name, value) in asset_characteristics:
+                case_graph.add((alternative, orion_ns[predicate_name], rdflib.URIRef(value)))
 
             case_graph.commit()
 
@@ -731,11 +733,11 @@ class CaseDatabase(coach.GraphDatabaseService):
             except AttributeError:
                 result.append("")
                 
-            categories = [{"name": "organization", "general_id": "o00"},
-                          {"name": "product", "general_id": "p00"},
-                          {"name": "stakeholder", "general_id": "s00"},
-                          {"name": "method", "general_id": "m00"},
-                          {"name": "business", "general_id": "b00"},]
+            categories = [{"name": "organization", "general_id": "O00"},
+                          {"name": "product", "general_id": "P00"},
+                          {"name": "stakeholder", "general_id": "S00"},
+                          {"name": "method", "general_id": "M00"},
+                          {"name": "business", "general_id": "B00"},]
             
             query = """ SELECT ?general_category_value
                             WHERE {
@@ -777,11 +779,11 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.set((general_context_uri, orion_ns.description, rdflib.Literal(general_context_list[0])))
             
             
-            categories = [{"name": "organization", "general_id": "o00"},
-                          {"name": "product", "general_id": "p00"},
-                          {"name": "stakeholder", "general_id": "s00"},
-                          {"name": "method", "general_id": "m00"},
-                          {"name": "business", "general_id": "b00"},]
+            categories = [{"name": "organization", "general_id": "O00"},
+                          {"name": "product", "general_id": "P00"},
+                          {"name": "stakeholder", "general_id": "S00"},
+                          {"name": "method", "general_id": "M00"},
+                          {"name": "business", "general_id": "B00"},]
                 
             for category, value in zip(categories, general_context_list[1:]):
                 context_category_uri = case_graph.value(general_context_uri, orion_ns[category["name"]], None, None)
@@ -824,7 +826,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             for entry_id in context_values_dict:
                 for value in context_values_dict[entry_id]:
                     entry_uri = self.new_uri()
-                    case_graph.add((context_uri, orion_ns[entry_id.lower()], entry_uri))
+                    case_graph.add((context_uri, orion_ns[entry_id], entry_uri))
                     case_graph.add((entry_uri, orion_ns.value, rdflib.Literal(value)))
         else:
             return "Invalid user token"

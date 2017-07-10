@@ -112,14 +112,14 @@
 	{% endif %}
 	<br/>
 	
-	{% if estimation_value == None %}
-		This estimation has not been computed yet
-	{% else %}
+	{% if estimation_value.computed %}
 		Current value is {{ "%.4f" | format(estimation_value.value) }}
 		{% if not estimation_value.up_to_date %}
 			<br/>
 			/!\ The current value is out-of-date
 		{% endif %}
+	{% else %}
+		This estimation has not been computed yet
 	{% endif %}
 	<br/>
 	

@@ -23,7 +23,6 @@ import requests
 # Database connection
 from neo4j.v1 import GraphDatabase, basic_auth
 
-
 # Auxiliary functions
         
 def endpoint(url_path = None, http_methods = ["POST", "GET"], content = "text/plain"):
@@ -229,7 +228,15 @@ class Microservice:
             if not request_args:
                 request_args = request.values
 
-            args = [request_args[p.name] for (_, p) in inspect.signature(m).parameters.items()]
+            args = []
+            for (param_name, param) in inspect.signature(m).parameters.items():
+                try:
+                    args.append(request_args[param_name])
+                except KeyError:
+                    if param.default == inspect.Parameter.empty:
+                        raise RuntimeError("Try to call the method {0} without the parameter {1}".format(m.__name__, param_name))
+                    args.append(param.default)
+                    
             if self.trace: 
                 print(highlight_text(self.trace_indent * "    " + m.__name__ + "(" + str(args) + ")"))
                 self.trace_indent += 1

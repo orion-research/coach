@@ -50,8 +50,8 @@ class PropertyModelService(coach.Microservice):
     PROPERTY_NOT_ADDED_STRING = ""
     PROPERTY_VALUE_NOT_COMPUTED_STRING = "---"
     
-    def __init__(self, settings_file_name = None, working_directory = None):
-        super().__init__(settings_file_name, working_directory = working_directory)
+    def __init__(self, settings_file_name = None, working_directory = None, *args, **kwargs):
+        super().__init__(settings_file_name, working_directory = working_directory, *args, **kwargs)
         self.orion_ns = "http://www.orion-research.se/ontology#"  # The name space for the ontology used
         self.ontology = None
 
@@ -633,14 +633,12 @@ class PropertyModelService(coach.Microservice):
         DESCRIPTION:
             Return true if the compute button is enable, otherwise False.
         INPUT:
-            used_properties: A list, in which each element is a dictionary containing the key value.
+            used_properties: A list, in which each element is a dictionary containing the key computed.
         OUTPUT:
-            True if, for each element of the list, the value associated with the key value is an integer, false otherwise.
+            True if, for each element of the list, the estimation has been computed, otherwise False.
         """
         for property_ in used_properties:
-            try:
-                int(property_["value"])
-            except ValueError:
+            if not property_["computed"]:
                 return False
         return True
     
@@ -966,8 +964,9 @@ class PropertyModelService(coach.Microservice):
                 - "selected": The selected estimation method for the dependent property.
                 - "value": The value of the dependent property computed with the selected estimation method. If there is
                     none, this field contains the string '---'.
-                - "up_to_date": True if the value of the dependent property is up-to-date, false otherwise. A value of a 
+                - "up_to_date": True if the value of the dependent property is up-to-date, False otherwise. A value of a 
                     property is up-to-date if it has been computed after each of its dependents properties.
+                - "computed": True if the estimation has already been computed, otherwise False.
 
         """
         user_id = db_infos["user_id"]
@@ -1004,12 +1003,9 @@ class PropertyModelService(coach.Microservice):
                 
             property_value = self._get_estimation_value(db_infos, alternative_uri, current_property_name,
                                                         selected_estimation_method_for_current_property)
-            if property_value is None:
-                property_value = {"value": self.PROPERTY_VALUE_NOT_COMPUTED_STRING, "up_to_date": True}
-            
             result.append({"name": current_property_name, "estimation_methods_name": estimation_method_name_list, 
-                           "value": property_value["value"], "up_to_date": property_value["up_to_date"],
-                           "selected": selected_estimation_method_for_current_property})
+                           "value": property_value["value"], "up_to_date": property_value["up_to_date"], 
+                           "computed": property_value["computed"], "selected": selected_estimation_method_for_current_property})
             
         return result
     
@@ -1042,13 +1038,17 @@ class PropertyModelService(coach.Microservice):
         """
         DESCRIPTION:
             Returns the estimated value of the estimation defined by the triplet (alternative, property, estimation method).
-            If the estimation has not yet been computed, returns None.
         INPUT:
             alternative_uri: The uri of the alternative in the triplet.
             property_name: The name of the property in the triplet.
             estimation_method_name: The name of the estimation method in the triplet. 
         OUTPUT:
-            The estimated value of the estimation, or None if the estimation has not yet been computed.
+            The estimated value as a dictionary containing the keys:
+                - "value": The value of the estimation, or self.PROPERTY_VALUE_NOT_COMPUTED_STRING if the estimation has not been
+                    computed yet.
+                - "up_to_date": A boolean which value is True if this estimation has been computed after all its used estimation,
+                    otherwise False. If the estimation has not been computed yet, this value is True.
+                - "computed": A boolean which value is True if the estimation has already been computed, otherwise False.
         """
         user_id = db_infos["user_id"]
         user_token = db_infos["user_token"]
@@ -1057,9 +1057,14 @@ class PropertyModelService(coach.Microservice):
         
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
         estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
-        return case_db_proxy.get_estimation_value(user_id=user_id, user_token=user_token, case_id=case_id, 
-                                                              alternative_uri=alternative_uri, property_uri=property_uri, 
-                                                              estimation_method_ontology_id=estimation_method_ontology_id)
+        estimated_value = case_db_proxy.get_estimation_value(user_id=user_id, user_token=user_token, case_id=case_id, 
+                                                             alternative_uri=alternative_uri, property_uri=property_uri, 
+                                                             estimation_method_ontology_id=estimation_method_ontology_id)
+        if estimated_value is None:
+            return {"value": self.PROPERTY_VALUE_NOT_COMPUTED_STRING, "up_to_date": True, "computed": False}
+    
+        estimated_value["computed"] = True       
+        return estimated_value
     
     def _get_estimation_method_ontology_id_name(self, estimation_method_attribute, is_attribute_name = True):
         """

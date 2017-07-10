@@ -1,7 +1,12 @@
 <H2>Select a case to work on</H2>
 
 <UL>
-{% for c in user_cases %}
+<h3>Opened cases</h3>
+{% for c in open_cases %}
 <LI> <A HREF= {{ url_for("open_case", case_id = c[0]) }}> {{ c[1] | safe }}</A></LI>
 {% endfor %}
-</UL>
+<h3>Closed cases</h3>
+{% for c in close_cases %}
+<li> <a HREF= {{ url_for("open_case", case_id = c[0]) }}> {{ c[1] | safe }}</a></li>
+{% endfor %}
+</ul>
