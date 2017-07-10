@@ -1,40 +1,30 @@
-<!DOCTYPE HTML>
-<HTML>
-<HEAD>
-<TITLE>COACH</TITLE>
-</HEAD>
+<h2>Create new user</h2>
 
-<BODY>
-<H1>Create new user</H1>
-
-<DIV style="color:red">
+<div style="color:red">
 {% if error == "UserExists": %}
 Error: User already exists!
 {% elif error == "PasswordsNotEqual": %}
 Error: Password and repeated password not equal!
 {% endif %} 
-</DIV>
+</div>
 
-<FORM action="/create_user" method="post" accept-charset="UTF-8">
+<form action="/create_user" method="post" accept-charset="UTF-8">
 Full name: 
-<BR>
-<INPUT type="text" name="name" required>
-<BR>
+<br>
+<input type="text" name="name" required>
+<br>
 E-mail: 
-<BR>
-<INPUT type="email" name="email" required>
-<BR>
+<br>
+<input type="email" name="email" required>
+<br>
 User name: 
-<BR><INPUT type="text" name="user_id" required>
-<BR>
+<br><input type="text" name="user_id" required>
+<br>
 Password: 
-<BR><INPUT type="password" name="password1" required>
-<BR>
+<br><input type="password" name="password1" required>
+<br>
 Repeat password: 
-<BR><INPUT type="password" name="password2" required>
-<BR>
-<INPUT type="submit" value="Create user">
-</FORM>
-
-</BODY>
-</HTML>
+<br><input type="password" name="password2" required>
+<br>
+<input type="submit" value="Create user">
+</form>

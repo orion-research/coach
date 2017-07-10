@@ -152,7 +152,7 @@
 	<li class="dropdown" style="float:right; min-width:180px">
 	<div>
 	<!--<img src="/static/orion_user.png" height="20">-->
-    <a href="javascript:void(0)" class="dropbtn"><img src="/static/orion_user.png" height="15vh"> {{ session["user_id"] }}</a>
+    <a href="javascript:void(0)" class="dropbtn"><img src="/static/orion_user.png" height="15" alt="user icon"> {{ session["user_id"] }}</a>
     </div>
     <div class="dropdown-content">
       <a href="/user_profile_dialogue">Profile</a>
@@ -172,23 +172,23 @@
 	</li>
 
 
-
+</ul>
 </div>
 
-<DIV id="main_dialogue">
-<BR>
-<BR>
-<BR>
+<div id="main_dialogue">
+<br>
+<br>
+<br>
 
 {% if message is defined %}
 {{ message | safe }}
-<BR><BR>
+<br><br>
 {% endif %}
 
 {% if main_dialogue is defined %}
 {{ main_dialogue | safe }}
 {% endif %}
-</DIV>
+</div>
 </body>
 
 </html>

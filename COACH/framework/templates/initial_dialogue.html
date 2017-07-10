@@ -1,66 +1,64 @@
 <!DOCTYPE HTML>
-<HTML>
-<HEAD>
+<html>
+<head>
 <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static', filename='format.css') }}">
-<TITLE>COACH</TITLE>
-</HEAD>
+<title>COACH</title>
+</head>
 
-<BODY align="center">
-<BR><BR>
-<IMG src="{{ url_for('static', filename='logotype.png') }}">
-<BR>
-<BR>
-<H1>COACH Decision Support System</H1>
-<BR>
-<BR>
-<DIV style="color:red">
+<body align="center">
+<br><br>
+<img src="{{ url_for('static', filename='logotype.png') }}">
+<br>
+<br>
+<h1>COACH Decision Support System</h1>
+<br>
+<br>
+<div style="color:red">
 {% if error == "FieldMissing": %}
 Error: User name or password missing!
-{% elif error == "NoSuchUser": %}
-Error: User does not exist, or has not been confirmed!
-{% elif error == "WrongPassword": %}
-Error: Wrong password!
+{% elif error == "WrongPasswordOrUser": %}
+Error: Wrong password, or user does not exist, or has not been confirmed!
 
 {% endif %} 
-</DIV>
+</div>
 
-<FORM action="/login_user" method="post" accept-charset="UTF-8">
+<form action="/login_user" method="post" accept-charset="UTF-8">
 User id: 
-<BR>
-<INPUT type="text" name="user_id" required>
-<BR>
+<br>
+<input type="text" name="user_id" required>
+<br>
 Password: 
-<BR>
-<INPUT type="password" name="password" required>
-<BR>
-<INPUT type="submit" value="Login">
-</FORM>
+<br>
+<input type="password" name="password" required>
+<br>
+<input type="submit" value="Login">
+</form>
 
-<BR>
-<BR>
+<br>
+<br>
 
-<FORM action="/create_user_dialogue" accept-charset="UTF-8">
-<INPUT type="submit" value="Create new user">
-</FORM>
+<form action="/create_user_dialogue" accept-charset="UTF-8">
+<input type="submit" value="Create new user">
+</form>
 
-<FORM action="/reset_password_dialogue" accept-charset="UTF-8">
-<INPUT type="submit" value="Reset password">
-</FORM>
+<form action="/reset_password_dialogue" accept-charset="UTF-8">
+<input type="submit" value="Reset password">
+</form>
 
-<BR>
-<BR>
+<br>
+<br>
 
-<DIV style="text-align: center;">
-<TABLE width= "50%" style="border: 2px solid black; background-color: #ffd213; margin: 0 auto;">
-<TR><TD align="left">
-<B>Warning:</B> This software is a research prototype. Be careful not to enter any sensitive data.
+<div style="text-align: center;">
+<table width= "50%" style="border: 2px solid black; background-color: #ffd213; margin: 0 auto;">
+<tr><td align="left">
+<b>Warning:</b> This software is a research prototype. Be careful not to enter any sensitive data.
 The software will be continuously changed and updated without prior notice, and in this process data may be lost.
-Parts of the service may be discontinued or interrupted at any point in time.<BR>
-<BR>
+Parts of the service may be discontinued or interrupted at any point in time.<br>
+<br>
 This software is version {{ session["version"] }}.
-</TD></TR>
-</TABLE>
-</DIV>
+</td></tr>
+</table>
+</div>
 
-</BODY>
-</HTML>
+</body>
+</html>

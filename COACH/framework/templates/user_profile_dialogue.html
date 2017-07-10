@@ -1,48 +1,37 @@
-<!DOCTYPE HTML>
-<HTML>
-<HEAD>
-<TITLE>COACH</TITLE>
-</HEAD>
+<h2>Edit user profile</h2>
 
-<BODY>
-<H2>Edit user profile</H2>
-
-<!--DIV style="color:red">
+<!--div style="color:red">
 {% if error == "UserExists": %}
 Error: User already exists!
 {% elif error == "PasswordsNotEqual": %}
 Error: Password and repeated password not equal!
 {% endif %} 
-</DIV-->
+</div-->
 
-<FORM action="/edit_user_profile" method="post" accept-charset="UTF-8">
+<form action="/edit_user_profile" method="post" accept-charset="UTF-8">
 Full name: 
-<BR>
-<INPUT type="text" name="user_name" value="{{ user_profile["user_name"] }}" required>
-<BR>
+<br>
+<input type="text" name="user_name" value="{{ user_profile["user_name"] }}" required>
+<br>
 E-mail: 
-<BR>
-<INPUT type="email" name="email" value="{{ user_profile["email"] }}" required>
-<BR>
+<br>
+<input type="email" name="email" value="{{ user_profile["email"] }}" required>
+<br>
 Company: 
-<BR><INPUT type="text" name="company_name" value="{{ user_profile["company_name"] }}">
-<BR>
+<br><input type="text" name="company_name" value="{{ user_profile["company_name"] }}">
+<br>
 Skype id: 
-<BR><INPUT type="text" name="skype_id" value="{{ user_profile["skype_id"] }}">
-<BR>
+<br><input type="text" name="skype_id" value="{{ user_profile["skype_id"] }}">
+<br>
 Contact details (telephone number): 
-<BR><INPUT type="text" name="user_phone" value="{{ user_profile["user_phone"] }}">
-<BR>
+<br><input type="text" name="user_phone" value="{{ user_profile["user_phone"] }}">
+<br>
 Primary location (Country/City): 
-<BR><INPUT type="text" name="location" value="{{ user_profile["location"] }}">
-<BR>
+<br><input type="text" name="location" value="{{ user_profile["location"] }}">
+<br>
 Bio: 
-<BR><textarea name="user_bio" rows="5" cols="70" value="{{ user_profile["user_bio"] }}"></textarea>
+<br><textarea name="user_bio" rows="5" cols="70" value="{{ user_profile["user_bio"] }}"></textarea>
 <!--<BR><INPUT type="text" name="user_bio" value="{{ user_profile["user_bio"] }}"> -->
-<BR>
-<INPUT type="submit" value="Save">
-</FORM>
-
-
-</BODY>
-</HTML>
+<br>
+<input type="submit" value="Save">
+</form>

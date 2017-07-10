@@ -1,55 +1,55 @@
 <!DOCTYPE HTML>
-<HTML>
-<HEAD>
-<LINK rel="stylesheet" type="text/css" href="format.css" media="screen" />
-<TITLE>COACH</TITLE>
-</HEAD>
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="format.css" media="screen" />
+<title>COACH</title>
+</head>
 
-<DIV id="menu">
-<IMG src="logotype.png">
-<DIV id="main_menu">
+<div id="menu">
+<img src="logotype.png">
+<div id="main_menu">
 Logged in as:<BR>
 {{ session["user_id"] }}
-<HR>
-<STRONG>General</STRONG><BR>
-Change password<BR>
-Logout<BR>
-Open case<BR>
+<hr>
+<strong>General</strong><br>
+Change password<br>
+Logout<br>
+Open case<br>
 Create case
-</DIV>
+</div>
 
-<HR>
+<hr>
 
-<DIV id="case_menu">
-<STRONG>Case management</STRONG><BR>
+<div id="case_menu">
+<strong>Case management</stron><br>
 {% if session["case_id"] %}
-Open case<BR>
+Open case<br>
 Create case
 {% else %}
-<FONT color="grey">
-Open case<BR>
+<font color="grey">
+Open case<br>
 Create case
-</FONT>
+</font>
 {% end if %}
-</DIV>
+</div>
 
-<HR>
+<hr>
 
-<DIV id="process_menu">
-<STRONG>Decision process</STRONG><BR>
+<div id="process_menu">
+<strong>Decision process</strong><br>
 {% if process_menu is defined %}
 {{ process_menu | safe }}
 {% end if %}
-</DIV>
-</DIV>
+</div>
+</div>
 
-<DIV id="main_dialogue">
-<H1>COACH Decision Support System</H1>
+<div id="main_dialogue">
+<h2>COACH Decision Support System</h2>
 {% if main_dialogue is defined %}
 {{ main_dialogue | safe }}
 {% end if %}
-</DIV>
+</div>
 
-<BODY>
-</BODY>
-</HTML>
+<body>
+</body>
+</html>

@@ -473,7 +473,7 @@ class InteractionService(coach.Microservice):
             return render_template("initial_dialogue.html", error = "FieldMissing")
         elif not self.authentication_service_proxy.user_exists(user_id = user_id):
             # If user_id does not exist, show the dialogue again with an error message
-            return render_template("initial_dialogue.html", error = "NoSuchUser")
+            return render_template("initial_dialogue.html", error = "WrongPasswordOrUser")
         else:
             # User exists, check if the password is correct (in which case a user token string is received
             user_token = self.authentication_service_proxy.check_user_password(user_id = user_id, password = password)
@@ -490,7 +490,7 @@ class InteractionService(coach.Microservice):
                 return self.main_menu_transition()
             else:
                 # If the wrong password was entered, show the dialogue again with an error message
-                return render_template("initial_dialogue.html", error = "WrongPassword")
+                return render_template("initial_dialogue.html", error = "WrongPasswordOrUser")
 
 
     @endpoint("/create_user", ["POST"], "text/html")
@@ -523,7 +523,7 @@ class InteractionService(coach.Microservice):
         As a transition action, it creates the new case in the database, and connects the current user to it.
         """
         session["case_id"] = self.case_db_proxy.create_case(user_id = session["user_id"], user_token = session["user_token"], title = title, description = description)
-        return self.case_status_dialogue_transition()
+        return self.case_status_dialogue_transition(), 
 
 
     @endpoint("/open_case", ["GET"], "text/html")
@@ -570,7 +570,7 @@ class InteractionService(coach.Microservice):
             session.pop("user_id", None)
             session.pop("user_token", None)
             session.pop("case_id", None)
-        except:
+        except KeyError:
             # If the user is already logged out, the user_id, user_token, and case_id is no longer available.
             pass
         return render_template("initial_dialogue.html")

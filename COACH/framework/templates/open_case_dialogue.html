@@ -1,9 +1,9 @@
-<H2>Select a case to work on</H2>
+<h2>Select a case to work on</h2>
 
-<UL>
+<ul>
 <h3>Opened cases</h3>
 {% for c in open_cases %}
-<LI> <A HREF= {{ url_for("open_case", case_id = c[0]) }}> {{ c[1] | safe }}</A></LI>
+<li> <a href={{ url_for("open_case", case_id = c[0]) }}>{{ c[1] | safe }}</a></li>
 {% endfor %}
 <h3>Closed cases</h3>
 {% for c in close_cases %}
