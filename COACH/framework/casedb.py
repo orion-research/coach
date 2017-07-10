@@ -374,20 +374,13 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_id = rdflib.URIRef(case_id)
             case_graph = self.graph.get_context(case_id)
             
-            #Check whether a property has already been added to the database, or if a new one need to be created
-            properties_uri_list = self.get_subjects(user_id, user_token, case_id, orion_ns.ontology_id, property_ontology_id)
-            if len(properties_uri_list) == 0:
-                # A new object need to be created
+            property_uri = case_graph.value(None, orion_ns.ontology_id, property_ontology_id, None, False)
+            if property_uri is None:
                 property_uri = self.new_uri()
                 case_graph.add((case_id, orion_ns.property, property_uri))
                 case_graph.add((property_uri, rdflib.RDF.type, orion_ns.Property))
-                case_graph.add((property_uri, orion_ns.ontology_id, rdflib.Literal(property_ontology_id)))
-            elif len(properties_uri_list) == 1:
-                # The existing object will be retrieved
-                property_uri = properties_uri_list[0]
-            else:
-                raise RuntimeError("A unique property should point to " + str(property_ontology_id) + " but " + str(len(properties_uri_list)) + " were found.")
-
+                case_graph.add((property_uri, orion_ns.ontology_id, rdflib.URIRef(property_ontology_id)))
+                
             case_graph.add((property_uri, orion_ns.belong_to, rdflib.URIRef(alternative_uri)))
             
             case_graph.commit()
@@ -410,7 +403,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                 estimation_uri = self.new_uri()
                 case_graph.add((case_id, orion_ns.estimation, estimation_uri))
                 case_graph.add((estimation_uri, rdflib.RDF.type, orion_ns.Estimation))
-                case_graph.add((estimation_uri, orion_ns.ontology_id, rdflib.Literal(estimation_method_ontology_id)))
+                case_graph.add((estimation_uri, orion_ns.ontology_id, rdflib.URIRef(estimation_method_ontology_id)))
                 case_graph.add((estimation_uri, orion_ns.belong_to_alternative, rdflib.URIRef(alternative_uri)))
                 case_graph.add((estimation_uri, orion_ns.belong_to_property, rdflib.URIRef(property_uri)))
             
