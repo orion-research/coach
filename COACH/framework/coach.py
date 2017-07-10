@@ -23,8 +23,7 @@ import requests
 # Database connection
 from neo4j.v1 import GraphDatabase, basic_auth
 
-# Auxiliary functions
-        
+# Auxiliary functions        
 def endpoint(url_path = None, http_methods = ["POST", "GET"], content = "text/plain"):
     """
     endpoint is intended to be used as a decorator for the methods of a service class that should be used
@@ -249,7 +248,7 @@ class Microservice:
             except Exception as _:
                 message = "An error occurred while processing the endpoint " + m.__name__ + ":\n"
                 message += "Service: " + self.__class__.__name__ + " running at " + self.host + ":" + str(self.port) + "\n"
-                message += "Arguments: " + str([(p.name, request.values[p.name]) for (_, p) in inspect.signature(m).parameters.items()]) + "\n"
+                message += "Arguments: " + str(args) + "\n"
                 message += traceback.format_exc() + "\n\n"
                 response = Response(message, status = 500, content_type = "text/plain")
 
