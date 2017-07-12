@@ -18,7 +18,7 @@ class CostEstimation(EstimationMethodService):
         if len(parameters_dict) != 1 or len(properties_dict) != 1:
             raise RuntimeError("Provided parameters does not match with the ontology")
         
-        return float(parameters_dict["Salary"]) * float(properties_dict["DevelopmentEffort"])
+        return float(parameters_dict["Salary"]) * float(properties_dict["Development effort"])
     
 if __name__ == '__main__':
     CostEstimation(sys.argv[1]).run()

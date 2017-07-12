@@ -21,7 +21,13 @@
 					&property_name={{property.property_name}}
 					&estimation_method_name={{property.estimation_methods[0].estimation_method_name}}" style="text-decoration:none; color:black">
 						<div>
-							&nbsp;{{value_object.value}}&nbsp;
+							&nbsp;
+							{% if value_object.value is number %}
+								{{ "%.4f" | format(value_object.value) }}
+							{% else %}
+								{{value_object.value}}
+							{% endif %}
+							&nbsp;
 						</div>
 					</a>
 				</td>
@@ -38,7 +44,13 @@
 							&property_name={{property.property_name}}
 							&estimation_method_name={{estimation.estimation_method_name}}" style="text-decoration:none; color:black">
 								<div>
-									&nbsp;{{value_object.value}}&nbsp;
+									&nbsp;
+									{% if value_object.value is number %}
+										{{ "%.4f" | format(value_object.value) }}
+									{% else %}
+										{{value_object.value}}
+									{% endif %}
+									&nbsp;
 								</div>
 							</a>
 						</td>

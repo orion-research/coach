@@ -14,18 +14,6 @@ import unittest
 import requests
 from flask import request
 
-# TODO: to suppress
-from datetime import datetime
-import inspect
-
-def log(*args):
-    message = datetime.now().strftime("%H:%M:%S") + " : "
-    message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
-    for arg in args:
-        message += str(arg) + " "
-    print(message)
-    sys.stdout.flush()
-
 class TestLogin(BaseTest):
     
     def testValidLogin(self):
@@ -136,7 +124,6 @@ class TestLogin(BaseTest):
         self.assertTrue("<title>405 Method Not Allowed</title>" in response.text)
 
 if __name__ == "__main__":
-    log("TestLogin main")
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestLogin)
     unittest.TextTestRunner().run(suite)      
     

@@ -16,20 +16,6 @@ from unittest import mock
 
 import requests
 from flask import request
-import time
-
-# TODO: to suppress
-from datetime import datetime
-import inspect
-
-def log(*args):
-    message = datetime.now().strftime("%H:%M:%S") + " : "
-    message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
-    for arg in args:
-        message += str(arg) + " "
-    print(message)
-    sys.stdout.flush()
-
     
 class TestCreateOpenCase(BaseTest):
     def setUp(self):
@@ -43,14 +29,10 @@ class TestCreateOpenCase(BaseTest):
     def test(self, mockSession):
         mockSession.return_value.side_effect = [1, 2, 3]
         interactionService = self.serviceAddress["InteractionService"]
-        log("interactionService :", interactionService)
         createCaseInformation = {"title": "testCase", "description": "case description"}
         response = requests.request("POST", interactionService + "/create_case", params=createCaseInformation)
-        log(response.text)
-        log("list of mock's calls :", mockSession.return_value.call_args_list)
         self.assertEqual(response.status_code, 200)
         self.assertTrue("<H2>Case status</H2>" in response.text)
-        log("caseId :", self.getCaseId())     
         
         
     def _testMoveToCreateCaseValid(self):
@@ -82,13 +64,10 @@ class TestCreateOpenCase(BaseTest):
     
     def _testCreateCaseValid(self):
         interactionService = self.serviceAddress["InteractionService"]
-        log("interactionService :", interactionService)
         createCaseInformation = {"title": "testCase", "description": "case description"}
         response = requests.request("POST", interactionService + "/create_case", params=createCaseInformation)
-        log(response.text)
         self.assertEqual(response.status_code, 200)
         self.assertTrue("<H2>Case status</H2>" in response.text)
-        log("caseId :", self.getCaseId())
         
     def _testCreateCaseInvalidParameterName(self):
         interactionService = self.serviceAddress["InteractionService"]
@@ -129,7 +108,6 @@ class TestCreateOpenCase(BaseTest):
         
         
 if __name__ == "__main__":
-    log("TestCreateCase main")
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestCreateOpenCase)
     unittest.TextTestRunner().run(suite)   
     

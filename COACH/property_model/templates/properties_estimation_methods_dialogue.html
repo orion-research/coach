@@ -113,7 +113,12 @@
 	<br/>
 	
 	{% if estimation_value.computed %}
-		Current value is {{ "%.4f" | format(estimation_value.value) }}
+		Current value is 
+		{% if estimation_value.value is number %}
+			{{ "%.4f" | format(estimation_value.value) }}
+		{% else %}
+			{{estimation_value.value}}
+		{% endif %}
 		{% if not estimation_value.up_to_date %}
 			<br/>
 			/!\ The current value is out-of-date

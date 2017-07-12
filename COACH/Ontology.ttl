@@ -731,7 +731,7 @@
 :developmentEffort
     :gradeId "AP1" ;
     a :Property ;
-    :title "DevelopmentEffort" ;
+    :title "Development effort" ;
     :description "Cost of a project" ;
     :type "float" .
 
