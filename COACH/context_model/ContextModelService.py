@@ -10,10 +10,6 @@ from COACH.build_coach_deployments import context_model
 """
 TODO:
 
-- Only the first of multiple selection alternatives are sent when the button is pressed.
-Sending it using method="get" includes all selected alternatives. Question is when duplicates of the same parameter are discarded
-
-
 - Button size (MAC bug):
 Possible workaround, but not so nice:
 input[type=submit] {
@@ -22,10 +18,6 @@ input[type=submit] {
 }
 
 - Some selections should also have a text field (treat as a separate type "multiother")?
-
-- Should be possible to have a "no answer" value also in the radio buttons.
-
-- Now each context entry is saved as a separate case fact. Is it better to save the whole context as a single fact?
 
 - Now all values are represented as strings when stored in the case fact (e.g., "Low" or "Aerospace/Aviation"). Is this ok?
 
@@ -128,7 +120,7 @@ class ContextModelService(coach.Microservice):
         organization_context = self._get_context_from_ontology(db_infos, orion_ns.OrganizationProperty, orion_ns)
         context_values = case_db_proxy.get_context(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                    context_predicate=orion_ns.organization)
-        self._update_context_description(context_values, organization_context)
+        self._add_database_value_to_ontology_description(context_values, organization_context)
         
         return self._context_category_dialogue("Organization", organization_context, "edit_context_organization")
     
@@ -141,7 +133,7 @@ class ContextModelService(coach.Microservice):
         product_context = self._get_context_from_ontology(db_infos, orion_ns.ProductProperty, orion_ns)
         context_values = case_db_proxy.get_context(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                    context_predicate=orion_ns.product)
-        self._update_context_description(context_values, product_context)
+        self._add_database_value_to_ontology_description(context_values, product_context)
         
         return self._context_category_dialogue("Product", product_context, "edit_context_product")
     
@@ -154,7 +146,7 @@ class ContextModelService(coach.Microservice):
         stakeholder_context = self._get_context_from_ontology(db_infos, orion_ns.StakeholderProperty, orion_ns)
         context_values = case_db_proxy.get_context(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                    context_predicate=orion_ns.stakeholder)
-        self._update_context_description(context_values, stakeholder_context)
+        self._add_database_value_to_ontology_description(context_values, stakeholder_context)
         
         return self._context_category_dialogue("Stakeholder", stakeholder_context, "edit_context_stakeholder")
         
@@ -167,7 +159,7 @@ class ContextModelService(coach.Microservice):
         methods_context = self._get_context_from_ontology(db_infos, orion_ns.DevelopmentMethodAndTechnologyProperty, orion_ns)
         context_values = case_db_proxy.get_context(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                    context_predicate=orion_ns.method)
-        self._update_context_description(context_values, methods_context)
+        self._add_database_value_to_ontology_description(context_values, methods_context)
         
         return self._context_category_dialogue("Development methods and Technology", methods_context, "edit_context_methods")
         
@@ -180,7 +172,7 @@ class ContextModelService(coach.Microservice):
         business_context = self._get_context_from_ontology(db_infos, orion_ns.MarketAndBusinessProperty, orion_ns)
         context_values = case_db_proxy.get_context(user_id=user_id, user_token=user_token, case_id=case_id, 
                                                    context_predicate=orion_ns.business)
-        self._update_context_description(context_values, business_context)
+        self._add_database_value_to_ontology_description(context_values, business_context)
         
         return self._context_category_dialogue("Market and business", business_context, "edit_context_business")
     
@@ -270,13 +262,13 @@ class ContextModelService(coach.Microservice):
         query_result = self.get_ontology().query(query, initNs = {"orion": orion_ns}, initBindings = {"entry_ontology_uri": entry_ontology_uri})
         return [e.toPython() for (e,) in query_result]
     
-    def _update_context_description(self, context_values, context_description):
+    def _add_database_value_to_ontology_description(self, context_values, context_description):
         for context_entry in context_description:
             try:
-                if len(context_values[context_entry["id"]]) == 1:
-                    context_entry["value"] = context_values[context_entry["id"]][0]
-                else:
+                if context_entry["type"] == "multi_select":
                     context_entry["value"] = context_values[context_entry["id"]]
+                else:
+                    context_entry["value"] = context_values[context_entry["id"]][0]
             except KeyError:
                 pass
     

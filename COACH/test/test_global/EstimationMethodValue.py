@@ -17,10 +17,6 @@ class EstimationMethodValue():
         {
             "property_name": "KLOC",
             "estimation_methods": ["Expert estimate float"]
-        },
-        {
-            "property_name": "Test text",
-            "estimation_methods": ["Expert estimate text"]
         },                          
         {
             "property_name": "Worst case execution time",
@@ -212,11 +208,11 @@ class EstimationMethodValue():
         raise RuntimeError("Dictionary with the property " + key_name + " equals to " + value + " not found.")
     
     @classmethod
-    def get_default_properties_name_list(cls):
+    def get_expected_properties_name_list(cls):
         return [p["property_name"] for p in cls.PROPERTY_ESTIMATION_METHOD]
     
     @classmethod
-    def get_default_estimation_methods_name_list(cls, property_name):
+    def get_expected_estimation_methods_name_list(cls, property_name):
         property_dictionary = cls._find_dictionary_in_list(cls.PROPERTY_ESTIMATION_METHOD, "property_name", property_name)
         return property_dictionary["estimation_methods"]
         

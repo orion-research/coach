@@ -7,6 +7,7 @@ Created on 20 juin 2017
 # Set python import path to include COACH top directory
 import os
 import sys
+import collections
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 from COACH.test.test_global.EstimationMethodValue import EstimationMethodValue
@@ -52,6 +53,12 @@ MAIN_MENU__CLOSE_CASE = "Close case"
 MAIN_MENU__GOAL_MENU = "Goal"
 
 MAIN_MENU__CONTEXT_MENU = "Context"
+MAIN_MENU__CONTEXT_GENERAL = "General"
+MAIN_MENU__CONTEXT_ORGANIZATION = "Organization"
+MAIN_MENU__CONTEXT_PRODUCT = "Product"
+MAIN_MENU__CONTEXT_STAKEHOLDER = "Stakeholder"
+MAIN_MENU__CONTEXT_METHOD = "Development methods and technology"
+MAIN_MENU__CONTEXT_BUSINESS = "Market and business"
 
 MAIN_MENU__STAKEHOLDERS_MENU = "Stakeholders"
 
@@ -111,6 +118,21 @@ PROPERTY_ESTIMATION_METHOD__NOT_COMPUTED_VALUE = "---"
 PROPERTY_ESTIMATION_METHOD__USED_PROPERTY_OUT_OF_DATE_MESSAGE = "/!\ This value is out-of-date"
 PROPERTY_ESTIMATION_METHOD__ESTIMATION_OUT_OF_DATE_MESSAGE = "/!\ The current value is out-of-date"
 
+#edit_context_dialogue.html
+GENERAL_CONTEXT__SUB_TITLE = "Edit Context"
+GENERAL_CONTEXT__CONTEXT_GENERAL_ID = "General_text"
+GENERAL_CONTEXT__ORGANIZATION_GENERAL_ID = "O00_text"
+GENERAL_CONTEXT__PRODUCT_GENERAL_ID = "P00_text"
+GENERAL_CONTEXT__STAKEHOLDER_GENERAL_ID = "S00_text"
+GENERAL_CONTEXT__METHOD_GENERAL_ID = "M00_text"
+GENERAL_CONTEXT__BUSINESS_GENERAL_ID = "B00_text"
+GENERAL_CONTEXT__CONFIRMATION_MESSAGE = "Context information (general) saved."
+
+#context_category_dialogue.html
+CONTEXT_CATEGORY__DEFAULT_COMBO_BOX_OPTION = "-- Select an option --"
+CONTEXT_CATEGORY_ORGANIZATION__SUB_TITLE = "Context details - Organization"
+CONTEXT_CATEGORY_ORGANIZATION__CONFIRMATION_MESSAGE = "Context information (organization) saved."
+
 
 class TestGlobal (unittest.TestCase):
     
@@ -124,11 +146,15 @@ class TestGlobal (unittest.TestCase):
         super(TestGlobal, cls).tearDownClass()
         cls.driver.close()
         
-    def setUp(self):    
+    def setUp(self):
         self.driver.get(MAIN_PAGE_ADDRESS)
+        self._assert_initial_page()
         self._login()
+        self._assert_unactive_case()
         self._go_to_link(MAIN_MENU__CASE_MENU, MAIN_MENU__NEW_CASE_LINK)
+        self._assert_page(CREATE_CASE__SUB_TITLE, False)
         self._create_case("case")
+        self._assert_page(CASE_STATUS__SUB_TITLE)
         
         self.alternatives_name_list = []
         self.estimation_value_list = []
@@ -144,6 +170,7 @@ class TestGlobal (unittest.TestCase):
     def wait_for_page_load(self, timeout=5):
         """
         Utility method to wait until a page is loaded. It will not work if the html does not change (angular application for example)
+        More information on http://www.obeythetestinggoat.com/how-to-get-selenium-to-wait-for-page-load-after-a-click.html
         It is used as follows:
         
         with wait_for_page_load():
@@ -156,7 +183,7 @@ class TestGlobal (unittest.TestCase):
         
     def test_property_estimation_method(self):
         """
-        This method test macro functionalities on the property model. 
+        This method tests macro functionalities on the property model. 
         
         It will test:
             - Creation of an alternative
@@ -165,6 +192,7 @@ class TestGlobal (unittest.TestCase):
             - Shortcut with a click on a cell of the overview page
             - Compute an estimation with parameters
             - Compute an estimation with used properties
+            - Message before a value is computed
             - Up-to-date is set to False when a used property is re-computed
             - Delete a property
             - Up-to-date is set to False when a used property is deleted
@@ -175,20 +203,30 @@ class TestGlobal (unittest.TestCase):
             - Selectable estimation method are those for the selected property
             - Selectable estimation method for a used property are those for this property
             - If a used estimation has not been computed yet, the compute button is disable
+            - If all used estimations have been computed, the compute button is enable
             - If an estimation has not been computed yet, the delete button is disable
+            - If an estimation has been computed, the delete button is enable
             - When up-to-date is False, it becomes True once the estimation is re computed
             - Selected estimation method for used properties is the one used for the last computation
             - Parameters's value are the ones used for the last computation
         """
-        self._go_to_link(MAIN_MENU__ALTERNATIVES_MENU, MAIN_MENU__ADD_ALTERNATIVE_LINK, 300)
+        # Creation of an alternative
+        self._go_to_link(MAIN_MENU__ALTERNATIVES_MENU, MAIN_MENU__ADD_ALTERNATIVE_LINK, 600)
         self._add_alternative("Alt 1")
         self._assert_alternative_added()
-        self._go_to_link(MAIN_MENU__ALTERNATIVES_MENU, MAIN_MENU__ADD_ALTERNATIVE_LINK, 300)
+        self._go_to_link(MAIN_MENU__ALTERNATIVES_MENU, MAIN_MENU__ADD_ALTERNATIVE_LINK)
         self._add_alternative("Alt 2")
         self._assert_alternative_added()
         
+        # Overview page without any estimation being computed
+        # Shortcut with a click on a cell of the overview page
+        # Message before a value is computed
+        # Compute an estimation with parameters
+        # Selectable estimation method are those for the selected property
+        # If an estimation has not been computed yet, the delete button is disable
+        # If an estimation has been computed, the delete button is enable
         estimation = ("Alt 1", "Development effort", "Expert estimate float")
-        self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK, 300)
+        self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK, 600)
         self._assert_property_overview_page()
         self._click_on_property_overview_shortcut(estimation)
         self._assert_property_estimation_method_page(estimation)
@@ -199,6 +237,9 @@ class TestGlobal (unittest.TestCase):
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK, 30)
         self._assert_property_overview_page()
   
+        # Compute an estimation with used properties
+        # Selectable estimation method for a used property are those for this property
+        # If all used estimations have been computed, the compute button is enable
         estimation = ("Alt 1", "Cost", "Cost estimation")
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_ESTIMATION_METHODS_LINK)
         self._assert_property_estimation_method_page()
@@ -210,7 +251,11 @@ class TestGlobal (unittest.TestCase):
         self._assert_compute_value(50)
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK)
         self._assert_property_overview_page()
-          
+        
+        # Up-to-date is set to False when a used property is re-computed
+        # When up-to-date is False, the overview background is yellow
+        # When up-to-date is False, a warning message is displayed before the value of the current estimation
+        # Parameters's value are the ones used for the last computation
         estimation = ("Alt 1", "Development effort", "Expert estimate float")
         self._click_on_property_overview_shortcut(estimation)
         self._assert_property_estimation_method_page(estimation, {"estimation": 5})
@@ -222,7 +267,9 @@ class TestGlobal (unittest.TestCase):
         self.estimation_value_list.append((*poped_estimation, False))
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK)
         self._assert_property_overview_page()
-          
+        
+        # When up-to-date is False, it becomes True once the estimation is re computed
+        # Selected estimation method for used properties is the one used for the last computation
         estimation = ("Alt 1", "Cost", "Cost estimation")
         self._click_on_property_overview_shortcut(estimation)
         self._assert_property_estimation_method_page(estimation, {"Salary": 10}, {"Development effort": ("Expert estimate float", True)}, False)
@@ -235,12 +282,15 @@ class TestGlobal (unittest.TestCase):
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK)
         self._assert_property_overview_page()
         
+        # If a used estimation has not been computed yet, the compute button is disable
         estimation = ("Alt 2", "Development effort", "Basic COCOMO")
         self._click_on_property_overview_shortcut(estimation)
         self._assert_property_estimation_method_page(estimation)
         
+        # Shortcut with the goto button
+        # Estimation computed for different alternatives
         estimation = ("Alt 2", "KLOC", "Expert estimate float")
-        self._click_on_goto_button("KLOC")
+        self._click_on_goto_button("KLOC", "Expert estimate float")
         self._assert_property_estimation_method_page(estimation)
         self._assert_compute_value(None)
         self._compute({"estimation": 5})
@@ -273,6 +323,7 @@ class TestGlobal (unittest.TestCase):
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK)
         self._assert_property_overview_page()
         
+        # When up-to-date is False, a warning message is displayed before the value of the used estimation
         estimation = ("Alt 2", "Cost", "Cost estimation")
         self._click_on_property_overview_shortcut(estimation)
         self._assert_property_estimation_method_page(estimation)
@@ -284,6 +335,8 @@ class TestGlobal (unittest.TestCase):
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK)
         self._assert_property_overview_page()
         
+        # Delete a property
+        # Up-to-date is set to False when a used property is deleted
         estimation = ("Alt 2", "Development effort", "Basic COCOMO")
         self._click_on_property_overview_shortcut(estimation)
         self._assert_property_estimation_method_page(estimation, {"developmentMode": "Semi-detached"}, {"KLOC": ("Expert estimate float", True)}, False)
@@ -298,19 +351,119 @@ class TestGlobal (unittest.TestCase):
         self._assert_compute_value(None)
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK)
         self._assert_property_overview_page()
+        
+    def test_context_model(self):
+        """
+        This method tests macro functionalities of the context model.
+        
+        It will test:
+            - Store information into the general context and retrieve them
+            - Store specific information in each category and retrieve them
+            - Retrieve the general description of a category from a category view that was stored in the general view
+            - Retrieve the general description of a category from the general view that was stored in a category view
+            - Check that the "Unknown" values are not send to the database
+            - Select 0 option on a multiple selection
+            - Select 1 option on a multiple selection
+            - Select more than 1 options on a multiple selection
+            - Store a text entry without value
+            - Store an integer entry without value
+            - Change a value that was previously saved
+            - Remove values from a multiple selection
+        
+        It will test only the organization category, as it is the same template to make all categories. 
+        """
+        # Store information into the general context and retrieve them
+        self._go_to_link(MAIN_MENU__CONTEXT_MENU, MAIN_MENU__CONTEXT_GENERAL, 600)
+        self._assert_general_context_page()
+        self._save_general_context("General", "Organization", "Product", "Stakeholder", "Method", "Business")
+        self._assert_general_context_saved()
+        self._go_to_link(MAIN_MENU__CONTEXT_MENU, MAIN_MENU__CONTEXT_GENERAL)
+        self._assert_general_context_page(["General", "Organization", "Product", "Stakeholder", "Method", "Business"])
+        
+        # Retrieve the general description of a category from a category view that was stored in the general view
+        # Store specific information in each category and retrieve them
+        # Check that the "Unknown" values are not send to the database
+        # Select 0 option on a multiple selection
+        # Select 1 option on a multiple selection
+        # Select more than 1 options on a multiple selection
+        # Store a text entry without value
+        # Store an integer entry without value
+        # Change a value that was previously saved
+        self._go_to_link(MAIN_MENU__CONTEXT_MENU, MAIN_MENU__CONTEXT_ORGANIZATION)
+        self._assert_category_context_page(CONTEXT_CATEGORY_ORGANIZATION__SUB_TITLE, {"O00_text": "Organization"})
+        category_information_dict = {"O00_text": "Organization category",
+                                     "O01_multi_select": [],
+                                     "O02_single_select": "Unknown",
+                                     "O03_single_select": "Medium",
+                                     "O04_text": "O04 value",
+                                     "O05.1_integer": 51,
+                                     "O06_multi_select": ["CMMI"],
+                                     "O07_single_select": "Good capacity utilization",
+                                     "O08_single_select": "Medium",
+                                     "O09_multi_select": ["Bureaucratic", "Other"],
+                                     "O10_single_select": "Medium",
+                                    }
+        self._save_category_context(category_information_dict)
+        self._assert_context_category_saved(CONTEXT_CATEGORY_ORGANIZATION__CONFIRMATION_MESSAGE)
+        self._go_to_link(MAIN_MENU__CONTEXT_MENU, MAIN_MENU__CONTEXT_ORGANIZATION)
+        # As unknown is not stored in the database, it becomes the default option
+        category_information_dict["O02_single_select"] = CONTEXT_CATEGORY__DEFAULT_COMBO_BOX_OPTION
+        self._assert_category_context_page(CONTEXT_CATEGORY_ORGANIZATION__SUB_TITLE, category_information_dict)
+        
+        # Retrieve the general description of a category from the general view that was stored in a category view
+        self._go_to_link(MAIN_MENU__CONTEXT_MENU, MAIN_MENU__CONTEXT_GENERAL)
+        self._assert_general_context_page(["General", "Organization category", "Product", "Stakeholder", "Method", "Business"])
+        
+        # Remove values from a multiple selection
+        self._go_to_link(MAIN_MENU__CONTEXT_MENU, MAIN_MENU__CONTEXT_ORGANIZATION)
+        self._assert_category_context_page(CONTEXT_CATEGORY_ORGANIZATION__SUB_TITLE, category_information_dict)
+        category_information_dict["O02_single_select"] = "Low"
+        category_information_dict["O09_multi_select"] = ["Virtual"]
+        self._save_category_context(category_information_dict)
+        self._assert_context_category_saved(CONTEXT_CATEGORY_ORGANIZATION__CONFIRMATION_MESSAGE)
+        self._go_to_link(MAIN_MENU__CONTEXT_MENU, MAIN_MENU__CONTEXT_ORGANIZATION)
+        self._assert_category_context_page(CONTEXT_CATEGORY_ORGANIZATION__SUB_TITLE, category_information_dict)
+        
+        
+        
+    def _select_combo_box(self, combo_box_name, option_name = None, page_load = False, timeout = 5, option_name_list = None):
+        if (option_name is None and option_name_list is None) or (option_name is not None and option_name_list is not None):
+            raise RuntimeError("Exactly 1 among option_name and option_name_list must be None")
+        
+        select_element = self.driver.find_element_by_name(combo_box_name)
+        is_multiple = select_element.get_attribute("multiple")
+        select_element = Select(self.driver.find_element_by_name(combo_box_name))
+        if option_name_list is not None and not is_multiple:
+            raise RuntimeError("Can't select multiple value in a single select")
+        
+        if option_name is not None:
+            # If the value is already selected, there is nothing to be done
+            if select_element.first_selected_option.text == option_name:
+                return
+            option_name_list = [option_name]
+        else:
+            select_element.deselect_all()
+            
+        for option_name in option_name_list:
+            if page_load:
+                with self.wait_for_page_load(timeout):
+                    select_element.select_by_visible_text(option_name)
+            else:
+                select_element.select_by_visible_text(option_name)
 
+    def _send_key_in_text_field(self, text_field_name, message, clear=True):
+        text_field_element = self.driver.find_element_by_name(text_field_name)
+        if clear:
+            text_field_element.clear()
+        text_field_element.send_keys(message)
+    
     
     def _login(self):
-        login_field = self.driver.find_element_by_name(INITIAL__USER_FIELD_NAME)
-        password_field = self.driver.find_element_by_name(INITIAL__PASSWORD_FIELD_NAME)
-        login_field.clear()
-        login_field.send_keys(INITIAL__USER_NAME)
-        password_field.clear()
-        password_field.send_keys(INITIAL__PASSWORD)
-        password_field.submit()
-        WebDriverWait(self.driver, 5).until(EC.title_is(MAIN_MENU__PAGE_TITLE))
+        self._send_key_in_text_field(INITIAL__USER_FIELD_NAME, INITIAL__USER_NAME)
+        self._send_key_in_text_field(INITIAL__PASSWORD_FIELD_NAME, INITIAL__PASSWORD)
+        with self.wait_for_page_load():
+            self.driver.find_element_by_tag_name("form").submit()
         
-    
     def _go_to_link(self, menu_name, link_name, timeout = 5):
         menu = self.driver.find_element_by_link_text(menu_name)
         # The mouse need to move over the menu element to display the sub-menu. 
@@ -326,41 +479,31 @@ class TestGlobal (unittest.TestCase):
     
     def _open_case(self, case_name):
         case_to_open_link = self.driver.find_element_by_link_text(case_name)
-        case_to_open_link.click()
-        WebDriverWait(self.driver, 5).until(EC.text_to_be_present_in_element((By.TAG_NAME, "h2"), CASE_STATUS__SUB_TITLE))
+        with self.wait_for_page_load():
+            case_to_open_link.click()
         
     def _create_case(self, case_name, case_description = "desc"):
-        title_field = self.driver.find_element_by_name(CREATE_CASE__TITLE_FIELD_NAME)
-        description_field = self.driver.find_element_by_name(CREATE_CASE__DESCRIPTION_FIELD_NAME)
-        title_field.clear()
-        title_field.send_keys(case_name)
-        description_field.clear()
-        description_field.send_keys(case_description)
-        description_field.submit()
-        WebDriverWait(self.driver, 5).until(EC.text_to_be_present_in_element((By.TAG_NAME, "h2"), CASE_STATUS__SUB_TITLE))
+        self._send_key_in_text_field(CREATE_CASE__TITLE_FIELD_NAME, case_name)
+        self._send_key_in_text_field(CREATE_CASE__DESCRIPTION_FIELD_NAME, case_description)
+        with self.wait_for_page_load():
+            self.driver.find_element_by_tag_name("form").submit()
         
     def _add_alternative(self, alternative_name, alternative_description = "desc", alternative_usage="Unknown",
                          alternative_origin="Unknown", alternative_type_list=[]):
         self.alternatives_name_list.append(alternative_name)
-        title_field = self.driver.find_element_by_name(ADD_ALTERNATIVE__TITLE_FIELD_NAME)
-        description_field = self.driver.find_element_by_name(ADD_ALTERNATIVE__DESCRIPTION_FIELD_NAME)
-        usage_field = self.driver.find_element_by_name(ADD_ALTERNATIVE__USAGE_FIELD_NAME)
-        origin_field = self.driver.find_element_by_name(ADD_ALTERNATIVE__ORIGIN_FIELD_NAME)
-        type_field = self.driver.find_element_by_name(ADD_ALTERNATIVE__TYPE_FIELD_NAME)
         
-        title_field.clear()
-        title_field.send_keys(alternative_name)
-        description_field.clear()
-        description_field.send_keys(alternative_description)
-        parameter_element = Select(usage_field)
-        parameter_element.select_by_visible_text(alternative_usage)
-        parameter_element = Select(origin_field)
-        parameter_element.select_by_visible_text(alternative_origin)
+        self._send_key_in_text_field(ADD_ALTERNATIVE__TITLE_FIELD_NAME, alternative_name)
+        self._send_key_in_text_field(ADD_ALTERNATIVE__DESCRIPTION_FIELD_NAME, alternative_description)
+        self._select_combo_box(ADD_ALTERNATIVE__USAGE_FIELD_NAME, alternative_usage)
+        self._select_combo_box(ADD_ALTERNATIVE__ORIGIN_FIELD_NAME, alternative_origin)
+        
+        type_field = self.driver.find_element_by_name(ADD_ALTERNATIVE__TYPE_FIELD_NAME)
         parameter_element = Select(type_field)
         for alternative_type in alternative_type_list:
             parameter_element.select_by_visible_text(alternative_type)
-        description_field.submit()
-        WebDriverWait(self.driver, 5).until(EC.invisibility_of_element_located((By.TAG_NAME, "h2")))
+        
+        with self.wait_for_page_load():
+            type_field.submit()
         
     def _click_on_property_overview_shortcut(self, estimation):
         (alternative_name, property_name, estimation_method_name) = estimation
@@ -379,40 +522,37 @@ class TestGlobal (unittest.TestCase):
             
             if (alternative_name == link_alternative_name and property_name == link_property_name and
                     estimation_method_name == link_estimation_method_name):
-                link.find_element_by_tag_name("div").click()
-                WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "select")))
+                with self.wait_for_page_load():
+                    link.find_element_by_tag_name("div").click()
                 return
-        raise RuntimeError("The link (" + alternative_name + ", " + property_name + ", " + estimation_method_name + 
-                           ") should have been clicked.")
+            
+        raise RuntimeError("The link ({0}, {1}, {2}) should have been clicked.".format(alternative_name, property_name, estimation_method_name))
         
     def _compute(self, parameters_dict = {}, used_properties_dict = {}):
         # The page is refresh each time a used property is selected: it must be done before keying in parameters 
         for used_property_name in used_properties_dict:
-            used_property_estimation_method = used_properties_dict[used_property_name]
-            used_property_element = Select(self.driver.find_element_by_name(used_property_name + "_selected_estimation_method"))
-            if used_property_element.first_selected_option.text != used_property_estimation_method:
-                with self.wait_for_page_load():
-                    used_property_element.select_by_visible_text(used_property_estimation_method)
+            self._select_combo_box(used_property_name + "_selected_estimation_method", used_properties_dict[used_property_name], True)
 
         for parameter_name in parameters_dict:
-            parameter_value = parameters_dict[parameter_name]
             try:
-                parameter_element = Select(self.driver.find_element_by_name(parameter_name + "_parameter"))
-                parameter_element.select_by_visible_text(parameter_value)
-            except UnexpectedTagNameException:
-                parameter_element = self.driver.find_element_by_name(parameter_name + "_parameter")
-                parameter_element.clear()
-                parameter_element.send_keys(str(parameter_value))
+                self._select_combo_box(parameter_name + "_parameter", parameters_dict[parameter_name])
+            except UnexpectedTagNameException: #Throw when trying to create a Select without a select element
+                self._send_key_in_text_field(parameter_name + "_parameter", parameters_dict[parameter_name])
         
-        compute_button = self._find_submit_component(PROPERTY_ESTIMATION_METHOD__COMPUTE_BUTTON_VALUE) 
-        compute_button.click()
-        WebDriverWait(self.driver, 60).until(EC.staleness_of(compute_button))
-        return
+        compute_button = self._find_submit_component(PROPERTY_ESTIMATION_METHOD__COMPUTE_BUTTON_VALUE)
+        with self.wait_for_page_load():
+            compute_button.click()
     
     def _delete(self):
         delete_button = self._find_submit_component(PROPERTY_ESTIMATION_METHOD__DELETE_BUTTON_VALUE)
         with self.wait_for_page_load():
             delete_button.click()
+
+    def _click_on_goto_button(self, property_name, estimation_method_name):
+        self._select_combo_box(property_name + PROPERTY_ESTIMATION_METHOD__USED_PROPERTIES_SELECT_SUFFIX, estimation_method_name, True)
+        goto_button = self._find_submit_component(property_name + PROPERTY_ESTIMATION_METHOD__GOTO_BUTTON_SUFFIX)
+        with self.wait_for_page_load():
+            goto_button.click()
     
     def _find_submit_component(self, component_value):
         submit_elements = self.driver.find_elements_by_name(PROPERTY_ESTIMATION_METHOD__SUBMIT_COMPONENT_NAME)
@@ -424,25 +564,45 @@ class TestGlobal (unittest.TestCase):
         (alternative_name, property_name, estimation_method_name) = estimation
         
         if alternative_name is not None:
-            self._select_combo_box(PROPERTY_ESTIMATION_METHOD__ALTERNATIVE_SELECT_NAME, alternative_name)
+            self._select_combo_box(PROPERTY_ESTIMATION_METHOD__ALTERNATIVE_SELECT_NAME, alternative_name, True)
         if property_name is not None:
-            self._select_combo_box(PROPERTY_ESTIMATION_METHOD__PROPERTY_SELECT_NAME, property_name)
+            self._select_combo_box(PROPERTY_ESTIMATION_METHOD__PROPERTY_SELECT_NAME, property_name, True)
         if estimation_method_name is not None:
-            self._select_combo_box(PROPERTY_ESTIMATION_METHOD__ESTIMATION_METHOD_SELECT_NAME, estimation_method_name)
+            self._select_combo_box(PROPERTY_ESTIMATION_METHOD__ESTIMATION_METHOD_SELECT_NAME, estimation_method_name, True)
             
-    def _select_combo_box(self, combo_box_name, option_name, timeout = 5):
-        select_element = Select(self.driver.find_element_by_name(combo_box_name))
-        if select_element.first_selected_option.text == option_name:
-            return
-        
-        with self.wait_for_page_load():
-            select_element.select_by_visible_text(option_name)
 
-    def _click_on_goto_button(self, property_name):
-        goto_button = self._find_submit_component(property_name + PROPERTY_ESTIMATION_METHOD__GOTO_BUTTON_SUFFIX)
-        with self.wait_for_page_load():
-            goto_button.click()
+    def _save_general_context(self, general_description=None, organization_description=None, product_description=None, 
+                              stakeholder_description=None, method_description=None, business_description=None):
+        if general_description is not None:
+            self._send_key_in_text_field(GENERAL_CONTEXT__CONTEXT_GENERAL_ID, general_description)
+        if organization_description is not None:
+            self._send_key_in_text_field(GENERAL_CONTEXT__ORGANIZATION_GENERAL_ID, organization_description)
+        if product_description is not None:
+            self._send_key_in_text_field(GENERAL_CONTEXT__PRODUCT_GENERAL_ID, product_description)
+        if stakeholder_description is not None:
+            self._send_key_in_text_field(GENERAL_CONTEXT__STAKEHOLDER_GENERAL_ID, stakeholder_description)
+        if method_description is not None:
+            self._send_key_in_text_field(GENERAL_CONTEXT__METHOD_GENERAL_ID, method_description)
+        if business_description is not None:
+            self._send_key_in_text_field(GENERAL_CONTEXT__BUSINESS_GENERAL_ID, business_description)
+        
+        with self.wait_for_page_load(30):
+            self.driver.find_element_by_tag_name("form").submit()
             
+    def _save_category_context(self, entries_value_dict):
+        for entry_name in entries_value_dict:
+            entry_value = entries_value_dict[entry_name]
+            try:
+                if (isinstance(entry_value, collections.Iterable) and not isinstance(entry_value, str)):
+                    self._select_combo_box(entry_name, option_name_list=entry_value)
+                else:
+                    self._select_combo_box(entry_name, entry_value)
+            except UnexpectedTagNameException: #Throw when trying to create a Select without a select element
+                self._send_key_in_text_field(entry_name, entry_value)
+                
+        with self.wait_for_page_load(30):
+            self.driver.find_element_by_tag_name("form").submit()
+        
     def _assert_initial_page(self):
         self.assertIn(INITIAL__PAGE_TITLE, self.driver.title)
         
@@ -516,10 +676,10 @@ class TestGlobal (unittest.TestCase):
         # Assert list of possible alternatives, properties, estimation methods
         self.assertEqual(set(self.alternatives_name_list), {option.text for option in alternative_select.options})
         
-        properties_name_list = EstimationMethodValue.get_default_properties_name_list()
+        properties_name_list = EstimationMethodValue.get_expected_properties_name_list()
         self.assertEqual(set(properties_name_list), {option.text for option in property_select.options})
         
-        estimation_methods_name_list = EstimationMethodValue.get_default_estimation_methods_name_list(property_select.first_selected_option.text)
+        estimation_methods_name_list = EstimationMethodValue.get_expected_estimation_methods_name_list(property_select.first_selected_option.text)
         self.assertEqual(set(estimation_methods_name_list), {option.text for option in estimation_method_select.options})
         
         self._assert_used_properties(used_properties_estimation_method)
@@ -537,18 +697,16 @@ class TestGlobal (unittest.TestCase):
         for list_element in used_properties_list_item_list:
             select_used_property = list_element.find_element_by_tag_name("select")
             property_name = select_used_property.get_attribute("name")[:-len(PROPERTY_ESTIMATION_METHOD__USED_PROPERTIES_SELECT_SUFFIX)]
-            estimation_methods_name_list = EstimationMethodValue.get_default_estimation_methods_name_list(property_name)
+            estimation_methods_name_list = EstimationMethodValue.get_expected_estimation_methods_name_list(property_name)
             select_used_property = Select(select_used_property)
             self.assertEqual(set(estimation_methods_name_list), {option.text for option in select_used_property.options})
             
-            selected_estimation_method = select_used_property.first_selected_option.text
-            try:
+            if property_name in used_properties_estimation_method:
+                selected_estimation_method = select_used_property.first_selected_option.text
                 (expected_selected_estimation_method, up_to_date) = used_properties_estimation_method[property_name]
                 del used_properties_estimation_method[property_name]
                 self.assertEqual(selected_estimation_method, expected_selected_estimation_method)
-            except KeyError:
-                up_to_date = True
-            self.assertEqual(up_to_date, PROPERTY_ESTIMATION_METHOD__USED_PROPERTY_OUT_OF_DATE_MESSAGE not in list_element.text)
+                self.assertEqual(up_to_date, PROPERTY_ESTIMATION_METHOD__USED_PROPERTY_OUT_OF_DATE_MESSAGE not in list_element.text)
             
             value_element = list_element.find_element_by_name(property_name + PROPERTY_ESTIMATION_METHOD__USED_PROPERTIES_VALUE_SUFFIX)
             if value_element.get_attribute("value") == PROPERTY_ESTIMATION_METHOD__NOT_COMPUTED_VALUE:
@@ -570,21 +728,17 @@ class TestGlobal (unittest.TestCase):
         for parameter_element in parameters_input_element_list:
             parameter_name = parameter_element.get_attribute("name")[:-len(PROPERTY_ESTIMATION_METHOD__PARAMETER_NAME_SUFFIX)]
             parameter_value = parameter_element.get_attribute("value")
-            try:
+            if parameter_name in parameters_value_dict:
                 self.assertEqual(str(parameter_value), str(parameters_value_dict[parameter_name]))
                 del parameters_value_dict[parameter_name]
-            except KeyError:
-                pass
             
         # Check all parameters of type select
         for parameter_element in parameters_select_element_list:
             parameter_name = parameter_element.get_attribute("name")[:-len(PROPERTY_ESTIMATION_METHOD__PARAMETER_NAME_SUFFIX)]
             parameter_value = Select(parameter_element).first_selected_option.text
-            try:
+            if parameter_name in parameters_value_dict:
                 self.assertEqual(str(parameter_value), str(parameters_value_dict[parameter_name]))
                 del parameters_value_dict[parameter_name]
-            except KeyError:
-                pass
                         
         self.assertEqual(len(parameters_value_dict), 0)
         
@@ -598,7 +752,82 @@ class TestGlobal (unittest.TestCase):
         else:
             self.assertIn(PROPERTY_ESTIMATION_METHOD__COMPUTE_VALUE_MESSAGE + str(value), " ".join(self.driver.page_source.split()))
             self.assertTrue(self._find_submit_component(PROPERTY_ESTIMATION_METHOD__DELETE_BUTTON_VALUE).is_enabled())
+            
+    def _assert_general_context_page(self, expected_descriptions_list = ["", "", "", "", "", ""]):
+        if len(expected_descriptions_list) != 6:
+            raise RuntimeError("There must be exactly 6 elements in the description list, but {0} were found".format(len(expected_descriptions_list)))
+        self._assert_page(GENERAL_CONTEXT__SUB_TITLE)
+        
+        actual_descriptions_list = [self.driver.find_element_by_name(GENERAL_CONTEXT__CONTEXT_GENERAL_ID).text,
+                                    self.driver.find_element_by_name(GENERAL_CONTEXT__ORGANIZATION_GENERAL_ID).text,
+                                    self.driver.find_element_by_name(GENERAL_CONTEXT__PRODUCT_GENERAL_ID).text,
+                                    self.driver.find_element_by_name(GENERAL_CONTEXT__STAKEHOLDER_GENERAL_ID).text,
+                                    self.driver.find_element_by_name(GENERAL_CONTEXT__METHOD_GENERAL_ID).text,
+                                    self.driver.find_element_by_name(GENERAL_CONTEXT__BUSINESS_GENERAL_ID).text]
+        self.assertListEqual(actual_descriptions_list, expected_descriptions_list)
+        
+    def _assert_general_context_saved(self):
+        self.assertIn(GENERAL_CONTEXT__CONFIRMATION_MESSAGE, self.driver.page_source)
+        
+    def _assert_category_context_page(self, page_sub_title, expected_information_dict={}):
+        self._assert_page(page_sub_title)
+        
+        form_element = self.driver.find_element_by_tag_name("form")
+        input_elements_list = form_element.find_elements_by_tag_name("input")
+        select_elements_list = form_element.find_elements_by_tag_name("select")
+        text_area_elements_list = form_element.find_elements_by_tag_name("textarea")
+        
+        for input_element in input_elements_list:
+            element_name = input_element.get_attribute("name")
+            element_value = input_element.get_attribute("value")
+            self._assert_value_match_in_expected_dictionary(element_value, element_name, expected_information_dict)
+            
+        for text_area_element in text_area_elements_list:
+            element_name = text_area_element.get_attribute("name")
+            element_value = text_area_element.text
+            self._assert_value_match_in_expected_dictionary(element_value, element_name, expected_information_dict)
+
+        for select_element in select_elements_list:
+            element_name = select_element.get_attribute("name")
+            is_multiple_select = select_element.get_attribute("multiple")
+            select_element = Select(select_element)
+            
+            if is_multiple_select:
+                selected_option = [option.get_attribute("value") for option in select_element.all_selected_options]
+                self._assert_value_match_in_expected_dictionary(selected_option, element_name, expected_information_dict)
+            
+            else:
+                element_value = select_element.first_selected_option.text
+                self._assert_value_match_in_expected_dictionary(element_value, element_name, expected_information_dict)
+        
+        self.assertEqual(len(expected_information_dict), 0)
+            
+    def _assert_value_match_in_expected_dictionary(self, value, key, expected_dictionary):
+        if key in expected_dictionary:
+            self.assertEqual(str(value), str(expected_dictionary[key]))
+            del expected_dictionary[key]
+            
+    def _assert_context_category_saved(self, confirmation_message):
+        self.assertIn(confirmation_message, self.driver.page_source)
     
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestGlobal)
     unittest.TextTestRunner().run(suite)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
