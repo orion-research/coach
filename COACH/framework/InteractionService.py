@@ -543,27 +543,41 @@ class InteractionService(coach.Microservice):
     
     @endpoint("/close_case_dialogue", ["GET"], "text/html")
     def close_case_dialogue(self):
-        dialogue = render_template("close_case_dialogue.html")
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        db_infos = {"user_id": session["user_id"], "user_token": session["user_token"], "case_id": session["case_id"]}
+        user_id = db_infos["user_id"]
+        user_token=db_infos["user_token"]
+        case_id = db_infos["case_id"]
+        
+        selected_alternative_uri = self.case_db_proxy.get_value(**db_infos, subject=case_id, predicate=orion_ns.selected_alternative, 
+                                                                object_=None, default_value=None, any_=False)
+        comments = self.case_db_proxy.get_value(**db_infos, subject=case_id, predicate=orion_ns.comments, object_=None, default_value="", 
+                                                any_=False)
+        alternative_list = self.case_db_proxy.get_decision_alternatives(user_id=user_id, token=user_token, case_id=case_id)
+        dialogue = render_template("close_case_dialogue.html", selected_alternative=selected_alternative_uri, comments=comments,
+                                   alternative_list=alternative_list)
         return self.main_menu_transition(main_dialogue = dialogue)
     
     @endpoint("/close_case", ["POST"], "text/html")
-    def close_case(self, export_to_kr_checkbox = False):
+    def close_case(self, selected_alternative, comments, export_to_kr_checkbox = False):
+        db_infos = {"user_id": session["user_id"], "user_token": session["user_token"], "case_id": session["case_id"]}
+        
+        self.case_db_proxy.add_case_decision(**db_infos, selected_alternative_uri=selected_alternative, comments=comments)
+        
         if export_to_kr_checkbox == "on":
             #TODO: add a confirmation window
-            case_description = self.case_db_proxy.export_case_data(user_id = session["user_id"], user_token = session["user_token"], 
-                                                                   case_id = session["case_id"], format = "n3")
+            case_description = self.case_db_proxy.export_case_data(**db_infos, format = "n3")
             self.knowledge_repository_proxy.export_case(graph_description=case_description, format_="n3")
             
-        self.case_db_proxy.remove_case(user_id=session["user_id"], user_token=session["user_token"], case_id=session["case_id"])
+        self.case_db_proxy.remove_case(**db_infos)
         del session["case_id"]
-        return self.main_menu_transition()
+        return self.main_menu_transition(main_dialogue="Case closed")
 
     @endpoint("/logout", ["GET"], "text/html")
     def logout(self):
         """
         Endpoint representing the transition to the logged out state, which is the same as the initial state.
-        The user id and token are deleted from the session. However, the case_id is kept, so that the
-        user directly returns to the case being worked on when loggin in again.
+        The user id, user token and case id are deleted from the session.
         """
         try:
             self.authentication_service_proxy.logout_user(user_id = session.pop("user_id"), user_token = session.pop("user_token"))

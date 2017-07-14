@@ -2,6 +2,22 @@
 
 <form action="/close_case" method="post" accept-charset="UTF-8">
 	<div>
+		<label for="selected_alternative">Selected alternative:</label>"
+		<select id="selected_alternative" name="selected_alternative" required>
+			<option disabled selected value>-- Select an option --</option>
+			<option value="None" {% if selected_alternative == "None" %} selected {% endif %}>None</option>
+			{% for alternative in alternative_list %}
+				<option value="{{alternative[1]}}" {% if selected_alternative == alternative[1] %} selected {% endif %}>
+					{{alternative[0]}}
+				</option>
+			{% endfor %}
+		</select>
+	</div>
+	<div>
+		<label for="comments">Comments:</label>
+		<textarea id="comments" name="comments" cols="80" rows="10">{{comments}}</textarea>
+	</div>
+	<div>
 		<label for="export_to_kr_checkbox">Export case to knowledge repository:</label>
 		<input id="export_to_kr_checkbox" type="checkbox" name="export_to_kr_checkbox" checked="checked">
 	</div>

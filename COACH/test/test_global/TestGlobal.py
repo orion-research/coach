@@ -85,6 +85,9 @@ CASE_STATUS__SUB_TITLE = "Case status"
 #close_case_dialogue.html
 CLOSE_CASE__SUB_TITLE = "Close case"
 CLOSE_CASE__EXPORT_TO_KR_CHECKBOX_NAME = "export_to_kr_checkbox"
+CLOSE_CASE__SELECTED_ALTERNATIVE_NAME = "selected_alternative"
+CLOSE_CASE__NONE_ALTERNATIVE = "None"
+CLOSE_CASE__CONFIRMATION_MESSAGE = "Case closed"
 
 #add_alternative_dialogue.html
 ADD_ALTERNATIVE__SUB_TITLE = "Add new decision alternative"
@@ -164,7 +167,13 @@ class TestGlobal (unittest.TestCase):
         export_to_kr_checkbox = self.driver.find_element_by_name(CLOSE_CASE__EXPORT_TO_KR_CHECKBOX_NAME)
         if export_to_kr_checkbox.is_selected():
             export_to_kr_checkbox.click()
-        export_to_kr_checkbox.submit()
+        
+        self._select_combo_box(CLOSE_CASE__SELECTED_ALTERNATIVE_NAME, CLOSE_CASE__NONE_ALTERNATIVE)
+        
+        with self.wait_for_page_load():
+            export_to_kr_checkbox.submit()
+        self.assertIn(CLOSE_CASE__CONFIRMATION_MESSAGE, self.driver.page_source)
+        
         
     @contextmanager
     def wait_for_page_load(self, timeout=5):
@@ -213,10 +222,10 @@ class TestGlobal (unittest.TestCase):
         # Creation of an alternative
         self._go_to_link(MAIN_MENU__ALTERNATIVES_MENU, MAIN_MENU__ADD_ALTERNATIVE_LINK, 600)
         self._add_alternative("Alt 1")
-        self._assert_alternative_added()
+        self.assertIn(ADD_ALTERNATIVE__CONFIRMATION_MESSAGE, self.driver.page_source)
         self._go_to_link(MAIN_MENU__ALTERNATIVES_MENU, MAIN_MENU__ADD_ALTERNATIVE_LINK)
         self._add_alternative("Alt 2")
-        self._assert_alternative_added()
+        self.assertIn(ADD_ALTERNATIVE__CONFIRMATION_MESSAGE, self.driver.page_source)
         
         # Overview page without any estimation being computed
         # Shortcut with a click on a cell of the overview page
@@ -376,7 +385,7 @@ class TestGlobal (unittest.TestCase):
         self._go_to_link(MAIN_MENU__CONTEXT_MENU, MAIN_MENU__CONTEXT_GENERAL, 600)
         self._assert_general_context_page()
         self._save_general_context("General", "Organization", "Product", "Stakeholder", "Method", "Business")
-        self._assert_general_context_saved()
+        self.assertIn(GENERAL_CONTEXT__CONFIRMATION_MESSAGE, self.driver.page_source)
         self._go_to_link(MAIN_MENU__CONTEXT_MENU, MAIN_MENU__CONTEXT_GENERAL)
         self._assert_general_context_page(["General", "Organization", "Product", "Stakeholder", "Method", "Business"])
         
@@ -404,7 +413,7 @@ class TestGlobal (unittest.TestCase):
                                      "O10_single_select": "Medium",
                                     }
         self._save_category_context(category_information_dict)
-        self._assert_context_category_saved(CONTEXT_CATEGORY_ORGANIZATION__CONFIRMATION_MESSAGE)
+        self.assertIn(CONTEXT_CATEGORY_ORGANIZATION__CONFIRMATION_MESSAGE, self.driver.page_source)
         self._go_to_link(MAIN_MENU__CONTEXT_MENU, MAIN_MENU__CONTEXT_ORGANIZATION)
         # As unknown is not stored in the database, it becomes the default option
         category_information_dict["O02_single_select"] = CONTEXT_CATEGORY__DEFAULT_COMBO_BOX_OPTION
@@ -420,7 +429,7 @@ class TestGlobal (unittest.TestCase):
         category_information_dict["O02_single_select"] = "Low"
         category_information_dict["O09_multi_select"] = ["Virtual"]
         self._save_category_context(category_information_dict)
-        self._assert_context_category_saved(CONTEXT_CATEGORY_ORGANIZATION__CONFIRMATION_MESSAGE)
+        self.assertIn(CONTEXT_CATEGORY_ORGANIZATION__CONFIRMATION_MESSAGE, self.driver.page_source)
         self._go_to_link(MAIN_MENU__CONTEXT_MENU, MAIN_MENU__CONTEXT_ORGANIZATION)
         self._assert_category_context_page(CONTEXT_CATEGORY_ORGANIZATION__SUB_TITLE, category_information_dict)
         
@@ -647,9 +656,6 @@ class TestGlobal (unittest.TestCase):
         else:
             self._assert_unactive_case()
     
-    def _assert_alternative_added(self):
-        self.assertIn(ADD_ALTERNATIVE__CONFIRMATION_MESSAGE, self.driver.page_source)
-        
     def _assert_property_overview_page(self):
         self._assert_page(PROPERTY_OVERVIEW__SUB_TITLE)
         actual_estimation_method_value = EstimationMethodValue.build_from_web_page(self.driver)
@@ -766,9 +772,6 @@ class TestGlobal (unittest.TestCase):
                                     self.driver.find_element_by_name(GENERAL_CONTEXT__BUSINESS_GENERAL_ID).text]
         self.assertListEqual(actual_descriptions_list, expected_descriptions_list)
         
-    def _assert_general_context_saved(self):
-        self.assertIn(GENERAL_CONTEXT__CONFIRMATION_MESSAGE, self.driver.page_source)
-        
     def _assert_category_context_page(self, page_sub_title, expected_information_dict={}):
         self._assert_page(page_sub_title)
         
@@ -807,9 +810,6 @@ class TestGlobal (unittest.TestCase):
             self.assertEqual(str(value), str(expected_dictionary[key]))
             del expected_dictionary[key]
             
-    def _assert_context_category_saved(self, confirmation_message):
-        self.assertIn(confirmation_message, self.driver.page_source)
-    
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestGlobal)
     unittest.TextTestRunner().run(suite)

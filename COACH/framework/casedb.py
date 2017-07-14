@@ -12,10 +12,8 @@ sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 # Coach framework
 from COACH.framework import coach
 from COACH.framework.coach import endpoint
-from COACH.knowledge_repository import KnowledgeRepositoryService
 
 # Standard libraries
-import json
 
 # Semantic web framework
 import rdflib
@@ -159,7 +157,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             # When using rdflib, the user is identified with an uri which consists of the authentication service url + user_id.
             return [user_name for (user_name, _, _, _) in self.authentication_service_proxy.get_users()]
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
          
     
     @endpoint("/user_cases", ["GET"], "application/json")
@@ -174,7 +172,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                                       initBindings = { "user_uri": self.authentication_service_proxy.get_user_uri(user_id = user_id) })
             return list(result)
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
     
     @endpoint("/case_users", ["GET"], "application/json")
@@ -188,7 +186,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                                       initBindings = { "case_id": case_id })
             return [u.toPython() for (u,) in result]
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
         
     @endpoint("/create_user", ["POST"], "application/json")
@@ -200,7 +198,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             # When using rdflib, users are not stored in the case database, so no operations are needed.
             pass
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
 
     @endpoint("/create_case", ["POST"], "application/json")
@@ -231,8 +229,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.commit()
             return str(case_id)
         else:
-            return "Invalid user token"
-        
+            raise RuntimeError("Invalid user token")        
     
     @endpoint("/change_case_description", ["POST"], "application/json")
     def change_case_description(self, user_id, user_token, case_id, title, description):
@@ -248,7 +245,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.commit()
             return "Ok"
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
            
     
     @endpoint("/get_case_description", ["GET"], "application/json")    
@@ -264,7 +261,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             description = case_graph.value(case_id, orion_ns.description, None, "")
             return (title, description)
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
 
     @endpoint("/add_stakeholder", ["POST"], "application/json")
@@ -287,32 +284,35 @@ class CaseDatabase(coach.GraphDatabaseService):
 
             return "Ok"
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
     @endpoint("/change_stakeholder", ["POST"], "application/json")
-    def change_stakeholder(self, user_id, user_token, case_id, role_property, stakeholder, values_list):   
-        case_id = rdflib.URIRef(case_id)
-        case_graph = self.graph.get_context(case_id)
-        orion_ns = rdflib.Namespace(self.orion_ns)
-        
-        query = """\
-        SELECT ?role_uri
-        WHERE {
-            ?case_id orion:role ?role_uri .
-            ?role_uri orion:person ?stakeholder_uri .
-        }
-        """
-        query_result = case_graph.query(query, initNs={"orion": orion_ns},
-                                        initBindings={"case_id": case_id, "stakeholder_uri": rdflib.URIRef(stakeholder)})
-        if len(query_result) > 1 or len(query_result) == 0:
-            raise RuntimeError("There must be exactly one role for the person " + str(stakeholder) + " but " +
-                               str(len(query_result)) + " were found.")
-        
-        role_uri = list(query_result)[0][0]
-        role_property = rdflib.URIRef(role_property)
-        case_graph.remove((role_uri, role_property, None))
-        for value in values_list:
-            case_graph.add((role_uri, role_property, rdflib.URIRef(value)))
+    def change_stakeholder(self, user_id, user_token, case_id, role_property, stakeholder, values_list):  
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            case_id = rdflib.URIRef(case_id)
+            case_graph = self.graph.get_context(case_id)
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            
+            query = """\
+            SELECT ?role_uri
+            WHERE {
+                ?case_id orion:role ?role_uri .
+                ?role_uri orion:person ?stakeholder_uri .
+            }
+            """
+            query_result = case_graph.query(query, initNs={"orion": orion_ns},
+                                            initBindings={"case_id": case_id, "stakeholder_uri": rdflib.URIRef(stakeholder)})
+            if len(query_result) > 1 or len(query_result) == 0:
+                raise RuntimeError("There must be exactly one role for the person " + str(stakeholder) + " but " +
+                                   str(len(query_result)) + " were found.")
+            
+            role_uri = list(query_result)[0][0]
+            role_property = rdflib.URIRef(role_property)
+            case_graph.remove((role_uri, role_property, None))
+            for value in values_list:
+                case_graph.add((role_uri, role_property, rdflib.URIRef(value)))
+        else:
+            raise RuntimeError("Invalid user token")
         
     @endpoint("/get_stakeholder", ["GET"], "application/json")
     def get_stakeholder(self, user_id, user_token, case_id, role_properties_list):
@@ -339,7 +339,24 @@ class CaseDatabase(coach.GraphDatabaseService):
                     
             return result
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
+        
+    @endpoint("/add_case_decision", ["POST"], "application/json")
+    def add_case_decision(self, user_id, user_token, case_id, selected_alternative_uri, comments):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            case_id = rdflib.URIRef(case_id)
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_graph = self.graph.get_context(case_id)
+            
+            case_graph.set((case_id, orion_ns.comments, rdflib.Literal(comments)))
+            case_graph.remove((case_id, orion_ns.selected_alternative, None))
+            if selected_alternative_uri == "None":
+                case_graph.add((case_id, orion_ns.selected_alternative, rdflib.Literal(selected_alternative_uri)))
+                return
+            
+            case_graph.add((case_id, orion_ns.selected_alternative, rdflib.URIRef(selected_alternative_uri)))
+        else:
+            raise RuntimeError("Invalid user token")
 
     @endpoint("/add_alternative", ["POST"], "application/json")    
     def add_alternative(self, user_id, user_token, case_id, title, description, asset_characteristics):
@@ -365,7 +382,7 @@ class CaseDatabase(coach.GraphDatabaseService):
 
             return str(case_id)
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
     
     @endpoint("/add_property", ["POST"], "application/json")
     def add_property(self, user_id, user_token, case_id, alternative_uri, property_ontology_id):
@@ -386,7 +403,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.commit()
             return str(case_id)
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
     @endpoint("/add_estimation", ["POST"], "application/json")
     def add_estimation(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id, value,
@@ -415,7 +432,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.commit()
             return str(case_id)
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
     def _add_estimation_parameters(self, user_id, user_token, case_id, estimation_uri, parameter_name_to_value_dict):
         query = """SELECT ?parameter ?parameter_name
@@ -476,7 +493,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             self._remove_estimation_parameters(user_id, user_token, case_id, estimation_uri)
             self.remove_resource(user_id, user_token, case_id, estimation_uri)
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
     
     def _remove_estimation_parameters(self, user_id, user_token, case_id, estimation_uri):
         query_parameters = """  SELECT ?parameter_uri
@@ -516,7 +533,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                                       initBindings = { "property_ontology_id": property_ontology_id })
             return [a for (a,) in result]
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
     @endpoint("/get_estimation_uri", ["GET"], "application/json")
     def get_estimation_uri(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
@@ -547,7 +564,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             
             return result[0] if len(result) == 1 else None
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
     @endpoint("/get_estimation_value", ["GET"], "application/json")
     def get_estimation_value(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
@@ -581,7 +598,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             result = {"value": estimation_value_list[0].toPython(), "up_to_date": estimation_up_to_date_list[0].toPython()}
             return result
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
     
     @endpoint("/get_estimation_parameters", ["GET"], "application/json")
     def get_estimation_parameters(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
@@ -616,7 +633,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                 result[parameter_name.toPython()] = parameter_value.toPython()
             return result
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
     @endpoint("/get_estimation_used_properties", ["GET"], "application/json")
     def get_estimation_used_properties(self, user_id, user_token, case_id, estimation_uri):
@@ -647,7 +664,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                 result[property_ontology_id.toPython()] = estimation_method_ontology_id.toPython()
             return result
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
     
     @endpoint("/get_decision_process", ["GET"], "application/json")    
     def get_decision_process(self, user_id, user_token, case_id):
@@ -661,7 +678,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             process = case_graph.value(case_id, orion_ns.decision_process)
             return process
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
     
     
     @endpoint("/change_decision_process", ["POST"], "application/json")
@@ -677,7 +694,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.commit()
             return "Ok"
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
 
     
     @endpoint("/change_case_property", ["POST"], "application/json")
@@ -693,7 +710,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.commit()
             return "Ok"
         else:
-            return "Invalid user or delegate token"
+            raise RuntimeError("Invalid user or delegate token")
 
     
     @endpoint("/get_case_property", ["GET"], "application/json")
@@ -708,7 +725,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             value = case_graph.value(case_id, rdflib.URIRef(name), None, None)
             return value
         else:
-            return "Invalid user or delegate token"
+            raise RuntimeError("Invalid user or delegate token")
     
     @endpoint("/get_general_context", ["GET"], "application/json")
     def get_general_context(self, user_id, user_token, case_id):
@@ -756,7 +773,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                     
             return result
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
     
     @endpoint("/save_general_context", ["POST"], "application/json")
     def save_general_context(self, user_id, user_token, case_id, general_context_list):
@@ -791,7 +808,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                 
                 case_graph.set((general_context_description_uri, orion_ns.value, rdflib.Literal(value)))
         else:
-            return "Invalid user token"      
+            raise RuntimeError("Invalid user token")
         
         
     @endpoint("/save_context", ["POST"], "application/json")
@@ -822,7 +839,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                     case_graph.add((context_uri, orion_ns[entry_id], entry_uri))
                     case_graph.add((entry_uri, orion_ns.value, rdflib.Literal(value)))
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
 
     @endpoint("/get_context", ["GET"], "application/json")
     def get_context(self, user_id, user_token, case_id, context_predicate):
@@ -848,7 +865,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                 result[entry_id].append(entry_value.toPython())
             return result
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
     
     @endpoint("/get_decision_alternatives", ["GET"], "application/json")
     def get_decision_alternatives(self, user_id, token, case_id):
@@ -864,7 +881,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                                       initBindings = { "case_id": case_id })
             return list(result)
         else:
-            return "Invalid user or delegate token"
+            raise RuntimeError("Invalid user or delegate token")
     
     @endpoint("/change_alternative_property", ["POST"], "application/json")
     def change_alternative_property(self, user_id, token, case_id, alternative, name, value):
@@ -880,7 +897,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.commit()
             return "Ok"
         else:
-            return "Invalid user or delegate token"
+            raise RuntimeError("Invalid user or delegate token")
 
     
     @endpoint("/get_alternative_property", ["GET"], "application/json")
@@ -896,7 +913,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             value = case_graph.value(alternative, rdflib.URIRef(name), None, None)
             return value
         else:
-            return "Invalid user or delegate token"
+            raise RuntimeError("Invalid user or delegate token")
         
         
     @endpoint("/get_ontology", ["GET", "POST"], "text/plain")
@@ -924,7 +941,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph = self.graph.get_context(case_id)
             return case_graph.serialize(format = format).decode("utf-8")
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
     
     @endpoint("/is_case_in_database", ["GET"], "application/json")
     def is_case_in_database(self, user_id, user_token, case_id):
@@ -934,7 +951,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                                             initBindings={"case_uri": case_id})
             return query_result.askAnswer
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
     @endpoint("/import_graph", ["POST"], "application/json")
     def import_graph(self, user_id, user_token, graph_description, format_, case_id):
@@ -942,7 +959,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph = rdflib.Graph(store = self.store, identifier = rdflib.URIRef(case_id))
             case_graph.parse(data=graph_description, format=format_)
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
     @endpoint("/remove_case", ["GET", "POST"], "application/json")
     def remove_case(self, user_id, user_token, case_id):
@@ -950,7 +967,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph = self.graph.get_context(case_id)
             case_graph.remove((None, None, None))
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
     
     #### NEW API FOR LINKED DATA #########################################################################
     
@@ -1012,7 +1029,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.commit()
             return uri
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
 
     
     def add_resource_with_uri(self, resource_class, uri):
@@ -1034,7 +1051,7 @@ class CaseDatabase(coach.GraphDatabaseService):
 
         # TODO: Add ontology and stakeholder checks.
         
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             resource = rdflib.URIRef(resource)
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))
             case_graph.remove((resource, None, None))
@@ -1042,7 +1059,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             case_graph.commit()
             return "Ok"
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
 
     
     @endpoint("/add_datatype_property", ["GET", "POST"], "application/json")
@@ -1055,13 +1072,13 @@ class CaseDatabase(coach.GraphDatabaseService):
         
         # A datatype property is stored in Neo4j as a node attribute.
 #        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))
             case_graph.add((rdflib.URIRef(resource), rdflib.URIRef(property_name), rdflib.Literal(value)))
             case_graph.commit()
             return "Ok"
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
         
         
     @endpoint("/add_object_property", ["GET", "POST"], "application/json")
@@ -1073,13 +1090,13 @@ class CaseDatabase(coach.GraphDatabaseService):
         # TODO: Add ontology and stakeholder checks.
         
 #        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))
             case_graph.add((rdflib.URIRef(resource1), rdflib.URIRef(property_name), rdflib.URIRef(resource2)))
             case_graph.commit()
             return "Ok"
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
 
 
     @endpoint("/get_datatype_property", ["GET", "POST"], "application/json")
@@ -1093,11 +1110,11 @@ class CaseDatabase(coach.GraphDatabaseService):
         
 #        if self.is_stakeholder(user_id, case_id) and (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = token) or 
 #                                                      self.authentication_service_proxy.check_delegate_token(user_id = user_id, delegate_token = token, case_id = case_id)):
-        if (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token)):
+        if (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token)) and self.is_stakeholder(user_id, case_id):
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))
             return case_graph.value(rdflib.URIRef(resource), rdflib.URIRef(property_name))
         else:
-            return "Invalid user or delegate token"
+            raise RuntimeError("Invalid user token")
         
         
     @endpoint("/get_object_properties", ["GET", "POST"], "application/json")
@@ -1111,10 +1128,10 @@ class CaseDatabase(coach.GraphDatabaseService):
         
         # Normally, we would get the uri of the resulting nodes. However, since it cannot assured that
         # all nodes have a uri, we get the node id instead and generate the uri from it.
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             return self.get_objects(user_id, user_token, case_id, resource, property_name)
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
 
 
     @endpoint("/get_subjects", ["GET", "POST"], "application/json")
@@ -1122,10 +1139,12 @@ class CaseDatabase(coach.GraphDatabaseService):
         """
         Returns the subjects of all triples where the predicate and object are as provided.
         """
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))
             result = case_graph.subjects(rdflib.URIRef(predicate), rdflib.URIRef(object))
             return list(result)
+        else:
+            raise RuntimeError("Invalid user token")
 
 
     @endpoint("/get_predicates", ["GET", "POST"], "application/json")
@@ -1133,10 +1152,12 @@ class CaseDatabase(coach.GraphDatabaseService):
         """
         Returns the predicates of all triples where the subject and object are as provided.
         """
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))
             result = case_graph.predicates(rdflib.URIRef(subject), rdflib.URIRef(object))
             return list(result)
+        else:
+            raise RuntimeError("Invalid user token")
 
 
     @endpoint("/get_objects", ["GET", "POST"], "application/json")
@@ -1144,10 +1165,51 @@ class CaseDatabase(coach.GraphDatabaseService):
         """
         Returns the objects of all triples where the subject and predicate are as provided.
         """
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))
             result = case_graph.objects(rdflib.URIRef(subject), rdflib.URIRef(predicate))
             return list(result)
+        else:
+            raise RuntimeError("Invalid user token")
+        
+    @endpoint("/get_value", ["GET", "POST"], "application/json")
+    def get_value(self, user_id, user_token, case_id, subject, predicate, object_, default_value=None, any_=True):
+        """
+        DESCRIPTION:
+            Get a value for a pair of two criteria among subject, predicate and object_.
+        INPUT:
+            user_id, user_token: The identifier of a user. They are used to check the authenticity of the caller.
+            case_id: The uri of the case on which the value will be retrieved. The user must be a stakeholder of this case.
+            subject, predicate, object_: Exactly one of those must be None. The two provided values are used to retrieve the missing one.
+                The values do not need to be rdf term.
+            default_value: If no value is found, return this value instead.
+            any_: If True, return any value in the case there is more than one, else, raise UniquenessError
+        OUTPUT:
+            The missing value among subject, predicate, object_. If there is no value corresponding to the two provided criteria, the 
+            default_value is returned instead. If there is more than one value corresponding to the two provided criteria and any_ is True,
+            return any value among them.
+        ERROR:
+            Raise RuntimeError if the user_token does not match the user_id.
+            Raise UniquenessError if there is more than one value matching the provided criteria and any_ is False
+            Raise an error if subject, predicate and object_ are all defined. 
+        """
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            case_graph = self.graph.get_context(rdflib.URIRef(case_id))
+            if subject is not None:
+                subject = rdflib.URIRef(subject)
+            if predicate is not None:
+                predicate = rdflib.URIRef(predicate)
+                
+            if object_ is None:
+                return case_graph.value(subject, predicate, None, default_value, any_)
+            else:
+                value_with_literal_object = case_graph.value(subject, predicate, rdflib.Literal(object_), default_value, any_)
+                if value_with_literal_object == default_value:
+                    return case_graph.value(subject, predicate, rdflib.URIRef(object_), default_value, any_)
+                else:
+                    return value_with_literal_object
+        else:
+            raise RuntimeError("Invalid user token")
 
 
     @endpoint("/remove_datatype_property", ["GET", "POST"], "application/json")
@@ -1158,13 +1220,13 @@ class CaseDatabase(coach.GraphDatabaseService):
 
         # TODO: Add ontology and stakeholder checks.
         
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))
             case_graph.remove((rdflib.URIRef(resource), rdflib.URIRef(property_name), None))
             case_graph.commit()
             return "Ok"
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
 
 
     @endpoint("/remove_object_property", ["GET", "POST"], "application/json")
@@ -1175,13 +1237,13 @@ class CaseDatabase(coach.GraphDatabaseService):
 
         # TODO: Add ontology and stakeholder checks.
         
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))
             case_graph.remove((rdflib.URIRef(resource1), rdflib.URIRef(property_name), rdflib.URIRef(resource2)))
             case_graph.commit()
             return "Ok"
         else:
-            return "Invalid user token"
+            raise RuntimeError("Invalid user token")
 
 
     @endpoint("/toggle_object_property", ["GET", "POST"], "application/json")
@@ -1190,18 +1252,24 @@ class CaseDatabase(coach.GraphDatabaseService):
         If the triple (resource1, property_name, resource2) exists, it is deleted and False is returned. 
         Otherwise, it is added, and True is returned. The result thus reflects if the triple exists after the call.
         """
-        
-        # Read value from database here, then invert it!
-        resource2 = rdflib.URIRef(resource2)
-        props = self.get_objects(user_id = user_id, user_token = user_token, case_id = case_id, 
-                                 subject = resource1, predicate = property_name)
-        if resource2 in props:
-            # Value is already set, so remove it
-            self.remove_object_property(user_id = user_id, user_token = user_token, case_id = case_id,
-                                        resource1 = resource1, property_name = property_name, resource2 = resource2)
-            return False
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            # Read value from database here, then invert it!
+            resource2 = rdflib.URIRef(resource2)
+            props = self.get_objects(user_id = user_id, user_token = user_token, case_id = case_id, 
+                                     subject = resource1, predicate = property_name)
+            if resource2 in props:
+                # Value is already set, so remove it
+                self.remove_object_property(user_id = user_id, user_token = user_token, case_id = case_id,
+                                            resource1 = resource1, property_name = property_name, resource2 = resource2)
+                return False
+            else:
+                # Value is not set, so add id
+                self.add_object_property(user_id = user_id, user_token = user_token, case_id = case_id, 
+                                         resource1 = resource1, property_name = property_name, resource2 = resource2)
+                return True
         else:
-            # Value is not set, so add id
-            self.add_object_property(user_id = user_id, user_token = user_token, case_id = case_id, 
-                                     resource1 = resource1, property_name = property_name, resource2 = resource2)
-            return True
+            raise RuntimeError("Invalid user token")
+            
+            
+            
+            
