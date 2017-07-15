@@ -120,7 +120,7 @@ Data sources (semicolon separated): <BR>
         for [c, _] in cases:
             try:
                 print("Loading case data for case " + str(c))
-                case_data = case_db_proxy.export_case_data(user_id = user_id, user_token = user_token, case_id = c, format = "n3")
+                case_data = case_db_proxy.export_case_data(user_id = user_id, user_token = user_token, case_id = c, format_ = "n3")
                 self.graph.parse(data = case_data, format = "n3")
             except Exception:
                 print("Failed to load case data for case " + str(c))
@@ -167,3 +167,5 @@ WHERE {
         result_text = " <BR> ".join([str(x) for x in result])
         
         return dialogue.format(data_sources = data_sources, query = q, result = result_text)
+    
+    

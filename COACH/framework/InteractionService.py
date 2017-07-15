@@ -26,6 +26,20 @@ import requests
 # Linked data
 import rdflib
 
+# TODO: to suppress
+from datetime import datetime
+import inspect
+
+def log(*args, verbose = True):
+    message = "" if verbose else "::"
+    if verbose:
+        message = datetime.now().strftime("%H:%M:%S") + " : "
+        message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
+    for arg in args:
+        message += str(arg).replace("\n", "\n::") + " "
+    print(message)
+    sys.stdout.flush()
+
 class InteractionService(coach.Microservice):
     
     """
@@ -92,7 +106,7 @@ class InteractionService(coach.Microservice):
         """
         if not self.ontology:
             self.ontology = rdflib.ConjunctiveGraph()
-            self.ontology.parse(data = self.case_db_proxy.get_ontology(format = "ttl"), format = "ttl")
+            self.ontology.parse(data = self.case_db_proxy.get_ontology(format_ = "ttl"), format = "ttl")
         return self.ontology
         
     
@@ -133,15 +147,12 @@ class InteractionService(coach.Microservice):
         If the case in the database has a decision method selected, its process method is fetched and included in the context.
         """
         context = kwargs
-        decision_process = ""
         if "case_id" in session:
-            try:
-                decision_process = self.case_db_proxy.get_decision_process(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
-                if decision_process:
-                    decision_process_proxy = self.create_proxy(decision_process)
-                    context["process_menu"] = decision_process_proxy.process_menu()
-            except Exception as e:
-                print("Error in main_menu_transition, with decision_process = " + str(decision_process) + ": " + str(e))
+            decision_process = self.case_db_proxy.get_decision_process(user_id = session["user_id"], user_token = session["user_token"], 
+                                                                       case_id = session["case_id"])
+            if decision_process:
+                decision_process_proxy = self.create_proxy(decision_process)
+                context["process_menu"] = decision_process_proxy.process_menu()
         return render_template("main_menu.html", **context)
 
 
@@ -311,9 +322,12 @@ class InteractionService(coach.Microservice):
         services = []
         current_decision_process = self.case_db_proxy.get_decision_process(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
 
+        log("self.service_directory_proxies :", self.service_directory_proxies)
         for d in self.service_directory_proxies:
             services += d.get_services(service_type = "decision_process")
-        options = ["<OPTION value=\"%s\" %s> %s </A>" % (s[2], "selected" if s[2] == current_decision_process else "", s[1]) for s in services]
+        log("services :", services)
+        options = ['<option value="%s" %s> %s </a>' % (s[2], "selected" if s[2] == current_decision_process else "", s[1]) for s in services]
+        log("options :", options)
         
         dialogue = render_template("change_decision_process_dialogue.html", decision_processes = options)
         return self.main_menu_transition(main_dialogue = dialogue)
@@ -486,7 +500,6 @@ class InteractionService(coach.Microservice):
                 session.pop("case_id", None)
 
                 # Add the user to the case db if it is not already there
-                self.case_db_proxy.create_user(user_id = session["user_id"], user_token = session["user_token"])
                 return self.main_menu_transition()
             else:
                 # If the wrong password was entered, show the dialogue again with an error message
@@ -536,7 +549,7 @@ class InteractionService(coach.Microservice):
             case_information = self.knowledge_repository_proxy.import_case(case_uri=case_id, format_="n3")
             case_graph_description = case_information["case_graph_description"]
             case_uri = case_information["case_uri"]
-            self.case_db_proxy.import_graph(user_id=user_id, user_token=user_token, graph_description=case_graph_description, format_="n3",
+            self.case_db_proxy.import_case(user_id=user_id, user_token=user_token, graph_description=case_graph_description, format_="n3",
                                             case_id=case_uri)
             
         return self.case_status_dialogue_transition()
@@ -566,7 +579,7 @@ class InteractionService(coach.Microservice):
         
         if export_to_kr_checkbox == "on":
             #TODO: add a confirmation window
-            case_description = self.case_db_proxy.export_case_data(**db_infos, format = "n3")
+            case_description = self.case_db_proxy.export_case_data(**db_infos, format_ = "n3")
             self.knowledge_repository_proxy.export_case(graph_description=case_description, format_="n3")
             
         self.case_db_proxy.remove_case(**db_infos)
@@ -620,8 +633,9 @@ class InteractionService(coach.Microservice):
 
     @endpoint("/edit_user_profile", ["POST"], "text/html")
     def edit_user_profile(self, user_name, company_name, email, skype_id, user_phone, location, user_bio):
-        self.authentication_service_proxy.set_user_profile(user_id = session["user_id"], user_name = user_name, company_name = company_name, 
-                                                           email = email, skype_id = skype_id, user_phone = user_phone, location = location, user_bio = user_bio)
+        self.authentication_service_proxy.set_user_profile(user_id = session["user_id"], user_token = session["user_token"], user_name = user_name, 
+                                                           company_name = company_name, email = email, skype_id = skype_id, user_phone = user_phone,
+                                                           location = location, user_bio = user_bio)
         return self.main_menu_transition(main_dialogue = "User profile details changed!")
         
     @endpoint("/change_case_description", ["POST"], "text/html")
@@ -663,7 +677,10 @@ class InteractionService(coach.Microservice):
         """
         Exports the current case to the knowledge repository.
         """
-        description = self.case_db_proxy.export_case_data(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"], format = "n3")
+        user_id = session["user_id"]
+        user_token = session["user_token"]
+        case_id = session["case_id"]
+        description = self.case_db_proxy.export_case_data(user_id = user_id, user_token = user_token, case_id = case_id, format_ = "n3")
         print(description)
         self.knowledge_repository_proxy.export_case(graph_description=description, format_="n3")
         description = description.replace("&", "&amp;")
@@ -725,26 +742,20 @@ class InteractionService(coach.Microservice):
         """
         Update the goal description with a new text.
         """
-        case_id = session["case_id"]
+        db_infos = {"user_id": session["user_id"], "user_token": session["user_token"], "case_id": session["case_id"]}
+        case_id = db_infos["case_id"]
         orion_ns = rdflib.Namespace(self.orion_ns)
 
         # Does the case already have a Goal element? If not, create it, and bind its url to goal_url.
-        goals = self.case_db_proxy.get_objects(user_id=session["user_id"], user_token=session["user_token"],
-                                               case_id=case_id, subject=case_id, predicate=orion_ns.goal)
+        goals = self.case_db_proxy.get_objects(**db_infos, subject=case_id, predicate=orion_ns.goal)
         if goals:
             goal_uri = goals[0]
         else:
-            goal_uri = self.case_db_proxy.add_resource(user_id=session["user_id"], user_token=session["user_token"],
-                                                       case_id=case_id, resource_class="Goal")
-            self.case_db_proxy.add_object_property(user_id=session["user_id"], user_token=session["user_token"],
-                                                   case_id=case_id, resource1=case_id, property_name=orion_ns.goal,
-                                                   resource2=goal_uri)
+            goal_uri = self.case_db_proxy.add_resource(**db_infos, resource_class="Goal")
+            self.case_db_proxy.add_object_property(**db_infos, resource1=case_id, property_name=orion_ns.goal, resource2=goal_uri)
 
         # Add the description
-        self.case_db_proxy.add_datatype_property(user_id = session["user_id"], user_token = session["user_token"],
-                                                 case_id = case_id,
-                                                 resource = goal_uri,
-                                                 property_name = orion_ns.description,
+        self.case_db_proxy.add_datatype_property(**db_infos, resource = goal_uri, property_name = orion_ns.description, 
                                                  value = rdflib.Literal(description))
         return self.main_menu_transition(main_dialogue = "Goal description changed!")
 
@@ -755,25 +766,22 @@ class InteractionService(coach.Microservice):
         Transition to the dialogue for the goal category customer value.
         Class name is a subcategory of Goal, and property name the property linking to that subcategory.
         """
-        case_id = session["case_id"]
+        db_infos = {"user_id": session["user_id"], "user_token": session["user_token"], "case_id": session["case_id"]}
+        case_id = db_infos["case_id"]
         orion_ns = rdflib.Namespace(self.orion_ns)
         
         # Does the case already have a Goal element? If not, create it, and bind its url to goal_url.
-        goals = self.case_db_proxy.get_objects(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, 
-                                               subject = case_id, predicate = orion_ns.goal)
+        goals = self.case_db_proxy.get_objects(**db_infos, subject = case_id, predicate = orion_ns.goal)
         if goals:
             goal_uri = goals[0]
         else:
-            goal_uri = self.case_db_proxy.add_resource(user_id = session["user_id"], user_token = session["user_token"], 
-                                                       case_id = case_id, resource_class = "Goal")
-            self.case_db_proxy.add_object_property(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, 
-                                                   resource1 = case_id, property_name = orion_ns.goal, resource2 = goal_uri)
+            goal_uri = self.case_db_proxy.add_resource(**db_infos, resource_class = "Goal")
+            self.case_db_proxy.add_object_property(**db_infos, resource1 = case_id, property_name = orion_ns.goal, resource2 = goal_uri)
         
         class_title = self.get_ontology().value(orion_ns[class_name], orion_ns.title, None)
 
         # Which goal subcategories are selected?
-        checked = self.case_db_proxy.get_objects(user_id = session["user_id"], user_token = session["user_token"], case_id = case_id, 
-                                                 subject = goal_uri, predicate = orion_ns[property_name])
+        checked = self.case_db_proxy.get_objects(**db_infos, subject = goal_uri, predicate = orion_ns[property_name])
 
         # Instances contains all uri:s in the ontology that are linked from a subject of class class_name with the predicate property_name.
         # The gradeId, title and description are also provided. The last field indicates if the item has been selected.
@@ -798,8 +806,8 @@ class InteractionService(coach.Microservice):
         It updates the database, and then displays the goal dialogue again.
         """
         orion_ns = rdflib.Namespace(self.orion_ns)
-        self.case_db_proxy.toggle_object_property(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"], resource1 = goal_uri,
-                                                  property_name = orion_ns[property_name], resource2 = value_uri)
+        db_infos = {"user_id": session["user_id"], "user_token": session["user_token"], "case_id": session["case_id"]}
+        self.case_db_proxy.toggle_object_property(**db_infos, resource1 = goal_uri, property_name = orion_ns[property_name], resource2 = value_uri)
         return self.goal_dialogue_transition(class_name = class_name, property_name = property_name)
     
     

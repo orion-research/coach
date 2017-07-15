@@ -445,7 +445,7 @@ class PropertyModelService(coach.Microservice):
         if not self.ontology:
             case_db_proxy = db_infos["case_db_proxy"]
             self.ontology = rdflib.ConjunctiveGraph()
-            self.ontology.parse(data = case_db_proxy.get_ontology(format = "ttl"), format = "ttl")
+            self.ontology.parse(data = case_db_proxy.get_ontology(format_ = "ttl"), format = "ttl")
         return self.ontology
     
     def _get_ontology_instances(self, class_name, db_infos = None):
@@ -519,7 +519,7 @@ class PropertyModelService(coach.Microservice):
         
         property_ontology_id = self._get_property_ontology_id_name(property_name)
         properties_list = case_db_proxy.get_subjects(user_id=user_id, user_token=user_token, case_id=case_id, 
-                                                     predicate=orion_ns.ontology_id, object=property_ontology_id)
+                                                     predicate=orion_ns.ontology_id, object_=property_ontology_id)
 
         if len(properties_list) > 1:
             raise RuntimeError("There should be at most one property with the name " + property_name + " but "

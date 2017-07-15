@@ -173,10 +173,9 @@ class AuthenticationService(Microservice):
     @endpoint("/get_users", ["POST"], "application/json")
     def get_users(self):
         """
-        Returns the list of all registered users, as a list of tuples (user_id, uri, email, name).
+        Returns the list of all registered users.
         """
-        return [(user_id, self.get_user_uri(user_id), self.users[user_id]["email"], self.users[user_id]["name"]) 
-                for user_id in self.users.keys()]
+        return self.users.keys()
 
 
     @endpoint("/logout_user", ["POST"], "application/json")
@@ -237,18 +236,21 @@ class AuthenticationService(Microservice):
             return None 
 
     @endpoint("/set_user_profile", ["GET", "POST"], "application/json")
-    def set_user_profile(self, user_id, user_name, company_name, email, skype_id, user_phone, location, user_bio):
+    def set_user_profile(self, user_id, user_token, user_name, company_name, email, skype_id, user_phone, location, user_bio):
         """
         Saves the profile of a user.
         """
-        self.users[user_id]["name"] = user_name
-        self.users[user_id]["company_name"] = company_name
-        self.users[user_id]["email"] = email
-        self.users[user_id]["skype_id"] = skype_id
-        self.users[user_id]["user_phone"] = user_phone
-        self.users[user_id]["location"] = location
-        self.users[user_id]["user_bio"] = user_bio
-        self.save_data()
+        if self.confirm_user_token(user_id, user_token):
+            self.users[user_id]["name"] = user_name
+            self.users[user_id]["company_name"] = company_name
+            self.users[user_id]["email"] = email
+            self.users[user_id]["skype_id"] = skype_id
+            self.users[user_id]["user_phone"] = user_phone
+            self.users[user_id]["location"] = location
+            self.users[user_id]["user_bio"] = user_bio
+            self.save_data()
+        else:
+            raise RuntimeError("Invalid user token")
     
         
     @endpoint("/get_user_email", ["GET", "POST"], "application/json")

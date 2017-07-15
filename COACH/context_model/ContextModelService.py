@@ -61,7 +61,7 @@ class ContextModelService(coach.Microservice):
         if not self.ontology:
             case_db_proxy = db_infos["case_db_proxy"]
             self.ontology = rdflib.ConjunctiveGraph()
-            self.ontology.parse(data = case_db_proxy.get_ontology(format = "ttl"), format = "ttl")
+            self.ontology.parse(data = case_db_proxy.get_ontology(format_ = "ttl"), format = "ttl")
         return self.ontology
 
     @endpoint("/edit_context_dialogue", ["GET"], "text/html")

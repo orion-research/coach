@@ -33,7 +33,7 @@ class DirectoryService(coach.Microservice):
     /removeService?url=Y
     /getServices[?type=X]
     
-    TODO: Possibly, this could also run some tests of the service, to see that it fulfils the protocol.
+    TODO: Possibly, this could also run some tests of the service, to see that it fulfills the protocol.
     See also paper on SECO quality assurance, and select techniques from there.
     """
     

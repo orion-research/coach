@@ -26,6 +26,20 @@ import rdflib
 from rdflib.namespace import split_uri
 import sqlalchemy
 from rdflib_sqlalchemy.store import SQLAlchemy
+
+# TODO: to suppress
+from datetime import datetime
+import inspect
+
+def log(*args, verbose = True):
+    message = "" if verbose else "::"
+    if verbose:
+        message = datetime.now().strftime("%H:%M:%S") + " : "
+        message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
+    for arg in args:
+        message += str(arg).replace("\n", "\n::") + " "
+    print(message)
+    sys.stdout.flush()
         
 class KnowledgeRepositoryService(Microservice):
 
@@ -136,9 +150,7 @@ class KnowledgeRepositoryService(Microservice):
                     raise RuntimeError("A subject must not be a Literal")
                 
                 predicate_name = split_uri(p)[1]
-#                     if not predicate_name.islower():
-#                         raise RuntimeError("The predicate " + predicate_name + " contains upper cases letters.")
-                
+                log(p, " ", predicate_name, verbose=False)
                 if predicate_name == "type":
                     if not str(o).startswith(self.orion_ns):
                         raise RuntimeError("The type of a node must be in the ontology namespace")

@@ -132,7 +132,7 @@ GENERAL_CONTEXT__BUSINESS_GENERAL_ID = "B00_text"
 GENERAL_CONTEXT__CONFIRMATION_MESSAGE = "Context information (general) saved."
 
 #context_category_dialogue.html
-CONTEXT_CATEGORY__DEFAULT_COMBO_BOX_OPTION = "-- Select an option --"
+CONTEXT_CATEGORY__DEFAULT_COMBO_BOX_OPTION = "Unknown"
 CONTEXT_CATEGORY_ORGANIZATION__SUB_TITLE = "Context details - Organization"
 CONTEXT_CATEGORY_ORGANIZATION__CONFIRMATION_MESSAGE = "Context information (organization) saved."
 

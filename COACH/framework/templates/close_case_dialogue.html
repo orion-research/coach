@@ -4,7 +4,6 @@
 	<div>
 		<label for="selected_alternative">Selected alternative:</label>"
 		<select id="selected_alternative" name="selected_alternative" required>
-			<option disabled selected value>-- Select an option --</option>
 			<option value="None" {% if selected_alternative == "None" %} selected {% endif %}>None</option>
 			{% for alternative in alternative_list %}
 				<option value="{{alternative[1]}}" {% if selected_alternative == alternative[1] %} selected {% endif %}>
