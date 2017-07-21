@@ -1,25 +1,25 @@
 <h2>Properties</h2>
 <br />
-<table id="overview" style="border-collapse: collapse; text-align:center; border: 2px solid black">
+<table class="properties_estimation_table">
 	<tr>
-		<th style="border: 1px solid black"></th>
-		<th style="border: 1px solid black"></th>
+		<th></th>
+		<th></th>
 		{% for alternative_name in alternatives_name_list %}
-			<th style="border: 1px solid black">{{alternative_name}}</th>
+			<th>{{alternative_name}}</th>
 		{% endfor %}
 	</tr>
 
 	{% for property in properties_estimations %}
-		<tr style="border: 2px solid black">
-			<th rowspan="{{property.estimation_methods | length}}" style="border: 1px solid black">{{property.property_name}}</th>
+		<tr class="property_row">
+			<th rowspan="{{property.estimation_methods | length}}">{{property.property_name}}</th>
 			<!-- The first estimation method must be here and not in a new row -->
-			<th style="border: 1px solid black">{{property.estimation_methods[0].estimation_method_name}}</th>
+			<th>{{property.estimation_methods[0].estimation_method_name}}</th>
 			{% for value_object in property.estimation_methods[0].estimated_values %}
-				<td style="{% if not value_object.up_to_date %} background-color:yellow;{%endif%} border:1px solid black">
+				<td {% if not value_object.up_to_date %} class="out_of_date" {%endif%}>
 					<a href="/property_model_request?endpoint=shortcut_from_overview
 					&alternative_name={{value_object.alternative_name}}
 					&property_name={{property.property_name}}
-					&estimation_method_name={{property.estimation_methods[0].estimation_method_name}}" style="text-decoration:none; color:black">
+					&estimation_method_name={{property.estimation_methods[0].estimation_method_name}}">
 						<div>
 							&nbsp;
 							{% if value_object.value is number %}
@@ -36,13 +36,13 @@
 		{% for estimation in property.estimation_methods %}
 			{% if estimation != property.estimation_methods[0] %}
 				<tr>
-					<th style="border: 1px solid black">{{estimation.estimation_method_name}}</th>
+					<th>{{estimation.estimation_method_name}}</th>
 					{% for value_object in estimation.estimated_values %}
-						<td style="{% if not value_object.up_to_date %}background-color:yellow;{%endif%} border:1px solid black">
+						<td {% if not value_object.up_to_date %} class="out_of_date" {%endif%}>
 							<a href="/property_model_request?endpoint=shortcut_from_overview
 							&alternative_name={{value_object.alternative_name}}
 							&property_name={{property.property_name}}
-							&estimation_method_name={{estimation.estimation_method_name}}" style="text-decoration:none; color:black">
+							&estimation_method_name={{estimation.estimation_method_name}}">
 								<div>
 									&nbsp;
 									{% if value_object.value is number %}

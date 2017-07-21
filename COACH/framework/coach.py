@@ -373,7 +373,7 @@ class Proxy():
                 http_method = next(m for m in self.method_preference if m in self.api[name]["methods"])
 
                 # Check that the parameter names used are in the api
-                for p in kwargs.keys():
+                for p in kwargs:
                     if p not in self.api[name]["params"]:
                         raise TypeError("Parameter " + p + " is not defined for proxy method " + name + ". " +
                                         "Allowed parameters are " + ", ".join(self.api[name]["params"]) + ".")

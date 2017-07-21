@@ -29,7 +29,7 @@ class EstimationMethodValue():
     
     @classmethod
     def build_from_web_page(cls, driver):
-        table_element = driver.find_element_by_id("overview")       
+        table_element = driver.find_element_by_class_name("properties_estimation_table")       
 
         tr_elements = table_element.find_elements_by_tag_name("tr")
         th_alternatives = tr_elements[0].find_elements_by_tag_name("th")
@@ -67,7 +67,7 @@ class EstimationMethodValue():
                 estimation_value = float(estimation_cell.text.strip())
             except ValueError:
                 estimation_value = estimation_cell.text.strip()
-            up_to_date = not ("background-color: yellow" in estimation_cell.get_attribute("style"))
+            up_to_date = not ("out_of_date" in estimation_cell.get_attribute("class"))
             
             estimation_method_values.append({"alternative_name": alternatives_name_list[i],
                                              "up_to_date": up_to_date,
@@ -118,10 +118,10 @@ class EstimationMethodValue():
             self.add_value(alternative_name, property_name, estimation_method_name, value, up_to_date)
         
         
-    def __eq__(self, other, verbose=True):
+    def __eq__(self, other, self_name="self", other_name="other", verbose=True):
         if not isinstance(other, EstimationMethodValue):
             if verbose:
-                print("other is not an EstimationMethodValue.")
+                print("{0} is not an EstimationMethodValue.".format(other_name))
             return False
         
         for i, self_property in enumerate(self.properties_estimation):
@@ -130,16 +130,16 @@ class EstimationMethodValue():
                 raise RuntimeError("Malformed object EstimationMethod : a property must have exactly 2 keys")
             if self_property["property_name"] != other_property["property_name"]:
                 if verbose:
-                    print("Properties differ between self and other. First different property: {0} in self, {1} in other."
-                          .format(self_property["property_name"], other_property["property_name"]) )
+                    print("Properties differ between {0} and {1}. First different property: {2} in {0}, {3} in {1}."
+                          .format(self_name, other_name, self_property["property_name"], other_property["property_name"]) )
                 return False
             
             self_estimation_methods_list = self_property["estimation_methods"]
             other_estimation_methods_list = other_property["estimation_methods"]
             if len(self_estimation_methods_list) != len(other_estimation_methods_list):
                 if verbose:
-                    print(("There is not the same number of estimation method for the property {0} in self and other. In self: {1}, " +
-                          "in other: {2}.").format(self_property["property_name"], len(self_estimation_methods_list), 
+                    print(("There is not the same number of estimation method for the property {0} in {1} and {2}. In {1}: {3}, " +
+                          "in {2}: {4}.").format(self_property["property_name"], self_name, other_name, len(self_estimation_methods_list), 
                                                   len(other_estimation_methods_list)))
                 return False
             
@@ -149,8 +149,8 @@ class EstimationMethodValue():
                                                                             self_estimation_method["estimation_method_name"])
                 except RuntimeError:
                     if verbose:
-                        print("The estimation method {0} is not in other's property {1}".format(self_estimation_method["estimation_method_name"],
-                                                                                                other_property["property_name"]))
+                        print("The estimation method {0} is not in {1}'s property {2}".format(self_estimation_method["estimation_method_name"],
+                                                                                                other_name, other_property["property_name"]))
                     return False
                 if len(self_estimation_method) != 2 or len(other_estimation_method) != 2:
                     raise RuntimeError("Malformed object EstimationMethod : an estimation method must have exactly 2 keys")
@@ -159,11 +159,11 @@ class EstimationMethodValue():
                 other_estimation_method_values_list = other_estimation_method["estimation_method_values"]
                 if len(self_estimation_method_values_list) != len(other_estimation_method_values_list):
                     if verbose:
-                        print(("There is not the same number of values for the property {0} and the estimation method {1} in self and other. " +
-                              "In self: {2}, in other: {3}").format(self_property["property_name"], 
-                                                                    self_estimation_method["estimation_method_name"], 
-                                                                    len(self_estimation_method_values_list), 
-                                                                    len(other_estimation_method_values_list)))
+                        print(("There is not the same number of values for the property {0} and the estimation method {1} in {2} and {3}. " +
+                              "In {2}: {4}, in {3}: {5}").format(self_property["property_name"], 
+                                                                 self_estimation_method["estimation_method_name"], self_name, other_name,
+                                                                 len(self_estimation_method_values_list), 
+                                                                 len(other_estimation_method_values_list)))
                     return False
                 
                 for self_estimation_method_value in self_estimation_method_values_list:
@@ -173,26 +173,26 @@ class EstimationMethodValue():
                                                                                       self_estimation_method_value["alternative_name"])
                     except RuntimeError:
                         if verbose:
-                            print("There is no estimation for ({0}, {1}, {2}) in other"
+                            print("There is no estimation for ({0}, {1}, {2}) in {3}"
                                   .format(self_estimation_method_value["alternative_name"], self_property["property_name"],
-                                          self_estimation_method["estimation_method_name"]))
+                                          self_estimation_method["estimation_method_name"], other_name))
                         return False
                     if len(self_estimation_method_value) != 3 or len(other_estimation_method_value) != 3:
                         raise RuntimeError("Malformed object EstimationMethod : an estimation method value must have exactly 3 keys")
                     
                     if self_estimation_method_value["value"] != other_estimation_method_value["value"]:
                         if verbose:
-                            print("The value of the estimation ({0}, {1}, {2}) is {3} in self and {4} in other"
+                            print("The value of the estimation ({0}, {1}, {2}) is {3} in {4} and {5} in {6}"
                                   .format(self_estimation_method_value["alternative_name"], self_property["property_name"],
                                           self_estimation_method["estimation_method_name"], self_estimation_method_value["value"],
-                                          other_estimation_method_value["value"]))
+                                          self_name, other_estimation_method_value["value"], other_name))
                         return False
                     if self_estimation_method_value["up_to_date"] != other_estimation_method_value["up_to_date"]:
                         if verbose:
-                            print("The estimation ({0}, {1}, {2}) has a up-to-date property {3} in self and {4} in other"
+                            print("The estimation ({0}, {1}, {2}) has a up-to-date property {3} in {4} and {5} in {6}"
                                   .format(self_estimation_method_value["alternative_name"], self_property["property_name"],
                                           self_estimation_method["estimation_method_name"], self_estimation_method_value["up_to_date"],
-                                          other_estimation_method_value["up_to_date"]))
+                                          self_name, other_estimation_method_value["up_to_date"], other_name))
                         return False
                         
         return True

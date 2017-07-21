@@ -8,6 +8,7 @@ Created on 20 juin 2017
 import os
 import sys
 import collections
+import time
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 from COACH.test.test_global.EstimationMethodValue import EstimationMethodValue
@@ -167,9 +168,9 @@ class TestGlobal (unittest.TestCase):
         export_to_kr_checkbox = self.driver.find_element_by_name(CLOSE_CASE__EXPORT_TO_KR_CHECKBOX_NAME)
         if export_to_kr_checkbox.is_selected():
             export_to_kr_checkbox.click()
-        
+         
         self._select_combo_box(CLOSE_CASE__SELECTED_ALTERNATIVE_NAME, CLOSE_CASE__NONE_ALTERNATIVE)
-        
+         
         with self.wait_for_page_load():
             export_to_kr_checkbox.submit()
         self.assertIn(CLOSE_CASE__CONFIRMATION_MESSAGE, self.driver.page_source)
@@ -245,7 +246,7 @@ class TestGlobal (unittest.TestCase):
         self._assert_compute_value(5)
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK, 30)
         self._assert_property_overview_page()
-  
+   
         # Compute an estimation with used properties
         # Selectable estimation method for a used property are those for this property
         # If all used estimations have been computed, the compute button is enable
@@ -260,7 +261,7 @@ class TestGlobal (unittest.TestCase):
         self._assert_compute_value(50)
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK)
         self._assert_property_overview_page()
-        
+         
         # Up-to-date is set to False when a used property is re-computed
         # When up-to-date is False, the overview background is yellow
         # When up-to-date is False, a warning message is displayed before the value of the current estimation
@@ -276,7 +277,7 @@ class TestGlobal (unittest.TestCase):
         self.estimation_value_list.append((*poped_estimation, False))
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK)
         self._assert_property_overview_page()
-        
+         
         # When up-to-date is False, it becomes True once the estimation is re computed
         # Selected estimation method for used properties is the one used for the last computation
         estimation = ("Alt 1", "Cost", "Cost estimation")
@@ -290,7 +291,7 @@ class TestGlobal (unittest.TestCase):
         self.estimation_value_list.append((*estimation, 50.0))
         self._go_to_link(MAIN_MENU__PROPERTIES_MENU, MAIN_MENU__PROPERTY_OVERVIEW_LINK)
         self._assert_property_overview_page()
-        
+         
         # If a used estimation has not been computed yet, the compute button is disable
         estimation = ("Alt 2", "Development effort", "Basic COCOMO")
         self._click_on_property_overview_shortcut(estimation)
@@ -660,7 +661,7 @@ class TestGlobal (unittest.TestCase):
         self._assert_page(PROPERTY_OVERVIEW__SUB_TITLE)
         actual_estimation_method_value = EstimationMethodValue.build_from_web_page(self.driver)
         expected_estimation_method_value = EstimationMethodValue.build_expected_result(self.alternatives_name_list, self.estimation_value_list)
-        self.assertEqual(actual_estimation_method_value, expected_estimation_method_value)
+        self.assertTrue(actual_estimation_method_value.__eq__(expected_estimation_method_value, "actual", "expected"))
         
     def _assert_property_estimation_method_page(self, estimation = (None, None, None), parameters_value = {}, used_properties_estimation_method = {}, 
                                                 up_to_date = True):

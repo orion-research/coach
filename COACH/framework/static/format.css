@@ -59,3 +59,32 @@ div.contextentry {
     width: 38em; /* NOTE: Hard-coded to look ok locally */
 }
 
+.properties_estimation_table {
+	border-collapse: collapse; 
+	text-align:center;
+}
+
+
+.properties_estimation_table th, td{
+	border: 1px solid black;
+}
+
+.properties_estimation_table a {
+	text-decoration:none; color:black;
+}
+
+tr.property_row {
+	border-top: 2px solid black;
+}
+
+td.out_of_date {
+	background-color:yellow;
+}
+
+
+
+
+
+
+
+

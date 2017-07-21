@@ -1,10 +1,12 @@
-<H2>Select a baseline</H2>
+<h2>Select a baseline</h2>
 
-<FORM action="/decision_process_request?endpoint=select_baseline" method="post" accept-charset="UTF-8">
-<SELECT name="baseline">
-{% for a in alternatives %}
-{{ a | safe }}
-{% endfor %}
-</SELECT>
-<INPUT type="submit" value="Select"/>
-</FORM>
+<form action="/decision_process_request?endpoint=select_baseline" method="post" accept-charset="UTF-8">
+	<select name="baseline">
+		{% for a in alternatives %}
+			<option value="{{a[1]}}" {% if baseline_list and a[1] == baseline_list[0] %} selected {% endif %}>
+				{{a[0]}}
+			</option>
+		{% endfor %}
+	</select>
+	<input type="submit" value="Select"/>
+</form>

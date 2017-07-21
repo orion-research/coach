@@ -333,8 +333,8 @@ class PropertyModelService(coach.Microservice):
                                                                       selected_estimation_method_for_used_properties)
 
         selected_estimation_method_parameters_list = self._get_estimation_method_parameters(db_infos, selected_alternative_name,
-                                                                                                     selected_property_name,
-                                                                                                     selected_estimation_method_name)
+                                                                                             selected_property_name,
+                                                                                             selected_estimation_method_name)
         
         enable_compute_button = self._is_compute_button_enable(used_properties)
         enable_delete_button = self._is_delete_button_enable(db_infos, selected_alternative_name, selected_property_name,
@@ -515,16 +515,10 @@ class PropertyModelService(coach.Microservice):
         user_token = db_infos["user_token"]
         case_id = db_infos["case_id"]
         case_db_proxy = db_infos["case_db_proxy"]
-        orion_ns = rdflib.Namespace(self.orion_ns)
         
         property_ontology_id = self._get_property_ontology_id_name(property_name)
-        properties_list = case_db_proxy.get_subjects(user_id=user_id, user_token=user_token, case_id=case_id, 
-                                                     predicate=orion_ns.ontology_id, object_=property_ontology_id)
-
-        if len(properties_list) > 1:
-            raise RuntimeError("There should be at most one property with the name " + property_name + " but "
-                               + str(len(properties_list)) + " were found.")
-        return properties_list[0] if len(properties_list) == 1 else None
+        return case_db_proxy.get_property_uri_from_ontology_id(user_id=user_id, token=user_token, case_id=case_id, 
+                                                               property_ontology_id=property_ontology_id)
     
     def _get_property_type(self, property_name):
         """
@@ -590,9 +584,9 @@ class PropertyModelService(coach.Microservice):
         result = []
         for alternative_uri in alternatives_uri_list:
             if alternative_uri in linked_alternatives_list_uri:
-                db_result = case_db_proxy.get_estimation_value(user_id=user_id, user_token=user_token, case_id=case_id, 
-                                                                  alternative_uri=alternative_uri, property_uri=property_uri, 
-                                                                  estimation_method_ontology_id=estimation_method_ontology_id)
+                db_result = case_db_proxy.get_estimation_value(user_id=user_id, token=user_token, case_id=case_id, 
+                                                               alternative_uri=alternative_uri, property_uri=property_uri, 
+                                                               estimation_method_ontology_id=estimation_method_ontology_id)
                 if db_result is None:
                     db_result = {"value": self.PROPERTY_VALUE_NOT_COMPUTED_STRING, "up_to_date": True}
             else:
@@ -1057,7 +1051,7 @@ class PropertyModelService(coach.Microservice):
         
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
         estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
-        estimated_value = case_db_proxy.get_estimation_value(user_id=user_id, user_token=user_token, case_id=case_id, 
+        estimated_value = case_db_proxy.get_estimation_value(user_id=user_id, token=user_token, case_id=case_id, 
                                                              alternative_uri=alternative_uri, property_uri=property_uri, 
                                                              estimation_method_ontology_id=estimation_method_ontology_id)
         if estimated_value is None:

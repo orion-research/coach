@@ -1,45 +1,84 @@
-<H2>Pugh analysis matrix</H2>
+<h2>Pugh analysis matrix</h2>
 
-<FORM action="/decision_process_request?endpoint=change_rating" method="post" accept-charset="UTF-8">
-<TABLE border="1">
-<TR>
-<TD>Criterium</TD>
-<TD>Weight</TD>
-{% for a in alternatives %}
-<TD> {{ a | safe }} </TD>
-{% endfor %}
-</TR>
-
-{% for c in criteria %}
-<TR>
-<TD>
-{{ c | safe }}
-</TD>
-<TD>
-{{ weights[c] | safe }}
-</TD>
-
-{% for a in alternative_ids %}
-<TD> 
-<INPUT type="number" name="{{ a | safe }}:{{ c | safe }}" min="-1" max="1" value="{{ ranking[a][c] | safe }}">
-</TD>
-{% endfor %}
-
-</TR>
-{% endfor %}
-
-<TR>
-<TD>
-Sum
-</TD>
-<TD></TD>
-{% for s in sums %}
-<TD> 
-{{ s | safe }} 
-</TD>
-{% endfor %}
-
-</TABLE>
-
-<INPUT type="submit" value="Save">
-</FORM>
+<form action="/decision_process_request?endpoint=change_rating" method="post" accept-charset="UTF-8">
+	<table class="properties_estimation_table">
+		<tr>
+			<th colspan="2">Criterium</th>
+			<th>Weight</th>
+			{%- for alternative in alternatives_list %}
+				<th> {{alternative[0]}} </th>
+			{% endfor -%}
+		</tr>
+		
+		{%- for criterium in criteria_nested_list %}
+			<tr class="criteria_row">
+				<th class="criteria" colspan="2">{{criterium.name}}</th>
+				<td rowspan="{{criterium.properties | length}}">
+					{{criterium.weight}}
+				</td>
+				
+				{%- for alternative in alternatives_list %}
+					<td> 
+						<input type="number" name="{{alternative[1]}}_{{criterium.name}}" min="-2" max="2" 
+								{%- if alternative[0] == baseline %}
+									value="0" disabled/>
+								{% else %}
+									value="{{criterium.ranking[alternative[0]]}}"/>
+								{% endif -%}
+					</td>
+				{% endfor -%}
+			</tr>
+			
+			{%- for property in criterium.properties %}
+				<tr class="property_row">
+					<th rowspan="{{property.estimation_methods | length}}">{{property.property_name}}</th>
+					
+					<!-- The first estimation method must be here and not in a new row -->
+					<th>{{property.estimation_methods[0].estimation_method_name}}</th>
+					{%- for value_object in property.estimation_methods[0].estimated_values %}
+						<td {%- if not value_object.up_to_date %} class="out_of_date" {% endif -%}>
+							{%- if value_object.value is number %}
+								{{ "%.4f" | format(value_object.value) }}
+							{% else %}
+								{{value_object.value}}
+							{% endif -%}
+						</td>
+					{% endfor -%}
+				</tr>
+				
+				{%- for estimation in property.estimation_methods %}
+					{%- if estimation != property.estimation_methods[0] %}
+						<tr>
+							<th>{{estimation.estimation_method_name}}</th>
+							{%- for value_object in estimation.estimated_values %}
+								<td {%- if not value_object.up_to_date %} class="out_of_date" {% endif -%}>
+									{%- if value_object.value is number %}
+										{{ "%.4f" | format(value_object.value) }}
+									{% else %}
+										{{value_object.value}}
+									{% endif -%}
+								</td>
+							{% endfor -%}
+						</tr>
+					{% endif -%}
+				{% endfor -%}
+			{% endfor -%}
+		{% endfor -%}
+		
+		<!-- 
+		<tr>
+			<td>
+				Sum
+			</td>
+			<td></td>
+			{%- for s in sums %}
+				<td> 
+					{{ s | safe }} 
+				</td>
+			{% endfor -%}
+		</tr>
+	 -->
+	</table>
+	
+	<input type="submit" value="Save">
+</form>

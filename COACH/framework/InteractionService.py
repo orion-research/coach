@@ -26,20 +26,6 @@ import requests
 # Linked data
 import rdflib
 
-# TODO: to suppress
-from datetime import datetime
-import inspect
-
-def log(*args, verbose = True):
-    message = "" if verbose else "::"
-    if verbose:
-        message = datetime.now().strftime("%H:%M:%S") + " : "
-        message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
-    for arg in args:
-        message += str(arg).replace("\n", "\n::") + " "
-    print(message)
-    sys.stdout.flush()
-
 class InteractionService(coach.Microservice):
     
     """
@@ -147,11 +133,16 @@ class InteractionService(coach.Microservice):
         If the case in the database has a decision method selected, its process method is fetched and included in the context.
         """
         context = kwargs
+        
         if "case_id" in session:
-            decision_process = self.case_db_proxy.get_decision_process(user_id = session["user_id"], user_token = session["user_token"], 
-                                                                       case_id = session["case_id"])
-            if decision_process:
-                decision_process_proxy = self.create_proxy(decision_process)
+            user_id = session["user_id"]
+            user_token = session["user_token"]
+            case_id = session["case_id"]
+            
+            selected_decision_process = self.case_db_proxy.get_selected_trade_off_method(user_id = user_id, user_token = user_token, 
+                                                                                         case_id = case_id)
+            if selected_decision_process:
+                decision_process_proxy = self.create_proxy(selected_decision_process)
                 context["process_menu"] = decision_process_proxy.process_menu()
         return render_template("main_menu.html", **context)
 
@@ -163,23 +154,38 @@ class InteractionService(coach.Microservice):
         It always passes the current decision case id as a parameter in the request.
         It requests a delegate token from the authentication server, and then revokes it after the call.
         """
-        decision_process = self.case_db_proxy.get_decision_process(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
-        delegate_token = self.authentication_service_proxy.get_delegate_token(user_id = session["user_id"], user_token = session["user_token"], 
-                                                                              case_id = session["case_id"])
-        if decision_process:
-            params = request.values.to_dict()
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        user_id = session["user_id"]
+        user_token = session["user_token"]
+        case_id = session["case_id"]
+        
+        trade_off_method_url = self.case_db_proxy.get_selected_trade_off_method(user_id = user_id, user_token = user_token, case_id = case_id)
+        delegate_token = self.authentication_service_proxy.get_delegate_token(user_id = user_id, user_token = user_token, case_id = case_id)
+        
+        if trade_off_method_url:
+            trade_off_method_uri = self.case_db_proxy.get_value(user_id=user_id, user_token=user_token, case_id=case_id, subject=case_id,
+                                                                predicate=orion_ns.selected_trade_off_method, object_=None, any_=False)
+            
+            # Using request.value is not good, because when there are multiple value for one argument, only the first one is used instead
+            # of creating a list.
+            params = dict(request.form)
+            params.update(request.args)
+            if len(params) != len(request.args) + len(request.form):
+                raise RuntimeError("Overlapping arguments between args and form")
+
             del params["endpoint"]
-            params["user_id"] = session["user_id"]
+            params["user_id"] = user_id
             params["delegate_token"] = delegate_token
             params["case_db"] = self.get_setting("database")
-            params["case_id"] = session["case_id"]
+            params["case_id"] = case_id
             params["directories"] = json.dumps(self.get_setting("service_directories"))
             params["knowledge_repository"] = self.get_setting("knowledge_repository")
-            response = requests.request(request.method, decision_process + "/" + request.values["endpoint"], params = params)
+            params["trade_off_method_uri"] = trade_off_method_uri
+            response = requests.request(request.method, trade_off_method_url + "/" + request.values["endpoint"], params = params)
             self.authentication_service_proxy.revoke_delegate_token(user_id = session["user_id"], user_token = session["user_token"])
             return self.main_menu_transition(main_dialogue = response.text)
         else:
-            return "No decision process selected"
+            raise RuntimeError("No decision process selected")
         
     
     @endpoint("/context_model_request", ["GET", "POST"], "text/html")
@@ -320,24 +326,25 @@ class InteractionService(coach.Microservice):
     @endpoint("/change_decision_process_dialogue", ["GET"], "text/html")
     def change_decision_process_dialogue_transition(self):
         services = []
-        current_decision_process = self.case_db_proxy.get_decision_process(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
+        user_id = session["user_id"]
+        user_token = session["user_token"]
+        case_id = session["case_id"]
+        
+        selected_decision_process = self.case_db_proxy.get_selected_trade_off_method(user_id = user_id, user_token = user_token, case_id = case_id)
 
-        log("self.service_directory_proxies :", self.service_directory_proxies)
         for d in self.service_directory_proxies:
             services += d.get_services(service_type = "decision_process")
-        log("services :", services)
-        options = ['<option value="%s" %s> %s </a>' % (s[2], "selected" if s[2] == current_decision_process else "", s[1]) for s in services]
-        log("options :", options)
         
-        dialogue = render_template("change_decision_process_dialogue.html", decision_processes = options)
+        dialogue = render_template("change_decision_process_dialogue.html", decision_processes = services, 
+                                   selected_decision_process = selected_decision_process)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
     def get_ontology_instances(self, class_name = None, class_name_list = None, returned_information= (0, 1, 2, 3)):
         """
         Returns a list containing all the instances of the given class in the ontology.
-        The result is a list of tuples, where the tuple elements are the instances' uri, gradeID, title, and description.
-        The list is sorted according to gradeId.
+        The result is a list of list, where the inner list elements are the instances' uri, gradeID, title, and description.
+        The outer list is sorted according to gradeId.
         """
         if (class_name is None and class_name_list is None) or (class_name is not None and class_name_list is not None):
             raise RuntimeError("Exactly one argument among class_name and class_name_list must be provided")
@@ -346,7 +353,6 @@ class InteractionService(coach.Microservice):
             class_name_list = [class_name]
         
         orion_ns = rdflib.Namespace(self.orion_ns)
-        result = []
         q = """\
         SELECT ?inst ?grade_id ?title ?description
         WHERE {
@@ -358,11 +364,10 @@ class InteractionService(coach.Microservice):
         ORDER BY ?grade_id
         """
         
+        result = []
         for class_name in class_name_list:
             query_result = self.get_ontology().query(q, initNs = { "orion": orion_ns }, 
                                                      initBindings = { "?class_name": rdflib.URIRef(class_name) })
-#             result += [(inst.toPython(), grade_id.toPython(), title.toPython(), description.toPython()) 
-#                        for (inst, grade_id, title, description) in query_result]
             class_result = []
             for line in query_result:
                 class_result.append([line[index].toPython() for index in returned_information])
@@ -446,8 +451,7 @@ class InteractionService(coach.Microservice):
         user_token = session["user_token"]
         case_id = session["case_id"]
 
-        request_args = dict(request.form)
-        values_list = request_args["select_" + role_property + "_" + stakeholder]
+        values_list = dict(request.form)["select_" + role_property + "_" + stakeholder]
         self.case_db_proxy.change_stakeholder(user_id=user_id, user_token=user_token, case_id=case_id, role_property=role_property,
                                               stakeholder=stakeholder, values_list=values_list)
         return self.add_stakeholder_dialogue_transition()
@@ -646,9 +650,12 @@ class InteractionService(coach.Microservice):
 
     @endpoint("/change_decision_process", ["POST"], "text/html")
     def change_decision_process(self, url):
-        self.case_db_proxy.change_decision_process(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"], decision_process = url)
-        menu = requests.get(url + "/process_menu", params = {"case_id": session["case_id"]}).text
-        return self.main_menu_transition(main_dialogue = "Decision process changed!", process_menu = menu)
+        user_id = session["user_id"]
+        user_token = session["user_token"]
+        case_id = session["case_id"]
+        
+        self.case_db_proxy.change_selected_trade_off_method(user_id = user_id, user_token = user_token, case_id = case_id, microservice_url = url)
+        return self.main_menu_transition(main_dialogue = "Decision process changed!")
 
 
     @endpoint("/add_alternative", ["POST"], "text/html")

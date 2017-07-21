@@ -1,10 +1,10 @@
 <h2>Select a decision process</h2>
 
 <form action="/change_decision_process" method="post" accept-charset="UTF-8">
-<select name="url">
-{% for p in decision_processes %}
-{{ p | safe }}
-{% endfor %}
-</select>
-<input type="submit" value="Select"/>
+	<select name="url">
+		{% for p in decision_processes %}
+			<option value="{{p[2]}}" {% if p[2] == selected_decision_process %} selected {% endif %}>{{p[1]}}</option>
+		{% endfor %}
+	</select>
+	<input type="submit" value="Select"/>
 </form>

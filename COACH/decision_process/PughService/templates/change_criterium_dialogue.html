@@ -1,20 +1,46 @@
-<H2>Change criterium</H2>
+<h2>Change criterium</h2>
 
-<FORM action="/decision_process_request?endpoint=change_criterium" method="post" accept-charset="UTF-8">
-<SELECT name="criterium">
-{% for c in criteria %}
-{{ c | safe }}
-{% endfor %}
-</SELECT>
+<script>
+	function combo_box_change(new_action_value) {
+		document.getElementById("mock_action_button").value = new_action_value;
+		document.getElementById("change_criterium_form").submit();
+	}
+</script>
 
-New name: 
-<BR>
-<INPUT type="text" name="new_name">
-<BR>
-Weight:
-<BR>
-<INPUT type="number" name="new_weight" value="" min="0">
-<BR>
-<INPUT type="submit" name="action" value="Change criterium">
-<INPUT type="submit" name="action" value="Delete criterium">
-</FORM>
+<form id="change_criterium_form" action="/decision_process_request?endpoint=manage_change_criterium_form" method="post" accept-charset="UTF-8">
+	<div>
+		<select name="criterium" onchange="combo_box_change('select_criterium')">
+			{% for criterium_name in criteria_name_list %}
+				<option value="{{criterium_name}}" {% if selected_criterium_name == criterium_name %} selected {% endif %}>
+					{{criterium_name}}
+				</option>
+			{% endfor %}
+		</select>
+	</div>
+	<div>
+		New name: 
+		<input type="text" name="new_name" value="{{selected_criterium_name}}"/>
+	</div>	
+	<div>
+		Weight:
+		<input type="number" name="new_weight" min="0" value="{{selected_criterium_weight}}"/>
+	</div>
+	<div>
+		<label for="criterium_properties">Criterium properties:</label>
+		<select name="criterium_properties" id="criterium_properties" multiple>
+			{% for property in properties_list %}
+				<option value="{{property[0]}}" {% if property[0] in selected_criterium_properties %} selected {% endif %}>
+					{{property[1]}}
+				</option>
+			{% endfor %}
+		</select>
+	</div>
+	<div>
+		<input type="submit" name="action" value="Change criterium"/>
+		<input type="submit" name="action" value="Delete criterium"/>
+	</div>
+	
+	<!-- If the form is submitted with a button, this input will be ignored. Else, submit_component will 
+	 have the value of this input, which would have been modified by the submitting component to put its name -->
+	<input id="mock_action_button" type="hidden" name="action" value="">
+</form>

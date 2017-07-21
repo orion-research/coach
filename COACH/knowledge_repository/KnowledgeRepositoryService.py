@@ -26,20 +26,6 @@ import rdflib
 from rdflib.namespace import split_uri
 import sqlalchemy
 from rdflib_sqlalchemy.store import SQLAlchemy
-
-# TODO: to suppress
-from datetime import datetime
-import inspect
-
-def log(*args, verbose = True):
-    message = "" if verbose else "::"
-    if verbose:
-        message = datetime.now().strftime("%H:%M:%S") + " : "
-        message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
-    for arg in args:
-        message += str(arg).replace("\n", "\n::") + " "
-    print(message)
-    sys.stdout.flush()
         
 class KnowledgeRepositoryService(Microservice):
 
@@ -120,6 +106,17 @@ class KnowledgeRepositoryService(Microservice):
         case_graph = rdflib.Graph()
         case_graph.parse(data=graph_description, format=format_)
         
+        check_blank_node_absence_query = """SELECT ?s ?p ?o
+                                            WHERE {
+                                                ?s ?p ?o .
+                                                FILTER(isBlank(?s) || isBlank(?o))
+                                            }
+                                        """
+        query_result = list(case_graph.query(check_blank_node_absence_query))
+        if len(query_result) != 0:
+            raise RuntimeError("Blank node are not handled when exporting data to the knowledge repository, but {0} were found."
+                               .format(len(query_result)))
+        
         check_unique_literal_query = """SELECT ?s ?p (count(?o) as ?count)
                                         WHERE {
                                             ?s ?p ?o .
@@ -137,11 +134,15 @@ class KnowledgeRepositoryService(Microservice):
             raise RuntimeError("The graph must not contain an uri linked to several literals with the same predicate, but the uri " +
                                subjet_uri + " is linked to " + literal_count + " literals by the predicate " + predicate +
                                ". There is " + other_uri_predicate_pair_count + " other uri-predicate pair in the same case in the graph.")
+            
+        
         
         with self.open_session() as session:
             # The case is deleted from the knowledge repository to handle suppressed nodes from the database
             orion_ns = rdflib.Namespace(self.orion_ns)
             case_uri = case_graph.query("SELECT ?case_uri WHERE {?case_uri a orion:Case.}", initNs={"orion": orion_ns})
+            if len(case_uri) != 1:
+                raise RuntimeError("There must be exactly one case in the provided graph, but {0} were found.".format(len(case_uri)))
             case_uri = list(case_uri)[0][0].toPython()
             self.delete_case(case_uri, session)
             
@@ -150,7 +151,10 @@ class KnowledgeRepositoryService(Microservice):
                     raise RuntimeError("A subject must not be a Literal")
                 
                 predicate_name = split_uri(p)[1]
-                log(p, " ", predicate_name, verbose=False)
+                if predicate_name == "uri":
+                    raise RuntimeError("Can not handle triplet whose predicate name is 'uri', as it is already used for the identifier " +
+                                       "property in neo4j. Triplet is :({0}, {1}, {2}).".format(s, p, o))
+                    
                 if predicate_name == "type":
                     if not str(o).startswith(self.orion_ns):
                         raise RuntimeError("The type of a node must be in the ontology namespace")
@@ -161,7 +165,7 @@ class KnowledgeRepositoryService(Microservice):
                     self.query(query, {"uri": str(s)}, session)
                     continue
                     
-                if isinstance(o, rdflib.Literal):
+                if isinstance(o, rdflib.term.Literal):
                     # Can not use the name of the property as a parameter, as it is not supported in neo4j
                     # TODO: Malicious code injection might be possible
                     query = "MERGE (node {uri: $uri}) SET node.`" + predicate_name + "` = $value"

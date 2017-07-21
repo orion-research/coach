@@ -1,13 +1,23 @@
-<H2>Add a criterium</H2>
+<h2>Add a criterium</h2>
 
-<FORM action="/decision_process_request?endpoint=add_criterium" method="post" accept-charset="UTF-8">
-Name: 
-<BR>
-<INPUT type="text" name="criterium" required>
-<BR>
-Weight:
-<BR>
-<INPUT type="number" name="weight" value="1" min="0">
-<BR>
-<INPUT type="submit" value="Add criterium">
-</FORM>
+<form action="/decision_process_request?endpoint=add_criterium" method="post" accept-charset="UTF-8">
+	<div>
+		<label for="criterium_name">Name:</label>
+		<input type="text" name="criterium_name" id="criterium_name" required/>
+	</div>
+	<div>
+		<label for="criterium_weight">Weight:</label>
+		<input type="number" name="criterium_weight" id="criterium_weight" value="1" min="0" required/>
+	</div>
+	<div>
+		<label for="criterium_properties">Criterium properties:</label>
+		<select name="criterium_properties" id="criterium_properties" multiple>
+			{% for property in properties_list %}
+				<option value="{{property[0]}}">{{property[1]}}</option>
+			{% endfor %}
+		</select>
+	</div>
+	<div>
+		<input type="submit" value="Add criterium"/>
+	</div>
+</form>

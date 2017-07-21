@@ -175,7 +175,7 @@ class AuthenticationService(Microservice):
         """
         Returns the list of all registered users.
         """
-        return self.users.keys()
+        return list(self.users.keys())
 
 
     @endpoint("/logout_user", ["POST"], "application/json")
