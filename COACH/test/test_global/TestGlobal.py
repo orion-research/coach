@@ -8,7 +8,6 @@ Created on 20 juin 2017
 import os
 import sys
 import collections
-import time
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 from COACH.test.test_global.EstimationMethodValue import EstimationMethodValue

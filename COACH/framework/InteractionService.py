@@ -589,6 +589,22 @@ class InteractionService(coach.Microservice):
         self.case_db_proxy.remove_case(**db_infos)
         del session["case_id"]
         return self.main_menu_transition(main_dialogue="Case closed")
+    
+    
+    @endpoint("/compute_similarity_dialogue", ["GET"], "text/html")
+    def compute_similarity_dialogue(self):
+        return self.main_menu_transition(main_dialogue=render_template("compute_similarity_dialogue.html"))
+    
+    
+    @endpoint("/compute_similarity", ["POST"], "text/html")
+    def compute_similarity(self, similarity_treshold):
+        # The similarity is computed using the knowledge repository data, the current case must therefore be exported.
+        self.export_case_to_knowledge_repository()
+        similarity_treshold = float(similarity_treshold)
+        similar_cases = self.knowledge_repository_proxy.get_similar_cases(case_db=self.get_setting("database"), case_uri=session["case_id"], 
+                                                                          similarity_treshold=similarity_treshold)
+        return self.main_menu_transition(main_dialogue=similar_cases)
+
 
     @endpoint("/logout", ["GET"], "text/html")
     def logout(self):

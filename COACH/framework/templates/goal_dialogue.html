@@ -7,7 +7,7 @@
 		{% for inst in instances %}
 		<input type="checkbox" onclick='window.location.assign(&quot;/toggle_goal_value?goal_uri={{ goal_uri | safe }}&value_uri={{ inst[0] | safe }}&class_name={{ class_name | safe }}&property_name={{ property_name | safe }}&quot;)'
         	{% if inst[4] %}
-        	checked
+        		checked
         	{% endif %}
         />
         {{ inst[2] | safe }}

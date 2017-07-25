@@ -52,9 +52,24 @@ class PughService(coach.DecisionProcessService):
     
     def _get_ontology_instances(self, class_name = None, case_db_proxy = None, class_name_list = None, returned_information= (0, 1, 2, 3)):
         """
-        Returns a list containing all the instances of the given class in the ontology.
-        The result is a list of list, where the inner list elements are the instances' uri, gradeID, title, and description.
-        The outer list is sorted according to gradeId.
+        DESCRIPTION:
+            Return a list containing all the instances of the given class in the ontology.
+        INPUT:
+            class_name: The name of a single class in the ontology. Requested information about all elements of this class present in
+                the ontology will be returned. Exactly one of class_name and class_name_list must be provided.
+            case_db_proxy: The proxy to access database. It can be omitted if the ontology has already been got from the database.
+            class_name_list: A list of class' name in the ontology. Requested information about all elements of these classes present in
+                the ontology will be returned. Exactly one of class_name and class_name_list must be provided.
+            returned_information: An iterable containing the indexes of the requested informations: 0 for the instances' uri, 1 for the 
+                gradeId, 2 for the title and 3 for the description. If there is only one element (e.g. (2,)), a simple list will be returned.
+                The elements in the inner list are in the same order than the indexes in returned_information.
+        OUTPUT:
+            Return a list containing all the instances of the given class in the ontology. Each element of this list provides the requested
+            information by returned_information. 
+        ERROR:
+            A RuntimeError is raised if both class_name and class_name_list are provided, or both are not.
+            An IndexError is raised if returned_information contains an integer greater than 3 or smaller than 0.
+            A TypeError is raised if returned_information contains a non-integer.
         """
         if (class_name is None and class_name_list is None) or (class_name is not None and class_name_list is not None):
             raise RuntimeError("Exactly one argument among class_name and class_name_list must be provided")

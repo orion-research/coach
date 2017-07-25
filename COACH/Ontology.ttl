@@ -192,19 +192,19 @@
 	:title "Customer value" .
 	
 :extendASystem 
-	:gradeId "SGR1" ;
+	:gradeId "SGR01" ;
 	a :CustomerValue ;
 	:title "Extend a system (functional)" ;
 	:description "Cover some customer need by extending system functionality. Extensions can be through the addition of new functionality or through modification of existing functionality." .
 	
 :improveQuality 
-	:gradeId "SGR2" ;
+	:gradeId "SGR02" ;
 	a :CustomerValue ;
 	:title "Improve/increase quality" ;
 	:description "The quality of the system should be improved, this may relate to meeting the perceived fulfillment of needs by the customer with regard to functional and non-functional properties of the system. Non-functional properties are, for example, reliability, security, performance, etc." .
 
 :improveCustomerSatisfaction 
-	:gradeId "SGR3" ;
+	:gradeId "SGR03" ;
 	a :CustomerValue ;
 	:title "Improve customer satisfaction" ;
 	:description "In this case, the component selection aims at enhancing customer satisfaction by trying to anticipate customers' needs. In this respect, the decision could take into account characteristics of the available components and select the best suited for the application customers. It is worth noting that customer satisfaction could include timely available features, that is reduced time-to-market, as well as high quality/price ratio, and so on." .
@@ -237,13 +237,13 @@
 	:title "Financial value" .
 	
 :increaseProfit 
-	:gradeId "SGR4" ;
+	:gradeId "SGR04" ;
 	a :FinancialValue ;
 	:title "Increase profit" ;
 	:description "Financial gain obtained by the company, calculated as the difference between cost and gains." .
 
 :acquisitionPotential 
-	:gradeId "SGR5" ;
+	:gradeId "SGR05" ;
 	a :FinancialValue ;
 	:title "Identify potential for acquisition of companies" ;
 	:description "This goal leverages the decision about component selection for external environmental survey. In fact, the decision would prefer outsourcing, COTS, or services as component selection in order to concretely inspect the qualities of a certain subcontractor and possibly buy it." .
@@ -264,25 +264,25 @@
 	:title "Internal business value" .
 	
 :replaceAnAsset 
-	:gradeId "SGR6" ;
+	:gradeId "SGR06" ;
 	a :InternalBusinessValue ;
 	:title "Replace an asset" ;
 	:description "An existing asset currently in use shall be replaced with another asset, a potential reason could be change in platforms, poor quality of existing assets, etc." .
 
 :increaseReuse 
-	:gradeId "SGR7" ;
+	:gradeId "SGR07" ;
 	a :InternalBusinessValue ;
 	:title "Increase reuse" ;
 	:description "The goal influences decision making aiming at selecting a component that could be reused in a variety of products by, for examle, providing more generic functionalities and high configurability." .
 
 :minimimzeTimeToMarket 
-	:gradeId "SGR8" ;
+	:gradeId "SGR08" ;
 	a :InternalBusinessValue ;
 	:title "Mimimize time to market" ;
 	:description "The goal drives the selection in that an option should be chosen that requires a short time to integrate and test into the system to minimize the duration needed to deliver to the market." .
 
 :increaseEffectiveness 
-	:gradeId "SGR9" ;
+	:gradeId "SGR09" ;
 	a :InternalBusinessValue ;
 	:title "Increase effectiveness" ;
 	:description "" .
@@ -453,15 +453,15 @@
 # The role type; role function; role level; and role title. 
 
 :Role
-	rdfs:subClassOf :Class .
+    rdfs:subClassOf :Class .
 
 :person
-	a owl:ObjectProperty ;
-	rdfs:domain :Role ;
-	rdfs:range :User .
+    a owl:ObjectProperty ;
+    rdfs:domain :Role ;
+    rdfs:range :User .
 
 :User
-	rdfs:subClassOf foaf:Person .
+    rdfs:subClassOf foaf:Person .
 
 
 ### Role type
@@ -469,31 +469,31 @@
 # Role types can be asset supplier; asset user; system end-user; or other.
 
 :roleType
-	a owl:ObjectProperty ;
-	rdfs:domain :Role ;
-	rdfs:range :RoleType .
+    a owl:ObjectProperty ;
+    rdfs:domain :Role ;
+    rdfs:range :RoleType .
 
 :RoleType
-	rdfs:subClassOf :Class ;
-	:title "Role type" .
-	
+    rdfs:subClassOf :Class ;
+    :title "Role type" .
+
 :assetSupplier 
-	:gradeId "RT1" ;
-	a :RoleType ;
-	:title "Asset supplier" ;
-	:description "The organization providing the asset." .
+    :gradeId "RT1" ;
+    a :RoleType ;
+    :title "Asset supplier" ;
+    :description "The organization providing the asset." .
 
 :assetUser
-	:gradeId "RT2" ;
-	a :RoleType ;
-	:title "Asset user" ;
-	:description "The organization using the asset." .
+    :gradeId "RT2" ;
+    a :RoleType ;
+    :title "Asset user" ;
+    :description "The organization using the asset." .
 
 :systemEndUser
-	:gradeId "RT3" ;
-	a :RoleType ;
-	:title "System end-user" ;
-	:description "The organization that is the user of the system in which the asset is utilized." .
+    :gradeId "RT3" ;
+    a :RoleType ;
+    :title "System end-user" ;
+    :description "The organization that is the user of the system in which the asset is utilized." .
 
 
 ### Role function
@@ -501,43 +501,43 @@
 # Role functions can be initiator; leader; supporter; influencer; decider; or other.
 
 :roleFunction
-	a owl:ObjectProperty ;
-	rdfs:domain :Role ;
-	rdfs:range :RoleFunction .
+    a owl:ObjectProperty ;
+    rdfs:domain :Role ;
+    rdfs:range :RoleFunction .
 
 :RoleFunction
-	rdfs:subClassOf :Class ;
-	:title "Role function" .
-	
+    rdfs:subClassOf :Class ;
+    :title "Role function" .
+
 :initiator
-	:gradeId "RF1" ;
-	a :RoleFunction ;
-	:title "Initiator" ;
-	:description "Initiator is a person who starts the whole process of decision-making, explicitly points out the need to make a decision." .
+    :gradeId "RF1" ;
+    a :RoleFunction ;
+    :title "Initiator" ;
+    :description "Initiator is a person who starts the whole process of decision-making, explicitly points out the need to make a decision." .
 
 :leader
-	:gradeId "RF2" ;
-	a :RoleFunction ;
-	:title "Leader" ;
-	:description "Leader is a person who leads the decision process, e.g. combines diverging contributions by relating them to a summarizing statement; if the discussion diverges, the person calls for an informal vote to reach consensus." .
+    :gradeId "RF2" ;
+    a :RoleFunction ;
+    :title "Leader" ;
+    :description "Leader is a person who leads the decision process, e.g. combines diverging contributions by relating them to a summarizing statement; if the discussion diverges, the person calls for an informal vote to reach consensus." .
 
 :supporter
-	:gradeId "RF3" ;
-	a :RoleFunction ;
-	:title "Supporter" ;
-	:description "Supporter is a person who supplies the information needed to make the decision." .
+    :gradeId "RF3" ;
+    a :RoleFunction ;
+    :title "Supporter" ;
+    :description "Supporter is a person who supplies the information needed to make the decision." .
 
 :influencer
-	:gradeId "RF4" ;
-	a :RoleFunction ;
-	:title "Influencer" ;
-	:description "Infuencer is a person who influences the outcome of the decision making and hence has influence on the decision maker." .
+    :gradeId "RF4" ;
+    a :RoleFunction ;
+    :title "Influencer" ;
+    :description "Infuencer is a person who influences the outcome of the decision making and hence has influence on the decision maker." .
 
 :decider
-	:gradeId "RF5" ;
-	a :RoleFunction ;
-	:title "Decider" ;
-	:description "Decider is a person who is responsible for taking the decision, actually reaches to the decision." .
+    :gradeId "RF5" ;
+    a :RoleFunction ;
+    :title "Decider" ;
+    :description "Decider is a person who is responsible for taking the decision, actually reaches to the decision." .
 
 
 ### Role level
@@ -545,31 +545,31 @@
 # Role level can be strategic; tactical; or operational.
 
 :roleLevel
-	a owl:ObjectProperty ;
-	rdfs:domain :Role ;
-	rdfs:range :RoleLevel .
+    a owl:ObjectProperty ;
+    rdfs:domain :Role ;
+    rdfs:range :RoleLevel .
 
 :RoleLevel
-	rdfs:subClassOf :Class ;
-	:title "Role level" .
-	
+    rdfs:subClassOf :Class ;
+    :title "Role level" .
+
 :strategic
-	:gradeId "RL1" ;
-	a :RoleLevel ;
-	:title "Strategic" ;
-	:description "Policy decisions, long-term, complex, non-routine decision-making, typically made by Senior Management." .
-	
+    :gradeId "RL1" ;
+    a :RoleLevel ;
+    :title "Strategic" ;
+    :description "Policy decisions, long-term, complex, non-routine decision-making, typically made by Senior Management." .
+
 :tactical
-	:gradeId "RL2" ;
-	a :RoleLevel ;
-	:title "Tactical" ;
-	:description "Relates to how to achieve policy, medium-term, less complex decision-making, typically made by Middle Management." .
-	
+    :gradeId "RL2" ;
+    a :RoleLevel ;
+    :title "Tactical" ;
+    :description "Relates to how to achieve policy, medium-term, less complex decision-making, typically made by Middle Management." .
+
 :operational
-	:gradeId "RL3" ;
-	a :RoleLevel ;
-	:title "Operational" ;
-	:description "Day-to-day, simple, routine decision-making typically made by Junior Management." .
+    :gradeId "RL3" ;
+    a :RoleLevel ;
+    :title "Operational" ;
+    :description "Day-to-day, simple, routine decision-making typically made by Junior Management." .
 
 
 ### Role title
@@ -577,129 +577,129 @@
 # Role title can be one of 22 different pre-defined values, or other.
 
 :roleTitle
-	a owl:ObjectProperty ;
-	rdfs:domain :Role ;
-	rdfs:range :RoleTitle .
+    a owl:ObjectProperty ;
+    rdfs:domain :Role ;
+    rdfs:range :RoleTitle .
 
 :RoleTitle
-	rdfs:subClassOf :Class ;
-	:title "Role title" .
-	
+    rdfs:subClassOf :Class ;
+    :title "Role title" .
+
 :productManager 
-	:gradeId "RP1" ;
-	a :RoleTitle ;
-	:title "Product Manager" ;
-	:description "Product Manager (PrM) is a business-owner in the small, representing the enterprise or business unit in strategy definition and operational execution. He governs a product (or solution or service) from its inception to the market/customer delivery in order to generate biggest possible value to the business." .
-	
+    :gradeId "RP1" ;
+    a :RoleTitle ;
+    :title "Product Manager" ;
+    :description "Product Manager (PrM) is a business-owner in the small, representing the enterprise or business unit in strategy definition and operational execution. He governs a product (or solution or service) from its inception to the market/customer delivery in order to generate biggest possible value to the business." .
+
 :lineManager
-	:gradeId "RP2" ;
-	a :RoleTitle ;
-	:title "Line Manager" ;
-	:description "Line Manager (LM) is a person who discretion over policy, appropriations, and operation in a unit such as subsidiary, factory, division, district, or minor function of a larger organization." .
-	
+    :gradeId "RP2" ;
+    a :RoleTitle ;
+    :title "Line Manager" ;
+    :description "Line Manager (LM) is a person who discretion over policy, appropriations, and operation in a unit such as subsidiary, factory, division, district, or minor function of a larger organization." .
+
 :portfolioManager
-	:gradeId "RP3" ;
-	a :RoleTitle ;
-	:title "Portfolio manager" ;
-	:description "Portfolio Manager (PoM) is an executive responsible for the overall smooth running of portfolio management. The competences and skills this individual should possess are superior to those of project managers, as portfolio managers should take a helicopter view over all running projects." .
-	
+    :gradeId "RP3" ;
+    a :RoleTitle ;
+    :title "Portfolio manager" ;
+    :description "Portfolio Manager (PoM) is an executive responsible for the overall smooth running of portfolio management. The competences and skills this individual should possess are superior to those of project managers, as portfolio managers should take a helicopter view over all running projects." .
+
 :projectManager
-	:gradeId "RP4" ;
-	a :RoleTitle ;
-	:title "Project Manager" ;
-	:description "Project Manager (PM) is a person who manage the projects and also responsible for overall quality management, staff development, and professional activities. The responsibilities may begin before project acquisition and continue beyond project close-out." .
-	
+    :gradeId "RP4" ;
+    a :RoleTitle ;
+    :title "Project Manager" ;
+    :description "Project Manager (PM) is a person who manage the projects and also responsible for overall quality management, staff development, and professional activities. The responsibilities may begin before project acquisition and continue beyond project close-out." .
+
 :chiefTechnicalOfficer
-	:gradeId "RP5" ;
-	a :RoleTitle ;
-	:title "Chief Technical Officer (CTO)" ;
-	:description "Chief Technical Officer (CTO) is a person responsible for overall technical activities, including the management of client relations to ensure that service objective expectations are developed and managed in the operations areas." .
-	
+    :gradeId "RP5" ;
+    a :RoleTitle ;
+    :title "Chief Technical Officer (CTO)" ;
+    :description "Chief Technical Officer (CTO) is a person responsible for overall technical activities, including the management of client relations to ensure that service objective expectations are developed and managed in the operations areas." .
+
 :developmentLead
-	:gradeId "RP6" ;
-	a :RoleTitle ;
-	:title "Development lead" ;
-	:description "Development Lead (DL) is person who being highly technical lead the development project and team, taking part in different activities from the initial stage to the successful delivery of projects." .
-	
+    :gradeId "RP6" ;
+    a :RoleTitle ;
+    :title "Development lead" ;
+    :description "Development Lead (DL) is person who being highly technical lead the development project and team, taking part in different activities from the initial stage to the successful delivery of projects." .
+
 :developer
-	:gradeId "RP7" ;
-	a :RoleTitle ;
-	:title "Developer" ;
-	:description "Developer (Dev) is a person involved in the development of software, typically use the architecture as a reference for developing the system and/or assembling system components." .
-	
+    :gradeId "RP7" ;
+    a :RoleTitle ;
+    :title "Developer" ;
+    :description "Developer (Dev) is a person involved in the development of software, typically use the architecture as a reference for developing the system and/or assembling system components." .
+
 :testLead
-	:gradeId "RP8" ;
-	a :RoleTitle ;
-	:title "Test lead" ;
-	:description "Test Leader (TL) is a person involved in the planning, monitoring, and control of the testing activities and tasks. TL is Responsible for management of all quality assurance functions including planning, strategy, testing execution and tools." .
-	
+    :gradeId "RP8" ;
+    a :RoleTitle ;
+    :title "Test lead" ;
+    :description "Test Leader (TL) is a person involved in the planning, monitoring, and control of the testing activities and tasks. TL is Responsible for management of all quality assurance functions including planning, strategy, testing execution and tools." .
+
 :testAnalyst
-	:gradeId "RP9" ;
-	a :RoleTitle ;
-	:title "Test Analyst" ;
-	:description "Test Analyst (TA) is a person responsible for initially identifying and subsequently defining the required tests, monitoring the test coverage and evaluating the overall quality experienced when testing the target test Items. " .
-	
+    :gradeId "RP9" ;
+    a :RoleTitle ;
+    :title "Test Analyst" ;
+    :description "Test Analyst (TA) is a person responsible for initially identifying and subsequently defining the required tests, monitoring the test coverage and evaluating the overall quality experienced when testing the target test Items. " .
+
 :architect
-	:gradeId "RP10" ;
-	a :RoleTitle ;
-	:title "Architect" ;
-	:description "Architect is a person responsible for designing, developing, nurturing, and maintaining the architecture of the software systems he/she is involved with." .
-	
+    :gradeId "RP10" ;
+    a :RoleTitle ;
+    :title "Architect" ;
+    :description "Architect is a person responsible for designing, developing, nurturing, and maintaining the architecture of the software systems he/she is involved with." .
+
 :integrator
-	:gradeId "RP11" ;
-	a :RoleTitle ;
-	:title "Integrator" ;
-	:description "Integrator is person who is responsible to ensure that a system comes together by assembling the essential components and elements into a cohesive and fully functional system that satisfies the original user needs." .
-	
+    :gradeId "RP11" ;
+    a :RoleTitle ;
+    :title "Integrator" ;
+    :description "Integrator is person who is responsible to ensure that a system comes together by assembling the essential components and elements into a cohesive and fully functional system that satisfies the original user needs." .
+
 :supportStaffForAssets
-	:gradeId "RP12" ;
-	a :RoleTitle ;
-	:title "Support staff for assets" ;
-	:description "" .
-	
+    :gradeId "RP12" ;
+    a :RoleTitle ;
+    :title "Support staff for assets" ;
+    :description "" .
+
 :chiefExecutiveOfficer 
-	:gradeId "RP13" ;
-	a :RoleTitle ;
-	:title "Chief Executive Officer (CEO)" ;
-	:description "Chief Executive Officer (CEO) is a person responsible for not only making decision by also executing the decisions." .
-	
+    :gradeId "RP13" ;
+    a :RoleTitle ;
+    :title "Chief Executive Officer (CEO)" ;
+    :description "Chief Executive Officer (CEO) is a person responsible for not only making decision by also executing the decisions." .
+
 :certificationAuthority
-	:gradeId "RP14" ;
-	a :RoleTitle ;
-	:title "Certification Authority" ;
-	:description "Certification Authority (CA) attests the validity of bindings by issuing digitally signed certificates that specify these bindings and by providing a means for clients to check the validity of certificates." .
-	
+    :gradeId "RP14" ;
+    a :RoleTitle ;
+    :title "Certification Authority" ;
+    :description "Certification Authority (CA) attests the validity of bindings by issuing digitally signed certificates that specify these bindings and by providing a means for clients to check the validity of certificates." .
+
 :configurationManager 
-	:gradeId "RP15" ;
-	a :RoleTitle ;
-	:title "Configuration Manager" ;
-	:description "Ensures that the change management process is implemented and proposed changes are reviewed and approved." .
-	
+    :gradeId "RP15" ;
+    a :RoleTitle ;
+    :title "Configuration Manager" ;
+    :description "Ensures that the change management process is implemented and proposed changes are reviewed and approved." .
+
 :processAnalyst
-	:gradeId "RP16" ;
-	a :RoleTitle ;
-	:title "Process Analyst" ;
-	:description "Planning and conducting process improvement efforts in an organization." .
-	
+    :gradeId "RP16" ;
+    a :RoleTitle ;
+    :title "Process Analyst" ;
+    :description "Planning and conducting process improvement efforts in an organization." .
+
 :dataProvider
-	:gradeId "RP17" ;
-	a :RoleTitle ;
-	:title "Data Provider" ;
-	:description "Provides and keeps data up-to-date to enable measurements." .
-	
+    :gradeId "RP17" ;
+    a :RoleTitle ;
+    :title "Data Provider" ;
+    :description "Provides and keeps data up-to-date to enable measurements." .
+
 :measurementProgramPlanner
-	:gradeId "RP18" ;
-	a :RoleTitle ;
-	:title "Measurement program planner" ;
-	:description "Responsible for measurement planning with regard to goal definition, elicitation, and decision making of which metrics to collect." .
-	
+    :gradeId "RP18" ;
+    a :RoleTitle ;
+    :title "Measurement program planner" ;
+    :description "Responsible for measurement planning with regard to goal definition, elicitation, and decision making of which metrics to collect." .
+
 :softwareQualityManager
-	:gradeId "RP19" ;
-	a :RoleTitle ;
-	:title "Software quality manager" ;
-	:description "" .
-	
-	
+    :gradeId "RP19" ;
+    a :RoleTitle ;
+    :title "Software quality manager" ;
+    :description "" .
+
+
 
 ##### Alternative and Asset elements
 
@@ -708,11 +708,11 @@
 # In GRADE, there is also a link to properties, which is currently not represented in this ontology.
 
 :Alternative 
-	rdfs:subClassOf :Class .
+    rdfs:subClassOf :Class .
 
 :Asset
-	rdfs:subClassOf :Alternative .
-	
+    rdfs:subClassOf :Alternative .
+
 
 ### Properties and estimation methods
 # Propperties can be: Prop 1, Prop 2, Prop 3
@@ -1062,36 +1062,36 @@
 # Asset usage can be reuse; adapt; buy; develop; or other.
 
 :assetUsage
-	a owl:ObjectProperty ;
-	rdfs:domain :Asset ;
-	rdfs:range :AssetUsage .
+    a owl:ObjectProperty ;
+    rdfs:domain :Asset ;
+    rdfs:range :AssetUsage .
 
 :AssetUsage
-	rdfs:subClassOf :Class .
-	
+    rdfs:subClassOf :Class .
+
 :reuse
-	:gradeId "AU1" ;
-	a :AssetUsage ;
-	:title "Reuse" ;
-	:description "An asset is reused with no change." .
+    :gradeId "AU1" ;
+    a :AssetUsage ;
+    :title "Reuse" ;
+    :description "An asset is reused with no change." .
 
 :adapt
-	:gradeId "AU2" ;
-	a :AssetUsage ;
-	:title "Adapt" ;
-	:description "An asset is used but tailored." .
+    :gradeId "AU2" ;
+    a :AssetUsage ;
+    :title "Adapt" ;
+    :description "An asset is used but tailored." .
 
 :buy 
-	:gradeId "AU3" ;
-	a :AssetUsage ;
-	:title "Buy" ;
-	:description "An asset is used after it is owned (bought)." .
+    :gradeId "AU3" ;
+    a :AssetUsage ;
+    :title "Buy" ;
+    :description "An asset is used after it is owned (bought)." .
 
 :develop
-	:gradeId "AU4" ;
-	a :AssetUsage ;
-	:title "Develop" ;
-	:description "An asset is developed by the company/individual." .
+    :gradeId "AU4" ;
+    a :AssetUsage ;
+    :title "Develop" ;
+    :description "An asset is developed by the company/individual." .
 
 
 ### Origin options and suboptions
@@ -1103,88 +1103,88 @@
 # Options
 
 :originOption
-	a owl:ObjectProperty ;
-	rdfs:domain :Asset ;
-	rdfs:range :OriginOption .
+    a owl:ObjectProperty ;
+    rdfs:domain :Asset ;
+    rdfs:range :OriginOption .
 
 :OriginOption
-	rdfs:subClassOf :Class .
-	
+    rdfs:subClassOf :Class .
+
 :InternalOriginOption
-	rdfs:subClassOf :OriginOption .
-	
+    rdfs:subClassOf :OriginOption .
+
 :ExternalOriginOption
-	rdfs:subClassOf :OriginOption .
-	
+    rdfs:subClassOf :OriginOption .
+
 :originSource
-	a owl:DatatypeProperty ;
-	rdfs:domain :OriginOption ;
-	rdfs:range xsd:string .
+    a owl:DatatypeProperty ;
+    rdfs:domain :OriginOption ;
+    rdfs:range xsd:string .
 
 :inhouse
-	:gradeId "AO1" ;
-	a :InternalOriginOption ;
-	:title "In-house" ;
-	:description "This is the process whereby the company uses their own workers (in-house team) to develop or implement an IT system that fits the specific needs of the company." .
+    :gradeId "AO1" ;
+    a :InternalOriginOption ;
+    :title "In-house" ;
+    :description "This is the process whereby the company uses their own workers (in-house team) to develop or implement an IT system that fits the specific needs of the company." .
 
 :outsource
-	:gradeId "AO2" ;
-	a :ExternalOriginOption ;
-	:title "Outsource" ;
-	:description "Outsourcing is defined as a situation where a company (a client) contracts out all or part of its software development activities to another company (a vendor), who provides agreed services for remuneration." .
+    :gradeId "AO2" ;
+    a :ExternalOriginOption ;
+    :title "Outsource" ;
+    :description "Outsourcing is defined as a situation where a company (a client) contracts out all or part of its software development activities to another company (a vendor), who provides agreed services for remuneration." .
 
 # Note: :openSource contains more fields, that are defined below under origin suboptions.
 :openSource
-	:gradeId "AO3" ;
-	a :ExternalOriginOption ;
-	:title "Open source" ;
-	:description "Open source development refers to the case where the source code is available for modification or enhancement by anyone outside the boundaries of an organization or individual." .
+    :gradeId "AO3" ;
+    a :ExternalOriginOption ;
+    :title "Open source" ;
+    :description "Open source development refers to the case where the source code is available for modification or enhancement by anyone outside the boundaries of an organization or individual." .
 
 :cots
-	:gradeId "AO4" ;
-	a :ExternalOriginOption ;
-	:title "Commercial off-the-shelf (COTS)" ;
-	:description "Commercial items, including services, available in the commercial marketplace that can be bought and used under government contract." .
+    :gradeId "AO4" ;
+    a :ExternalOriginOption ;
+    :title "Commercial off-the-shelf (COTS)" ;
+    :description "Commercial items, including services, available in the commercial marketplace that can be bought and used under government contract." .
 
 
 # Suboptions
 
 :originSuboption
-	a owl:ObjectProperty ;
-	rdfs:domain :Asset ;
-	rdfs:range :OriginSuboption .
+    a owl:ObjectProperty ;
+    rdfs:domain :Asset ;
+    rdfs:range :OriginSuboption .
 
 :OriginSuboption
-	rdfs:subClassOf :Class .
-	
+    rdfs:subClassOf :Class .
+
 :projectBased
-	:gradeId "AS1" ;
-	a :OriginSuboption ;
-	:title "Project-based" ;
-	:description "Source code is originated only from specific projects." .
+    :gradeId "AS1" ;
+    a :OriginSuboption ;
+    :title "Project-based" ;
+    :description "Source code is originated only from specific projects." .
 
 :innerSource
-	:gradeId "AS2" ;
-	a :OriginSuboption ;
-	:title "Inner source" ;
-	:description "Source code is available for modification as in open source, but applied to internal software development." .
+    :gradeId "AS2" ;
+    a :OriginSuboption ;
+    :title "Inner source" ;
+    :description "Source code is available for modification as in open source, but applied to internal software development." .
 
 # Note: :openSource is also defined above under origin options, where the :title and :description fields can be found.
 :openSource
-	:gradeId "AS3" ;
-	a :OriginSuboption .
+    :gradeId "AS3" ;
+    a :OriginSuboption .
 
 :subcontracting
-	:gradeId "AS4" ;
-	a :OriginSuboption ;
-	:title "Subcontracting" ;
-	:description "Subcontracting refers to when establishing a contractual agreement with an outside person or company to perform the work." .
+    :gradeId "AS4" ;
+    a :OriginSuboption ;
+    :title "Subcontracting" ;
+    :description "Subcontracting refers to when establishing a contractual agreement with an outside person or company to perform the work." .
 
 :crowdsource
-	:gradeId "AS5" ;
-	a :OriginSuboption ;
-	:title "Crowdsource" ;
-	:description "Crowdsourcing is a new on-line distributed problem solving and production model in which networked people collaborate to complete a task." .
+    :gradeId "AS5" ;
+    a :OriginSuboption ;
+    :title "Crowdsource" ;
+    :description "Crowdsourcing is a new on-line distributed problem solving and production model in which networked people collaborate to complete a task." .
 
 
 ### Asset element types
@@ -1195,167 +1195,167 @@
 # Element classes
 
 :elementType
-	a owl:ObjectProperty ;
-	rdfs:domain :Asset ;
-	rdfs:range :ElementType .
+    a owl:ObjectProperty ;
+    rdfs:domain :Asset ;
+    rdfs:range :ElementType .
 
 :ElementType
-	rdfs:subClassOf :Class .
-	
+    rdfs:subClassOf :Class .
+
 :HardwareElement
-	rdfs:subClassOf :ElementType .
-	
+    rdfs:subClassOf :ElementType .
+
 :InformationElement
-	rdfs:subClassOf :ElementType .
-	
+    rdfs:subClassOf :ElementType .
+
 :ServiceElement
-	rdfs:subClassOf :ElementType .
-	
+    rdfs:subClassOf :ElementType .
+
 :SoftwareElement
-	rdfs:subClassOf :ElementType .
-	
+    rdfs:subClassOf :ElementType .
+
 :SystemElement
-	rdfs:subClassOf :ElementType .
-	
+    rdfs:subClassOf :ElementType .
+
 # Concrete element types
 
 :processor
-	:gradeId "AT1" ;
-	a :HardwareElement ;
-	:title "Processor" ;
-	:description "" .
+    :gradeId "AT1" ;
+    a :HardwareElement ;
+    :title "Processor" ;
+    :description "" .
 
 :display
-	:gradeId "AT2" ;
-	a :HardwareElement ;
-	:title "Display" ;
-	:description "" .
+    :gradeId "AT2" ;
+    a :HardwareElement ;
+    :title "Display" ;
+    :description "" .
 
 :sensor
-	:gradeId "AT3" ;
-	a :HardwareElement ;
-	:title "Sensor" ;
-	:description "" .
+    :gradeId "AT3" ;
+    a :HardwareElement ;
+    :title "Sensor" ;
+    :description "" .
 
 :actuator
-	:gradeId "AT4" ;
-	a :HardwareElement ;
-	:title "Actuator" ;
-	:description "" .
+    :gradeId "AT4" ;
+    a :HardwareElement ;
+    :title "Actuator" ;
+    :description "" .
 
 :circuit
-	:gradeId "AT5" ;
-	a :HardwareElement ;
-	:title "Circuit" ;
-	:description "" .
+    :gradeId "AT5" ;
+    a :HardwareElement ;
+    :title "Circuit" ;
+    :description "" .
 
 :networkInfrastructure
-	:gradeId "AT6" ;
-	a :HardwareElement ;
-	:title "Network infrastructure" ;
-	:description "" .
+    :gradeId "AT6" ;
+    a :HardwareElement ;
+    :title "Network infrastructure" ;
+    :description "" .
 
 :designDocument
-	:gradeId "AT7" ;
-	a :InformationElement ;
-	:title "Design document (architecture)" ;
-	:description "The composite of the design architectures for products and their life cycle processes." .
+    :gradeId "AT7" ;
+    a :InformationElement ;
+    :title "Design document (architecture)" ;
+    :description "The composite of the design architectures for products and their life cycle processes." .
 
 :modelAndMetamodel
-	:gradeId "AT8" ;
-	a :InformationElement ;
-	:title "Model and metamodel" ;
-	:description "" .
+    :gradeId "AT8" ;
+    a :InformationElement ;
+    :title "Model and metamodel" ;
+    :description "" .
 
 :pattern
-	:gradeId "AT9" ;
-	a :InformationElement ;
-	:title "Pattern (Design)" ;
-	:description "A description of the problem and the essence of its solution to enable the solution to be reused in different settings." .
+    :gradeId "AT9" ;
+    a :InformationElement ;
+    :title "Pattern (Design)" ;
+    :description "A description of the problem and the essence of its solution to enable the solution to be reused in different settings." .
 
 :functionalService
-	:gradeId "AT10" ;
-	a :ServiceElement ;
-	:title "Service (funtional)" ;
-	:description "A service that must be implemented in the piece of software in order to fulfill functional user requirements." .
+    :gradeId "AT10" ;
+    a :ServiceElement ;
+    :title "Service (funtional)" ;
+    :description "A service that must be implemented in the piece of software in order to fulfill functional user requirements." .
 
 :serviceOrComponentComposition
-	:gradeId "AT11" ;
-	a :ServiceElement ;
-	:title "Service/component composition" ;
-	:description "The combination of two or more software components yielding a new component behavior at a different level of abstraction. The characteristics of the new component behavior are determined by the components being combined and by the way they are combined." .
+    :gradeId "AT11" ;
+    a :ServiceElement ;
+    :title "Service/component composition" ;
+    :description "The combination of two or more software components yielding a new component behavior at a different level of abstraction. The characteristics of the new component behavior are determined by the components being combined and by the way they are combined." .
 
 :plugin
-	:gradeId "AT12" ;
-	a :SoftwareElement ;
-	:title "Plugin" ;
-	:description "A software that is installed into an existing application in order to enhance its capability. For example, plug-ins are widely used in image editing programs such as Photoshop to add some special effect. The term is widely used for software, but can also refer to a plug-in module for hardware." .
+    :gradeId "AT12" ;
+    a :SoftwareElement ;
+    :title "Plugin" ;
+    :description "A software that is installed into an existing application in order to enhance its capability. For example, plug-ins are widely used in image editing programs such as Photoshop to add some special effect. The term is widely used for software, but can also refer to a plug-in module for hardware." .
 
 :library
-	:gradeId "AT13" ;
-	a :SoftwareElement ;
-	:title "Library" ;
-	:description "A software library containing computer readable and human readable information relevant to a software development effort." .
+    :gradeId "AT13" ;
+    a :SoftwareElement ;
+    :title "Library" ;
+    :description "A software library containing computer readable and human readable information relevant to a software development effort." .
 
 :functionalComponent
-	:gradeId "AT14" ;
-	a :SoftwareElement ;
-	:title "Functional component" ;
-	:description "A general term used to refer to a software system or an element, such as module, unit, data, or document." .
+    :gradeId "AT14" ;
+    a :SoftwareElement ;
+    :title "Functional component" ;
+    :description "A general term used to refer to a software system or an element, such as module, unit, data, or document." .
 
 :database
-	:gradeId "AT15" ;
-	a :SoftwareElement ;
-	:title "Database" ;
-	:description "1. It is a collection of interrelated data stored together in one or more computerized files. 2. It is a collection of data organized according to a conceptual structure describing the characteristics of the data and the relationships among their corresponding entities, supporting one or more application areas" .
+    :gradeId "AT15" ;
+    a :SoftwareElement ;
+    :title "Database" ;
+    :description "1. It is a collection of interrelated data stored together in one or more computerized files. 2. It is a collection of data organized according to a conceptual structure describing the characteristics of the data and the relationships among their corresponding entities, supporting one or more application areas" .
 
 :middleware
-	:gradeId "AT16" ;
-	a :SoftwareElement ;
-	:title "Middleware" ;
-	:description "A middleware refers to the software that hides the complexity and heterogeneity of underlying hardware and network platforms,eases the management of system resources, and increases the predictability of application executions." .
+    :gradeId "AT16" ;
+    a :SoftwareElement ;
+    :title "Middleware" ;
+    :description "A middleware refers to the software that hides the complexity and heterogeneity of underlying hardware and network platforms,eases the management of system resources, and increases the predictability of application executions." .
 
 :operatingSystem
-	:gradeId "AT17" ;
-	a :SoftwareElement ;
-	:title "Operating system (OS)" ;
-	:description "A collection of software, firmware, and hardware elements that controls the execution of computer programs and provides such services as computer resource allocation, job control, input/output control, and file management in a computer system" .
+    :gradeId "AT17" ;
+    a :SoftwareElement ;
+    :title "Operating system (OS)" ;
+    :description "A collection of software, firmware, and hardware elements that controls the execution of computer programs and provides such services as computer resource allocation, job control, input/output control, and file management in a computer system" .
 
 :server
-	:gradeId "AT18" ;
-	a :SoftwareElement ;
-	:title "Server" ;
-	:description "1. A hardware system or software program which provides a service to clients. 2. A process implementing one or more operations on one or more objects." .
+    :gradeId "AT18" ;
+    a :SoftwareElement ;
+    :title "Server" ;
+    :description "1. A hardware system or software program which provides a service to clients. 2. A process implementing one or more operations on one or more objects." .
 
 :userInterface
-	:gradeId "AT19" ;
-	a :SoftwareElement ;
-	:title "User interface" ;
-	:description "An interface that enables information to be passed between a human user and hardware or software components of a computer system." .
+    :gradeId "AT19" ;
+    a :SoftwareElement ;
+    :title "User interface" ;
+    :description "An interface that enables information to be passed between a human user and hardware or software components of a computer system." .
 
 :system
-	:gradeId "AT20" ;
-	a :SystemElement ;
-	:title "System" ;
-	:description "Computer System: A system containing one or more computers and associated software. Software System: Computer programs, procedures, and possibly associated documentation and data pertaining to the operation of a computer system." .
+    :gradeId "AT20" ;
+    a :SystemElement ;
+    :title "System" ;
+    :description "Computer System: A system containing one or more computers and associated software. Software System: Computer programs, procedures, and possibly associated documentation and data pertaining to the operation of a computer system." .
 
 :subsystem
-	:gradeId "AT21" ;
-	a :SystemElement ;
-	:title "Subsystem" ;
-	:description "Is a group of interconnected and interactive parts that performs an important job or task as a component of a larger system." .
+    :gradeId "AT21" ;
+    a :SystemElement ;
+    :title "Subsystem" ;
+    :description "Is a group of interconnected and interactive parts that performs an important job or task as a component of a larger system." .
 
 :systemOfSystems
-	:gradeId "AT22" ;
-	a :SystemElement ;
-	:title "System of systems" ;
-	:description "A large system that delivers unique capabilities, formed by integrating independently useful systems." .
+    :gradeId "AT22" ;
+    a :SystemElement ;
+    :title "System of systems" ;
+    :description "A large system that delivers unique capabilities, formed by integrating independently useful systems." .
 
 
 ##### Decisions element
 
 :Decision
-	rdfs:subClassOf :Class .
+    rdfs:subClassOf :Class .
 
 
 ##### Context element (called Environment in GRADE)

@@ -11,12 +11,18 @@ import sys
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir))
 
 from COACH import launch_local
+from COACH.test.test_interaction_service.TestCreateOpenCase import TestCreateOpenCase
+from COACH.test.test_interaction_service.TestLogin import TestLogin
 
 class Suite(unittest.TestSuite):
     
     def __init__(self, isServerLaunched = False):
         super().__init__(self)
         self.isServerLaunched = isServerLaunched
+        
+        # add tests to the test suite
+        # self.addTests(unittest.makeSuite(TestCreateOpenCase))
+        self.addTests(unittest.makeSuite(TestLogin))
     
     def run(self, result):
         self.setUpSuite()
