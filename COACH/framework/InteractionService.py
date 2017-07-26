@@ -597,12 +597,16 @@ class InteractionService(coach.Microservice):
     
     
     @endpoint("/compute_similarity", ["POST"], "text/html")
-    def compute_similarity(self, similarity_treshold):
+    def compute_similarity(self, similarity_threshold, number_ratio_threshold, export_case_to_kr = False):
         # The similarity is computed using the knowledge repository data, the current case must therefore be exported.
-        self.export_case_to_knowledge_repository()
-        similarity_treshold = float(similarity_treshold)
+        if export_case_to_kr:
+            self.export_case_to_knowledge_repository()
+            
+        similarity_threshold = float(similarity_threshold)
+        number_ratio_threshold = float(number_ratio_threshold)
         similar_cases = self.knowledge_repository_proxy.get_similar_cases(case_db=self.get_setting("database"), case_uri=session["case_id"], 
-                                                                          similarity_treshold=similarity_treshold)
+                                                                          similarity_threshold=similarity_threshold,
+                                                                          number_ratio_threshold=number_ratio_threshold)
         return self.main_menu_transition(main_dialogue=similar_cases)
 
 

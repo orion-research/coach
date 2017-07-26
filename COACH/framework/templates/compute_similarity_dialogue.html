@@ -2,8 +2,16 @@
 
 <form method="post" action="/compute_similarity" accept-charset="UTF-8">
 	<div>
-		<label for="similarity_treshold"></label>
-		<input id="similarity_treshold" name="similarity_treshold" type="number" step="any" min="0" max="1" value="1"/>
+		<label for="similarity_threshold">Similarity threshold:</label>
+		<input id="similarity_threshold" name="similarity_threshold" type="number" step="any" min="0" max="1" value="0.8" required/>
+	</div>
+	<div>
+		<label for="number_ratio_threshold">Number ratio threshold:</label>
+		<input id="number_ratio_threshold" name="number_ratio_threshold" type="number" step="any" min="1" value="1.5" required/>
+	</div>
+	<div>
+		<label for="export_case">Export case to knowledge repository:</label>
+		<input id="export_case" name="export_case" type="checkbox"/>
 	</div>
 	<div>
 		<input type="submit" value="Compute"/>

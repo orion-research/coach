@@ -5,15 +5,19 @@
 		</legend>
 		
 		{% for inst in instances %}
-		<input type="checkbox" onclick='window.location.assign(&quot;/toggle_goal_value?goal_uri={{ goal_uri | safe }}&value_uri={{ inst[0] | safe }}&class_name={{ class_name | safe }}&property_name={{ property_name | safe }}&quot;)'
-        	{% if inst[4] %}
-        		checked
-        	{% endif %}
-        />
-        {{ inst[2] | safe }}
-        <br>
-		{{ inst[3] | safe }}
-		</br>
+			<div>
+				<input type="checkbox" id="{{inst[1]}}" onclick='window.location.assign(&quot;/toggle_goal_value?goal_uri={{ goal_uri | safe }}&value_uri={{ inst[0] | safe }}&class_name={{ class_name | safe }}&property_name={{ property_name | safe }}&quot;)'
+		        	{% if inst[4] %}
+		        		checked
+		        	{% endif %}
+		        />
+		        <label for="{{inst[1]}}">{{inst[2]}}</label>
+		        <br/>
+		        <p>
+					{{inst[3]}}
+				</p>
+				<br/>
+			</div>
 		{% endfor %}
 	</fieldset>
 </form>

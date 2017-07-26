@@ -28,11 +28,8 @@ import rdflib
 from rdflib.namespace import split_uri
 import sqlalchemy
 from rdflib_sqlalchemy.store import SQLAlchemy
-
-# TODO: to suppress
-from datetime import datetime
-import inspect
-        
+    
+    
 class KnowledgeRepositoryService(Microservice):
 
     """
@@ -349,7 +346,7 @@ class KnowledgeRepositoryService(Microservice):
     
     
     @endpoint("/get_similar_cases", ["GET"], "application/json")
-    def get_similar_cases(self, case_db, case_uri, similarity_treshold):
+    def get_similar_cases(self, case_db, case_uri, similarity_threshold, number_ratio_threshold):
         # Get all necessary data from the ontology
         case_db_proxy = self.create_proxy(case_db)
           
@@ -371,32 +368,36 @@ class KnowledgeRepositoryService(Microservice):
             context_from_ontology[database_name] = self._get_ontology_instances(ontology_name, case_db_proxy, None, (1, 4, 5))
             
         # Compute vectors
-        case_vector = self._get_case_vector(case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, context_from_ontology, 
-                                            context_categories_in_database)
+        (case_vector, _, _) = self._get_case_vector(case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, 
+                                                    context_from_ontology, context_categories_in_database)
         
         result = []
         cases_uri_list = [case_node[0].properties["uri"] for case_node in self.query("MATCH (case:Case) RETURN case")]
+        
         for current_case_uri in cases_uri_list:
-            current_case_vector = self._get_case_vector(current_case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, 
-                                                        context_from_ontology, context_categories_in_database)
+            (current_case_vector, number_indexes, single_select_indexes) = (
+                self._get_case_vector(current_case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, context_from_ontology, 
+                                      context_categories_in_database))
             
-            # If one of those vectors has only 0 terms, numpy.nan will be returned, but numpy.nan > 0 is False.
-            # Consequently, if a case has only 0 terms, it is similar to not a single case (even itself).
-            similarity = float(1 - spatial.distance.cosine(case_vector, current_case_vector))
-            if similarity > similarity_treshold:
+            similarity = self._compute_similarity(case_vector, current_case_vector, number_ratio_threshold, number_indexes, single_select_indexes)
+            if similarity > similarity_threshold:
                 result.append((current_case_uri, similarity))
         return result
         
     
     def _get_case_vector(self, case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, context_from_ontology, 
                          context_categories_name):
-        result = self._get_goal_dimensions(case_uri, goal_uri_from_ontology_list)
-        result += self._get_stakeholder_dimensions(case_uri, stakeholder_uri_from_ontology_list)
-        result += self._get_context_dimensions(case_uri, context_from_ontology, context_categories_name)
-        return result
+        result = self._get_goal_components(case_uri, goal_uri_from_ontology_list)
+        result += self._get_stakeholder_components(case_uri, stakeholder_uri_from_ontology_list)
+        
+        (context_components, number_indexes, single_select_indexes) = (
+            self._get_context_components(case_uri, context_from_ontology, context_categories_name, len(result)))
+        
+        result += context_components
+        return (result, number_indexes, single_select_indexes)
     
     
-    def _get_goal_dimensions(self, case_uri, goal_uri_from_ontology_list):
+    def _get_goal_components(self, case_uri, goal_uri_from_ontology_list):
         query = """ MATCH (:Case {uri: $case_uri}) -[:goal]-> () --> (goal)
                     RETURN goal
         """
@@ -406,26 +407,25 @@ class KnowledgeRepositoryService(Microservice):
         return [1 if goal in goals_in_case else 0 for goal in goal_uri_from_ontology_list]
     
     
-    def _get_stakeholder_dimensions(self, case_uri, stakeholder_uri_from_ontology_list):
+    def _get_stakeholder_components(self, case_uri, stakeholder_uri_from_ontology_list):
         query = """ MATCH (:Case {uri :$case_uri}) -[:role]-> (:Role) --> (stakeholder)
                     RETURN stakeholder
         """
         query_result = self.query(query, {"case_uri": case_uri})
 
-        count_stakeholder_in_case = defaultdict(int)
-        for record in query_result:
-            record_uri = record[0].properties["uri"]
-            count_stakeholder_in_case[record_uri] += 1
-
-        return [count_stakeholder_in_case[stakeholder] for stakeholder in stakeholder_uri_from_ontology_list]
+        stakeholder_in_case = [e[0].properties["uri"] for e in query_result]
+        return [1 if stakeholder in stakeholder_in_case else 0 for stakeholder in stakeholder_uri_from_ontology_list]
     
     
-    def _get_context_dimensions(self, case_uri, context_from_ontology, categories_name):
+    def _get_context_components(self, case_uri, context_from_ontology, categories_name, start_index):
         query = """ MATCH (:Case {{uri: $case_uri}}) -[:context]-> () -[:{0}]-> () -[grade_id]-> (value)
                     RETURN grade_id, value
         """
         
         result = []
+        number_indexes = set()
+        single_select_indexes = set()
+        
         for category_name in categories_name:
             query_result = self.query(query.format(category_name), {"case_uri": case_uri})
             
@@ -439,11 +439,13 @@ class KnowledgeRepositoryService(Microservice):
                 current_type = context_entry[1]
                 current_possible_values_list = context_entry[2]
                 
+                
                 if current_type == "text":
                     # At the moment, text entry are not used to compute similarity.
                     pass
                 
                 elif current_type in ["integer", "float"]:
+                    number_indexes.add(len(result) + start_index)
                     if current_grade_id in context_in_case:
                         field_value = float(context_in_case[current_grade_id][0])
                         result.append(field_value)
@@ -451,6 +453,7 @@ class KnowledgeRepositoryService(Microservice):
                         result.append(0)
                 
                 elif current_type == "single_select":
+                    single_select_indexes.add(len(result) + start_index)
                     if current_grade_id in context_in_case:
                         # 0 is the value when the user selects unknown. Consequently, the first value in the ontology is 1, 
                         # hence 'index + 1'
@@ -466,22 +469,62 @@ class KnowledgeRepositoryService(Microservice):
                         for possible_value in current_possible_values_list:
                             selected_values_list = context_in_case[current_grade_id]
                             result.append(1 if possible_value in selected_values_list else 0)
+                    
                 else:
                     raise RuntimeError("Unknown type {0}. Allowed types are 'text', 'integer', 'float', 'single_select' and 'multi_select'."
                                        .format(current_type))
-                    
+                
             
-        return result
+        return (result, number_indexes, single_select_indexes)
     
     
-    def _compute_similarity(self, case_vector1, case_vector2):
-        if len(case_vector1) != len(case_vector2):
-            raise RuntimeError("Both vectors must have the same length, but length are {0} and {1}."
-                               .format(len(case_vector1), len(case_vector2)))
-            
+    def _compute_similarity(self, case_vector1, case_vector2, number_ratio_threshold, number_indexes, single_select_indexes):
         
+        vector_length = len(case_vector1)
+        if vector_length != len(case_vector2):
+            raise RuntimeError("Both vectors must have the same length, but length are {0} and {1}."
+                               .format(vector_length, len(case_vector2)))
+        
+        # Jaccard index is used to compute similarity
+        number_of_components_both_1 = 0 # Component are identical
+        number_of_components_both_0 = 0 # No information provided
+        # Components are different is computed by vector_lentgth - identical - no_information
+        
+        for i in range(vector_length):
+            value1 = abs(case_vector1[i])
+            value2 = abs(case_vector2[i])
+            value_min = min(value1, value2)
+            value_max = max(value1, value2)
+            
+            if i in single_select_indexes:
+                if value_max == 0:
+                    number_of_components_both_0 += 1
+                elif value_min == value_max:
+                    number_of_components_both_1 += 1
+                    
+            elif i in number_indexes:
+                if value_max == 0:
+                    number_of_components_both_0 += 1
+                elif value_min != 0 and value_max / value_min < number_ratio_threshold:
+                    number_of_components_both_1 += 1
+            
+            else:
+                if value_max > 1:
+                    raise RuntimeError("When the component is neither a number nor a single select, value in the cases' vector must be " +
+                                       "0 or 1, but it is {0} for index {1}.".format(value_max, i))
+                if value_max == 0:
+                    number_of_components_both_0 += 1
+                elif value_min == 1:
+                    number_of_components_both_1 += 1
+                
+        try:
+            return number_of_components_both_1 / (vector_length - number_of_components_both_0)
+        except ZeroDivisionError:
+            return 0
 
-
+if __name__ == "__main__":
+    kr = KnowledgeRepositoryService()
+    kr.get_similar_cases("http://127.0.0.1:5008", "http://127.0.0.1:5008/data#2668", 0, 1.5)
 
 
 

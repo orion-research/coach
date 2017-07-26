@@ -36,8 +36,7 @@ def run_all():
 
     SimpleDecisionProcessService.SimpleDecisionProcessService().run()
     
-    cd = CaseDatabase()
-    cd.run()
+    CaseDatabase().run()
 
     AverageOfTwo.AverageOfTwo().run()
 
@@ -61,7 +60,5 @@ def run_all():
     IntermediateCOCOMO().run()
     CostEstimation().run()
     
-    return cd
-
 if __name__ == '__main__':
     run_all()
