@@ -14,7 +14,7 @@ sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 # Coach framework
 from COACH.framework import coach
-from COACH.framework.coach import endpoint, MicroserviceException
+from COACH.framework.coach import endpoint
 
 # Web server framework
 from flask.templating import render_template
@@ -772,14 +772,14 @@ class PropertyModelService(coach.Microservice):
         case_id = db_infos["case_id"]
         case_db_proxy = db_infos["case_db_proxy"]
         
-        parameters = self._get_estimation_method_parameters_from_ontology(estimation_method_name)
+        ontology_parameters = self._get_estimation_method_parameters_from_ontology(estimation_method_name)
         
         alternative_uri = self._get_alternative_uri_from_name(db_infos, alternative_name)
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
         if property_uri is None:
             # if the property has not been added in the database, no estimation could have been computed, 
             # so no parameters could have been stored in the database.
-            return parameters
+            return ontology_parameters
         
         estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
         database_parameters = case_db_proxy.get_estimation_parameters(user_id=user_id, user_token=user_token, case_id=case_id, 
@@ -787,19 +787,20 @@ class PropertyModelService(coach.Microservice):
                                                                       estimation_method_ontology_id=estimation_method_ontology_id)
         
         if len(database_parameters) == 0:
-            return parameters
+            return ontology_parameters
         
-        if len(database_parameters) != len(parameters):
+        number_of_ontology_parameters = sum([len(category["parameters"]) for category in ontology_parameters])
+        if len(database_parameters) != number_of_ontology_parameters:
             raise RuntimeError("Parameters stored in the database do not match with those of the estimation method.")
         
-        for parameter_category in parameters:
+        for parameter_category in ontology_parameters:
             for parameter in parameter_category["parameters"]:
                 try:
                     parameter["value"] = database_parameters[parameter["name"]]
-                except KeyError:
-                    raise RuntimeError("Parameter " + parameter["value"] + " is not stored in the database.")
+                except KeyError as e:
+                    raise KeyError("Parameter " + parameter["value"] + " is not stored in the database.") from e
             
-        return parameters
+        return ontology_parameters
     
     def _get_estimation_method_parameters_from_ontology(self, estimation_method_name):
         """

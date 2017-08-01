@@ -36,7 +36,6 @@ Having installed Python 3.x (whatever the latest version is), and the pip packag
 	$ pip install rdflib
 	$ pip install sqlalchemy
 	$ pip install rdflib-sqlalchemy
-	$ pip install scipy
 
 (In some installations, you have to use pip3 instead of pip in the above commands.)
 

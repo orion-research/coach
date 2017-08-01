@@ -386,31 +386,31 @@
 	:title "Market value" .
 	
 :reachDiversifiedCustomers 
-	:gradeId "ESGR5" ;
+	:gradeId "ESGR05" ;
 	a :MarketValue ;
 	:title "Reach diversified customers (other than typical ones)" ;
 	:description "This goal aims at exploiting the component development need as a way to expand the plethora of potential customers. Such an aim could be reached by selecting a component with additional features, with specific properties/quality attributes, and so forth. Notably, the adoption of an open source component could disclose the opportunity of attracting open source communities, or a certified component might make the product appealing for safety-sensitive customers." .
 
 :addressLargerMarket 
-	:gradeId "ESGR6" ;
+	:gradeId "ESGR06" ;
 	a :MarketValue ;
 	:title "Address a larger market (more variation in features)" ;
 	:description "The goal influences decision making with regard to the ability to customize the product to the specific needs of customers within a specific market segment (software product line approach), i.e. a system should be configurable to specific needs (a good example is the configuration of different products from a common platform for cars, which can be tailored through product instantiation." .
 
 :newMarket 
-	:gradeId "ESGR7" ;
+	:gradeId "ESGR07" ;
 	a :MarketValue ;
 	:title "New market" ;
 	:description "The goal impacts decision making in enabling the entry into a new market, which could be a new market segment or domain, i.e. by targeting a new group/subset of customers that were not targeted before. The new segment should differ from the existing segments in their response to market strategies" .
 
 :raiseMarketEntranceBarriers 
-	:gradeId "ESGR8" ;
+	:gradeId "ESGR08" ;
 	a :MarketValue ;
 	:title "Raise the barriers for entering the market" ;
 	:description "Introduce barriers to enter the market, barriers known in literature are economies of scale, product differentiation, capital/investment requirements to do what the company plans to do, introduce cost disadvantages for competitors, distribution channelges, and exploition of gouvernment policies." .
 
 :createBrandIdentity 
-	:gradeId "ESGR9" ;
+	:gradeId "ESGR09" ;
 	a :MarketValue ;
 	:title "Create brand identity" ;
 	:description "" .

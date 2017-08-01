@@ -7,6 +7,7 @@ Created on 9 aug. 2016
 # Set python import path to include COACH top directory
 import os
 import sys
+import traceback
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 # Coach framework
@@ -246,8 +247,7 @@ class PughService(coach.DecisionProcessService):
         except MicroserviceException:
             return("Compute an estimation for each property you want to add.")
         
-        return self.matrix_dialogue_transition(user_id, delegate_token, case_db, case_id)    
-        
+        return "Criterium added!"
     
     @endpoint("/change_criterium_dialogue", ["GET"], "text/html")
     def change_criterium_dialogue_transition(self, user_id, delegate_token, case_db, case_id, trade_off_method_uri, selected_criterium_name=""):
@@ -300,6 +300,7 @@ class PughService(coach.DecisionProcessService):
             return "Criterium changed!"
         elif action == "Delete criterium":
             self._delete_criterium(db_infos, case_db_proxy, criterium_uri)
+            return "Criterium deleted!"
         elif action == "select_criterium":
             return self.change_criterium_dialogue_transition(user_id, delegate_token, case_db, case_id, trade_off_method_uri, criterium)
         else:

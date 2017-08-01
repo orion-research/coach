@@ -149,6 +149,51 @@ class KnowledgeRepositoryService(Microservice):
             return [e.toPython() for e in possible_values_list]
         return line[index].toPython()
     
+    
+    def _get_estimation_method_property_ontology_id_name(self, class_attribute, is_class_property, is_attribute_name = True):
+        """
+        DESCRIPTION:
+            Returns the name or the ontology id of the estimation method or the property defined by class_attribute.
+        INPUT:
+            class_attribute: The name or the ontology id of an estimation method or a property.
+            is_class_property: A boolean, which is True if we are looking for a property attribute, and False if 
+                we are looking for an estimation method attribute.
+            is_attribute_name: A boolean, which should be True if class_attribute is the name of the
+                class and False if class_attribute is the ontology id of the class.
+        OUTPUT:
+            If is_attribute_name is True, returns the ontology id of the class defined by the name
+            class_attribute. Otherwise, returns the name of the class defined by the 
+            ontology id class_attribute.
+        ERROR:
+            Raise a RuntimeError if no match were found with class_attribute.
+        """
+        if is_attribute_name:
+            index_returned = 0
+            index_look_for = 2
+        else:
+            index_returned = 2
+            index_look_for = 0
+        
+        orion_ns = rdflib.Namespace(self.orion_ns)
+
+        if is_class_property:
+            orion_class = orion_ns.Property
+        else:
+            orion_class = orion_ns.EstimationMethod
+            
+        class_list = self._get_ontology_instances(orion_class)
+        for class_tuple in class_list:
+            if class_tuple[index_look_for] == class_attribute:
+                return class_tuple[index_returned]
+        raise RuntimeError("The provided attribute " + class_attribute + " should be in the ontology")
+    
+    @classmethod
+    def _find_dictionary_in_list(cls, dictionary_list, key_name, value):
+        for dictionary in dictionary_list:
+            if dictionary[key_name] == value:
+                return dictionary
+        raise KeyError("Dictionary with the property " + key_name + " equals to " + value + " not found.")
+    
             
     def open_session(self):
         """
@@ -286,7 +331,7 @@ class KnowledgeRepositoryService(Microservice):
                 """
         user_uri = self.authentication_proxy.get_user_uri(user_id=user_id)
         query_result = self.query(query, {"user_uri": user_uri})
-        result = [[e[0].properties["uri"], e.values()[0].properties["title"]] for e in query_result]
+        result = [[e[0].properties["uri"], e[0].properties["title"]] for e in query_result]
         return result
     
     @endpoint("/import_case", ["GET"], "application/json")
@@ -296,6 +341,7 @@ class KnowledgeRepositoryService(Microservice):
                 """
         query_result = self.query(query, {"case_uri": case_uri})
         case_graph = self.get_graph_from_query_result(list(query_result))
+        
         orion_ns = rdflib.Namespace(self.orion_ns)
         case_uri = case_graph.query("SELECT ?case_uri WHERE {?case_uri a orion:Case.}", initNs={"orion": orion_ns})
         case_uri = list(case_uri)[0][0].toPython()
@@ -349,39 +395,47 @@ class KnowledgeRepositoryService(Microservice):
     def get_similar_cases(self, case_db, case_uri, similarity_threshold, number_ratio_threshold):
         # Get all necessary data from the ontology
         case_db_proxy = self.create_proxy(case_db)
-          
+           
         goal_class_in_ontology = ["CustomerValue", "FinancialValue", "InternalBusinessValue", "InnovationAndLearningValue", "MarketValue"]
         goal_uri_from_ontology_list = self._get_ontology_instances(None, case_db_proxy, goal_class_in_ontology, [0])
-            
+             
         stakeholder_classes_in_ontology = ["RoleType", "RoleFunction", "RoleLevel", "RoleTitle"]
         stakeholder_uri_from_ontology_list = self._get_ontology_instances(None, case_db_proxy, stakeholder_classes_in_ontology, [0])
-
+ 
         context_categories_in_ontology = ["OrganizationProperty", 
                                           "ProductProperty", 
                                           "StakeholderProperty", 
                                           "DevelopmentMethodAndTechnologyProperty", 
                                           "MarketAndBusinessProperty"]
         context_categories_in_database = ["organization", "product", "stakeholder", "method", "business"]
-        
+         
         context_from_ontology = {}
         for (database_name, ontology_name) in zip(context_categories_in_database, context_categories_in_ontology):
             context_from_ontology[database_name] = self._get_ontology_instances(ontology_name, case_db_proxy, None, (1, 4, 5))
-            
+             
         # Compute vectors
         (case_vector, _, _) = self._get_case_vector(case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, 
                                                     context_from_ontology, context_categories_in_database)
-        
+         
         result = []
         cases_uri_list = [case_node[0].properties["uri"] for case_node in self.query("MATCH (case:Case) RETURN case")]
-        
+         
         for current_case_uri in cases_uri_list:
+            if current_case_uri == case_uri:
+                continue
+             
             (current_case_vector, number_indexes, single_select_indexes) = (
                 self._get_case_vector(current_case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, context_from_ontology, 
                                       context_categories_in_database))
-            
+             
             similarity = self._compute_similarity(case_vector, current_case_vector, number_ratio_threshold, number_indexes, single_select_indexes)
             if similarity > similarity_threshold:
-                result.append((current_case_uri, similarity))
+                current_case_node = list(self.query("MATCH (c:Case {uri: $uri}) RETURN c", {"uri": current_case_uri}))[0][0]
+                current_case_title = current_case_node.properties["title"]
+                
+                alternatives_name_list = self._get_alternative(current_case_uri)
+                result.append((current_case_title, similarity, alternatives_name_list, 
+                               self._get_properties_estimation_methods(current_case_uri, alternatives_name_list)))
         return result
         
     
@@ -399,27 +453,27 @@ class KnowledgeRepositoryService(Microservice):
     
     def _get_goal_components(self, case_uri, goal_uri_from_ontology_list):
         query = """ MATCH (:Case {uri: $case_uri}) -[:goal]-> () --> (goal)
-                    RETURN goal
+                    RETURN goal.uri
         """
         query_result = self.query(query, {"case_uri": case_uri})
         
-        goals_in_case = [e[0].properties["uri"] for e in query_result]
+        goals_in_case = [e[0] for e in query_result]
         return [1 if goal in goals_in_case else 0 for goal in goal_uri_from_ontology_list]
     
     
     def _get_stakeholder_components(self, case_uri, stakeholder_uri_from_ontology_list):
         query = """ MATCH (:Case {uri :$case_uri}) -[:role]-> (:Role) --> (stakeholder)
-                    RETURN stakeholder
+                    RETURN stakeholder.uri
         """
         query_result = self.query(query, {"case_uri": case_uri})
 
-        stakeholder_in_case = [e[0].properties["uri"] for e in query_result]
+        stakeholder_in_case = [e[0] for e in query_result]
         return [1 if stakeholder in stakeholder_in_case else 0 for stakeholder in stakeholder_uri_from_ontology_list]
     
     
     def _get_context_components(self, case_uri, context_from_ontology, categories_name, start_index):
         query = """ MATCH (:Case {{uri: $case_uri}}) -[:context]-> () -[:{0}]-> () -[grade_id]-> (value)
-                    RETURN grade_id, value
+                    RETURN grade_id, value.value
         """
         
         result = []
@@ -431,7 +485,7 @@ class KnowledgeRepositoryService(Microservice):
             
             context_in_case = defaultdict(list)
             for record in query_result:
-                context_in_case[record[0].type].append(record[1].properties["value"])
+                context_in_case[record[0].type].append(record[1])
             
             for context_entry in context_from_ontology[category_name]:
                 # context_entry is a list [grade_id, type, possible_values]. possible_values can be either None or a list of string
@@ -521,10 +575,52 @@ class KnowledgeRepositoryService(Microservice):
             return number_of_components_both_1 / (vector_length - number_of_components_both_0)
         except ZeroDivisionError:
             return 0
+        
+    def _get_alternative(self, case_uri):
+        query = """ MATCH (:Case {uri: $uri}) -[:alternative]-> (alternative:Alternative)
+                    RETURN alternative.title
+                """
+        
+        result = [alt[0] for alt in self.query(query, {"uri": case_uri})]
+        return result
+    
+    @endpoint("/_get_properties_estimation_methods", ["GET"], "application/json")
+    def _get_properties_estimation_methods(self, case_uri, alternatives_name_list):
+        query = """ MATCH (case:Case {uri: $uri}) -[:property]-> (property:Property) -[:ontology_id]-> (prop_ontology_id)
+                    MATCH (property) <-[:belong_to_property]- (estimation:Estimation) -[:ontology_id]-> (estimation_ontology_id)
+                    MATCH (estimation) -[:belong_to_alternative]-> (alternative:Alternative)
+                    RETURN DISTINCT prop_ontology_id.uri, estimation_ontology_id.uri, estimation, alternative.title
+                """
+        query_result = self.query(query, {"uri": case_uri})
+
+        result = []
+        for record in query_result:
+            property_name = self._get_estimation_method_property_ontology_id_name(record[0], True, False)
+            try:
+                property_dictionary = self._find_dictionary_in_list(result, "property_name", property_name) 
+            except KeyError:
+                property_dictionary = {"property_name": property_name, "estimation_methods": []}
+                result.append(property_dictionary)
+            
+            em_name = self._get_estimation_method_property_ontology_id_name(record[1], False, False)
+            try:
+                em_dictionary = self._find_dictionary_in_list(property_dictionary["estimation_methods"], "estimation_method_name", em_name)
+            except KeyError:
+                estimated_values = [{"up_to_date": True, "value": "---", "alternative_name": alt} for alt in alternatives_name_list]
+                em_dictionary = {"estimation_method_name": em_name, "estimated_values": estimated_values}
+                property_dictionary["estimation_methods"].append(em_dictionary)
+            
+            alternative_name = record[3]
+            estimated_value = self._find_dictionary_in_list(em_dictionary["estimated_values"], "alternative_name", alternative_name)
+
+            estimation = record[2]
+            estimated_value["up_to_date"] = estimation.properties["up_to_date"]
+            estimated_value["value"] = estimation.properties["value"]
+            
+        return result
 
 if __name__ == "__main__":
-    kr = KnowledgeRepositoryService()
-    kr.get_similar_cases("http://127.0.0.1:5008", "http://127.0.0.1:5008/data#2668", 0, 1.5)
+    KnowledgeRepositoryService(sys.argv[1]).run()
 
 
 

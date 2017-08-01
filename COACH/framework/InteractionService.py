@@ -410,6 +410,7 @@ class InteractionService(coach.Microservice):
             ?role_class  orion:title ?role_title .
             FILTER (?role_property != orion:person)
         }
+        ORDER BY ?role_title
         """
         role_categories = self.get_ontology().query(q, initNs = { "orion": orion_ns, "owl": rdflib.OWL })
         role_categories = [(rc[0].toPython(), rc[1].toPython(), rc[2].toPython().lower().replace(" ", "_")) for rc in role_categories]
@@ -450,8 +451,12 @@ class InteractionService(coach.Microservice):
         user_id = session["user_id"]
         user_token = session["user_token"]
         case_id = session["case_id"]
-
-        values_list = dict(request.form)["select_" + role_property + "_" + stakeholder]
+        
+        try:
+            values_list = dict(request.form)["select_" + role_property + "_" + stakeholder]
+        except KeyError:
+            values_list = []
+            
         self.case_db_proxy.change_stakeholder(user_id=user_id, user_token=user_token, case_id=case_id, role_property=role_property,
                                               stakeholder=stakeholder, values_list=values_list)
         return self.add_stakeholder_dialogue_transition()
@@ -597,9 +602,9 @@ class InteractionService(coach.Microservice):
     
     
     @endpoint("/compute_similarity", ["POST"], "text/html")
-    def compute_similarity(self, similarity_threshold, number_ratio_threshold, export_case_to_kr = False):
+    def compute_similarity(self, similarity_threshold, number_ratio_threshold, export_case = False):
         # The similarity is computed using the knowledge repository data, the current case must therefore be exported.
-        if export_case_to_kr:
+        if export_case == "on":
             self.export_case_to_knowledge_repository()
             
         similarity_threshold = float(similarity_threshold)
@@ -607,7 +612,9 @@ class InteractionService(coach.Microservice):
         similar_cases = self.knowledge_repository_proxy.get_similar_cases(case_db=self.get_setting("database"), case_uri=session["case_id"], 
                                                                           similarity_threshold=similarity_threshold,
                                                                           number_ratio_threshold=number_ratio_threshold)
-        return self.main_menu_transition(main_dialogue=similar_cases)
+        
+        dialogue = render_template("computed_similarity.html", similar_cases_list=similar_cases)
+        return self.main_menu_transition(main_dialogue=dialogue)
 
 
     @endpoint("/logout", ["GET"], "text/html")
@@ -710,6 +717,7 @@ class InteractionService(coach.Microservice):
         description = self.case_db_proxy.export_case_data(user_id = user_id, user_token = user_token, case_id = case_id, format_ = "n3")
         print(description)
         self.knowledge_repository_proxy.export_case(graph_description=description, format_="n3")
+        
         description = description.replace("&", "&amp;")
         description = description.replace("<", "&lt;")
         description = description.replace(">", "&gt;")
@@ -736,7 +744,7 @@ class InteractionService(coach.Microservice):
         description = description.replace("<", "&lt;")
         description = description.replace(">", "&gt;")
         message = "Exported case to knowledge repository, with the following data:\n\n"
-        message += "<DIV style=\"white-space: pre-wrap;\"><CODE>" + description + "</CODE></DIV>"
+        message += '<div style="white-space: pre-wrap;"><code>' + description + '<code></div>'
         return self.main_menu_transition(main_dialogue = message)
     
 

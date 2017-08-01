@@ -124,6 +124,12 @@ class EstimationMethodValue():
                 print("{0} is not an EstimationMethodValue.".format(other_name))
             return False
         
+        if len(self.properties_estimation) != len(other.properties_estimation):
+            if verbose:
+                print("There are {0} properties in {1}, and {2} in {3}".format(len(self.properties_estimation), self_name,
+                                                                               len(other.properties_estimation), other_name))
+            return False
+        
         for i, self_property in enumerate(self.properties_estimation):
             other_property = other.properties_estimation[i]
             if len(self_property) != 2 or len(other_property) != 2:
@@ -147,7 +153,7 @@ class EstimationMethodValue():
                 try:
                     other_estimation_method = self._find_dictionary_in_list(other_estimation_methods_list, "estimation_method_name", 
                                                                             self_estimation_method["estimation_method_name"])
-                except RuntimeError:
+                except KeyError:
                     if verbose:
                         print("The estimation method {0} is not in {1}'s property {2}".format(self_estimation_method["estimation_method_name"],
                                                                                                 other_name, other_property["property_name"]))
@@ -171,7 +177,7 @@ class EstimationMethodValue():
                         other_estimation_method_value = self._find_dictionary_in_list(other_estimation_method_values_list, 
                                                                                       "alternative_name", 
                                                                                       self_estimation_method_value["alternative_name"])
-                    except RuntimeError:
+                    except KeyError:
                         if verbose:
                             print("There is no estimation for ({0}, {1}, {2}) in {3}"
                                   .format(self_estimation_method_value["alternative_name"], self_property["property_name"],
@@ -205,7 +211,7 @@ class EstimationMethodValue():
         for dictionary in dictionary_list:
             if dictionary[key_name] == value:
                 return dictionary
-        raise RuntimeError("Dictionary with the property " + key_name + " equals to " + value + " not found.")
+        raise KeyError("Dictionary with the property " + key_name + " equals to " + value + " not found.")
     
     @classmethod
     def get_expected_properties_name_list(cls):

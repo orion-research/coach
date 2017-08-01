@@ -1,0 +1,55 @@
+<h2>Computed similarity</h2>
+
+{% for similar_case in similar_cases_list -%}
+	<h3 style="padding-top: 30px;">{{similar_case[0]}}: {{"%.4f" | format(similar_case[1])}}</h3>
+	
+	{% if similar_case[2] | length > 0 -%}
+		<table class="properties_estimation_table">
+			<tr>
+				<th></th>
+				<th></th>
+				{% for alternative_name in similar_case[2] -%}
+					<th>{{alternative_name}}</th>
+				{% endfor -%}
+			</tr>
+		
+			{% for property in similar_case[3] -%}
+				<tr class="property_row">
+					<th rowspan="{{property.estimation_methods | length}}">{{property.property_name}}</th>
+					<!-- The first estimation method must be here and not in a new row -->
+					<th>{{property.estimation_methods[0].estimation_method_name}}</th>
+					{% for value_object in property.estimation_methods[0].estimated_values -%}
+						<td {% if not value_object.up_to_date -%} class="out_of_date" {%endif%}>
+							{% if value_object.value is number -%}
+								{{ "%.4f" | format(value_object.value) }}
+							{% else -%}
+								{{value_object.value}}
+							{% endif -%}
+						</td>
+					{% endfor -%}
+				</tr>
+				{% for estimation in property.estimation_methods -%}
+					{% if estimation != property.estimation_methods[0] -%}
+						<tr>
+							<th>{{estimation.estimation_method_name}}</th>
+							{% for value_object in estimation.estimated_values -%}
+								<td {% if not value_object.up_to_date -%} class="out_of_date" {%endif%}>
+									{% if value_object.value is number -%}
+										{{ "%.4f" | format(value_object.value) }}
+									{% else -%}
+										{{value_object.value}}
+									{% endif -%}
+								</td>
+							{% endfor -%}
+						</tr>
+					{% endif -%}
+				{% endfor -%}
+			{% endfor -%}
+		</table>
+	{% endif -%}
+	
+	<hr/>
+{% endfor -%}
+
+
+	

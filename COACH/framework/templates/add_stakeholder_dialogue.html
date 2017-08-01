@@ -41,7 +41,8 @@
 			
 			{% for property in column_labels %}
 			<td>
-				<select name="select_{{property[1]}}_{{user[1]}}" onchange="change_stakeholder_role('{{property[1]}}', '{{user[1]}}')" multiple>
+				<select id="select_{{property[0]}}_{{user[0]}}" name="select_{{property[1]}}_{{user[1]}}" 
+						onchange="change_stakeholder_role('{{property[1]}}', '{{user[1]}}')" multiple>
 					{% for possible_value in possible_column_values[property[1]] %}
 						<option value="{{ possible_value[1] | safe }}"
 						{% if current_cell_values[user[1]] and current_cell_values[user[1]][property[1]] and 
@@ -73,5 +74,6 @@
 	<input id="role_property_input" type="hidden" name="role_property">
 	<input id="stakeholder_input" type="hidden" name="stakeholder">
 </form>
+
 
 
