@@ -65,7 +65,8 @@ class TestSimilarity(TestGlobal):
             - It is possible to retrieve a case where the user is not a stakeholder
             - Export to knowledge repository checkbox
             - A case is not similar to itself
-        XXXXX Alternatives, properties and estimations are retrieved for similar cases
+        TODO  Alternatives, properties and estimations are retrieved for similar cases
+        TODO  Selected alternative is retrieved for similar cases
         """
         self._open_or_create_case(self.CASE_NAME_1)
         self._set_up_goal()

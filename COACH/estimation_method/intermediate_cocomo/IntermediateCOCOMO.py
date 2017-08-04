@@ -11,10 +11,6 @@ sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 from COACH.framework.coach import endpoint, EstimationMethodService
 
-# TODO: to suppress
-from datetime import datetime
-import inspect
-
 class IntermediateCOCOMO(EstimationMethodService):
     
     @endpoint("/compute", ["POST"], "application/json")
@@ -155,9 +151,9 @@ class IntermediateCOCOMO(EstimationMethodService):
                                     }
         
         parameters_table["developmentMode"] = {
-                                        "Organic": 2.4,
+                                        "Organic": 3.2,
                                         "Semi-detached": 3.0,
-                                        "Embedded": 3.6,
+                                        "Embedded": 2.8,
                                     }
         return parameters_table
     

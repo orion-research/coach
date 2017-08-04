@@ -251,72 +251,75 @@ class InteractionService(coach.Microservice):
 
     @endpoint("/case_status_dialogue", ["GET"], "text/html")
     def case_status_dialogue_transition(self):
-        # Shows the case status
-        activities = {}
         """
          Get case description
         """  
+        activities = {}
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        case_id = session["case_id"]
+        db_infos = {"user_id": session["user_id"], "user_token": session["user_token"], "case_id": case_id}
         
         activities["case_description"] = {
             "link" : "/edit_case_description_dialogue",
             "name" : "Describe case",
-            "status" : "Not started"}
-        result = self.case_db_proxy.get_case_description(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
-        if result[1]:
-            activities["case_description"]["status"] = "Started"
+            "status" : "Started"} # The case description is done when the user creates a new case.
 
         activities["stakeholders"] = {
             "link" : "/add_stakeholder_dialogue",
             "name" : "Add stakeholders",
             "status" : "Not started"}
-        result = self.case_db_proxy.case_users(user_id = session["user_id"], user_token = session["user_token"], case_id = session["case_id"])
-        if len(result) > 1:
+        roles_uri = self.case_db_proxy.get_objects(**db_infos, subject=case_id, predicate=orion_ns.role)
+        # The case owner is always a stakeholder. So we can safely access the first element of the list, as it will never be empty.
+        # Each role node has two link by default: the person who has the role, and a link to say that it is a role
+        if len(roles_uri) > 1 or len(self.case_db_proxy.get_predicate_objects(**db_infos, subject=roles_uri[0])) > 2:
             activities["stakeholders"]["status"] = "Started"
-        # TODO: add the case where the users' own role as stakeholder have been defined
-           
             
         activities["goal"] = {
-            "link" : "#",
+            "link" : "/edit_goal_description_dialogue",
             "name" : "Describe goal",
-            "status" : "Not started"}  
-        # TODO: Add a check if started
+            "status" : "Not started"
+        }
+        if len(self.case_db_proxy.get_objects(**db_infos, subject=case_id, predicate=orion_ns.goal)) == 1:
+            activities["goal"]["status"] = "Started"
 
         activities["context"] = {
             "link" : "/context_model_request?endpoint=edit_context_dialogue",
             "name" : "Describe context",
             "status" : "Not started"}   
-        # TODO: Add a check if started
+        if len(self.case_db_proxy.get_objects(**db_infos, subject=case_id, predicate=orion_ns.context)) == 1:
+            activities["context"]["status"] = "Started"
             
         activities["alternatives"] = {
             "link" : "/add_alternative_dialogue",
             "name" : "Add alternatives",
-            "status" : "Not started"}                        
-        result = self.case_db_proxy.get_decision_alternatives(user_id = session["user_id"], token = session["user_token"], case_id = session["case_id"])
-        if len(result) > 0:
+            "status" : "Not started"}
+        alternatives_number = len(self.case_db_proxy.get_objects(**db_infos, subject=case_id, predicate=orion_ns.alternative))
+        if alternatives_number > 0:
             activities["alternatives"]["status"] = "Started"
 
 
         activities["properties"] = {
-            "link" : "/property_model_request?endpoint=properties_dialogue",
+            "link" : "/property_model_request?endpoint=properties_overview_dialogue",
             "name" : "Set properties",
             "status" : "Not started"}   
-        if len(result) == 0:
+        if alternatives_number == 0:
             activities["properties"]["status"] = "Unavailable"
-        # TODO: check if there are any properties defined to set their status to started or Not started
+        elif len(self.case_db_proxy.get_objects(**db_infos, subject=case_id, predicate=orion_ns.property)) >= 1:
+            activities["properties"]["status"] = "Started"
 
         activities["tradeoff"] = {
             "link" : "/change_decision_process_dialogue",
             "name" : "Trade-off analysis",
             "status" : "Not started"}  
-        if len(result) < 2:
+        if alternatives_number < 2:
             activities["tradeoff"]["status"] = "Unavailable"
-        # TODO: Add a check if started
+        elif len(self.case_db_proxy.get_objects(**db_infos, subject=case_id, predicate=orion_ns.selected_trade_off_method)) == 1:
+            activities["tradeoff"]["status"] = "Started"
 
         activities["close"] = {
-            "link" : "#",
+            "link" : "/close_case_dialogue",
             "name" : "Decide and close case",
-            "status" : "Not started"}   
-        # TODO: Add a check if started
+            "status" : "Not started"} # Close case can not be started, as a displayed case is always opened
 
 
         dialogue = render_template("case_status_dialogue.html", activities = activities)
@@ -584,6 +587,8 @@ class InteractionService(coach.Microservice):
     def close_case(self, selected_alternative, comments, export_to_kr_checkbox = False):
         db_infos = {"user_id": session["user_id"], "user_token": session["user_token"], "case_id": session["case_id"]}
         
+        if selected_alternative == "None":
+            selected_alternative = None
         self.case_db_proxy.add_case_decision(**db_infos, selected_alternative_uri=selected_alternative, comments=comments)
         
         if export_to_kr_checkbox == "on":

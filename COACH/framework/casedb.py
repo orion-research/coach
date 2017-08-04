@@ -327,11 +327,8 @@ class CaseDatabase(coach.GraphDatabaseService):
             
             case_graph.set((case_id, orion_ns.comments, rdflib.Literal(comments)))
             case_graph.remove((case_id, orion_ns.selected_alternative, None))
-            if selected_alternative_uri == "None":
-                case_graph.add((case_id, orion_ns.selected_alternative, rdflib.Literal(selected_alternative_uri)))
-                return
-            
-            case_graph.add((case_id, orion_ns.selected_alternative, rdflib.URIRef(selected_alternative_uri)))
+            if selected_alternative_uri is not None:
+                case_graph.add((case_id, orion_ns.selected_alternative, rdflib.URIRef(selected_alternative_uri)))
         else:
             raise RuntimeError("Invalid user token")
 
@@ -1348,6 +1345,15 @@ class CaseDatabase(coach.GraphDatabaseService):
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))
             result = case_graph.objects(rdflib.URIRef(subject), rdflib.URIRef(predicate))
+            return list(result)
+        else:
+            raise RuntimeError("Invalid user token")
+        
+    @endpoint("/get_predicate_objects", ["GET"], "application/json")
+    def get_predicate_objects(self, user_id, user_token, case_id, subject):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            case_graph = self.graph.get_context(rdflib.URIRef(case_id))
+            result = case_graph.predicate_objects(rdflib.URIRef(subject))
             return list(result)
         else:
             raise RuntimeError("Invalid user token")

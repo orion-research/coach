@@ -433,8 +433,15 @@ class KnowledgeRepositoryService(Microservice):
                 current_case_node = list(self.query("MATCH (c:Case {uri: $uri}) RETURN c", {"uri": current_case_uri}))[0][0]
                 current_case_title = current_case_node.properties["title"]
                 
+                query_selected_alternative = """MATCH (:Case {uri :$uri}) -[:selected_alternative]-> (alt:Alternative)
+                                                RETURN alt.title"""
+                try:
+                    selected_alternative = list(self.query(query_selected_alternative, {"uri": current_case_uri}))[0][0]
+                except IndexError:
+                    selected_alternative = None               
+                
                 alternatives_name_list = self._get_alternative(current_case_uri)
-                result.append((current_case_title, similarity, alternatives_name_list, 
+                result.append((current_case_title, similarity, selected_alternative, alternatives_name_list, 
                                self._get_properties_estimation_methods(current_case_uri, alternatives_name_list)))
         return result
         

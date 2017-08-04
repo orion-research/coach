@@ -2,18 +2,23 @@
 
 {% for similar_case in similar_cases_list -%}
 	<h3 style="padding-top: 30px;">{{similar_case[0]}}: {{"%.4f" | format(similar_case[1])}}</h3>
+	{% if similar_case[2] -%}
+		<p>
+			Selected alternative: {{similar_case[2]}}
+		</p>
+	{% endif -%}
 	
-	{% if similar_case[2] | length > 0 -%}
+	{% if similar_case[3] | length > 0 -%}
 		<table class="properties_estimation_table">
 			<tr>
 				<th></th>
 				<th></th>
-				{% for alternative_name in similar_case[2] -%}
+				{% for alternative_name in similar_case[3] -%}
 					<th>{{alternative_name}}</th>
 				{% endfor -%}
 			</tr>
 		
-			{% for property in similar_case[3] -%}
+			{% for property in similar_case[4] -%}
 				<tr class="property_row">
 					<th rowspan="{{property.estimation_methods | length}}">{{property.property_name}}</th>
 					<!-- The first estimation method must be here and not in a new row -->
