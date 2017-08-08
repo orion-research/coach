@@ -7,15 +7,12 @@ Created on 9 aug. 2016
 # Set python import path to include COACH top directory
 import os
 import sys
-import traceback
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 # Coach framework
 from COACH.framework import coach
 from COACH.framework.coach import endpoint, MicroserviceException
 
-# Standard libraries
-import json
 
 # Web server framework
 from flask import request
@@ -25,6 +22,8 @@ from flask.templating import render_template
 import rdflib
 
 class PughService(coach.DecisionProcessService):
+    PROPERTY_NOT_ADDED_STRING = ""
+    PROPERTY_VALUE_NOT_COMPUTED_STRING = "---"
     # TODO: Doc string to update
     
     def __init__(self, settings_file_name = None, working_directory = None):
@@ -106,6 +105,113 @@ class PughService(coach.DecisionProcessService):
         return result
     
     
+    def _get_estimation_method_property_ontology_id_name(self, class_attribute, is_class_property, is_attribute_name=True, case_db_proxy=None):
+        """
+        DESCRIPTION:
+            Returns the name or the ontology id of the estimation method or the property defined by class_attribute.
+        INPUT:
+            class_attribute: The name or the ontology id of an estimation method or a property.
+            is_class_property: A boolean, which is True if we are looking for a property attribute, and False if 
+                we are looking for an estimation method attribute.
+            is_attribute_name: A boolean, which should be True if class_attribute is the name of the
+                class and False if class_attribute is the ontology id of the class.
+        OUTPUT:
+            If is_attribute_name is True, returns the ontology id of the class defined by the name
+            class_attribute. Otherwise, returns the name of the class defined by the 
+            ontology id class_attribute.
+        ERROR:
+            Raise a RuntimeError if no match were found with class_attribute.
+        """
+        if is_attribute_name:
+            index_returned = 0
+            index_look_for = 2
+        else:
+            index_returned = 2
+            index_look_for = 0
+        
+        orion_ns = rdflib.Namespace(self.orion_ns)
+
+        if is_class_property:
+            orion_class = orion_ns.Property
+        else:
+            orion_class = orion_ns.EstimationMethod
+            
+        class_list = self._get_ontology_instances(orion_class, case_db_proxy)
+        for class_tuple in class_list:
+            if class_tuple[index_look_for] == class_attribute:
+                return class_tuple[index_returned]
+        raise RuntimeError("The provided attribute " + class_attribute + " should be in the ontology")
+
+    def _get_estimation_methods_name(self, property_name, case_db_proxy):
+        """
+        DESCRIPTION:
+            Returns a list with the name of all estimation methods in the ontology which are available for the provided property.
+        INPUT:
+            property_name: The name of the property for which the returned estimation methods are available.
+        OUTPUT:
+            A list with the name of all estimation methods available for the provided property.
+            The estimation method "ExpertEstimate" is a default to all properties, and it is declined in 3 different estimation methods,
+            depending of the type of the property.
+        """
+        property_ontology_id = self._get_estimation_method_property_ontology_id_name(property_name, True, True)
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        query = """ SELECT ?estimation_method_name
+                    WHERE {
+                        ?estimation_method_ontology_uri a orion:EstimationMethod .
+                        ?estimation_method_ontology_uri orion:belongTo ?property_ontology_uri .
+                        ?estimation_method_ontology_uri orion:type ?type .
+                        ?property_ontology_uri orion:type ?type .
+                        ?estimation_method_ontology_uri orion:title ?estimation_method_name .
+                    }
+        """
+        
+        query_result = self._get_ontology(case_db_proxy).query(query, initNs = {"orion": orion_ns}, 
+                                                               initBindings = {"property_ontology_uri": rdflib.URIRef(property_ontology_id)})
+        
+        result = [e.toPython() for (e,) in query_result]
+        property_type = self._get_property_type(property_name)
+        if property_type == "text":
+            result.append("Expert estimate text")
+        elif property_type == "float":
+            result.append("Expert estimate float")
+        else:
+            result.append("Expert estimate integer")
+            
+        return result
+    
+    def _get_property_type(self, property_name):
+        """
+        DESCRIPTION:
+            Return the type of the property defined by property_name.
+        INPUT:
+            property_name: The name of a property.
+        OUTPUT:
+            The type of the property defined by property_name.
+        ERROR:
+            Raise a RuntimeError if there is no type or more than one type for the provided property, or if the type 
+            is invalid. Valid types are "text", "float" and "integer".
+        """
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        query = """ SELECT ?property_type
+                    WHERE {
+                        ?property_ontology_uri a orion:Property .
+                        ?property_ontology_uri orion:title ?property_name .
+                        ?property_ontology_uri orion:type ?property_type .
+                    }
+        """
+        query_result = self._get_ontology().query(query, initNs = {"orion": orion_ns}, 
+                                                  initBindings = {"property_name": rdflib.Literal(property_name)})
+        result = [t.toPython() for (t,) in query_result]
+        if len(result) != 1:
+            raise RuntimeError("The property " + property_name + " must have exactly 1 type, but " + str(len(result)) + " were found.")
+        
+        allowed_types = ["text", "float", "integer"]
+        if result[0] not in allowed_types:
+            raise RuntimeError("The property " + property_name + " have an unknown type (" + result[0] + "). Valid types are: "
+                               + ", ".join(allowed_types) + ".")
+        return result[0]
+    
+    
     def _add_or_replace_criterium(self, db_infos, case_db_proxy, criterium_uri, criterium_name, criterium_weight, criterium_properties_ontology_id_list):
         orion_ns = rdflib.Namespace(self.orion_ns)
         
@@ -136,7 +242,7 @@ class PughService(coach.DecisionProcessService):
         orion_ns = rdflib.Namespace(self.orion_ns)
         
         criterium_uri_list = case_db_proxy.get_objects_in_trade_off(**db_infos, subject=trade_off_method_uri, predicate=orion_ns.criterium)
-        return [case_db_proxy.get_objects_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.name)[0] 
+        return [case_db_proxy.get_objects_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.name)[0]
                 for criterium_uri in criterium_uri_list]
         
     
@@ -151,17 +257,97 @@ class PughService(coach.DecisionProcessService):
         return None
     
     
-    def _get_criteria_properties_estimation_methods(self, db_infos, case_db_proxy, trade_off_method_uri, alternatives_list):
+    def _get_criteria_properties_estimation_methods(self, db_infos, case_db_proxy, trade_off_method_uri):
         orion_ns = rdflib.Namespace(self.orion_ns)
+        alternatives_list = case_db_proxy.get_decision_alternatives(**db_infos)
+        alternatives_uri_to_name_dict = {alternative_uri: alternative_name for (alternative_name, alternative_uri) in alternatives_list}
         result = []
         
-        criteria_uri_list = case_db_proxy.get_objects_in_trade_off(**db_infos, subjec=trade_off_method_uri, predicate=orion_ns.criterium)
+        criteria_uri_list = case_db_proxy.get_objects_in_trade_off(**db_infos, subject=trade_off_method_uri, predicate=orion_ns.criterium)
         for criterium_uri in criteria_uri_list:
+            criterium_name = case_db_proxy.get_objects_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.name)[0]
+            criterium_weight = case_db_proxy.get_objects_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.weight)[0]
+            criterium_ranking = self._get_criterium_ranking(db_infos, case_db_proxy, criterium_uri, alternatives_uri_to_name_dict)
+            result.append({"criterium_name": criterium_name, "criterium_weight": criterium_weight, "criterium_properties_list": [], 
+                           "ranking": criterium_ranking})
+            
             criterium_properties_uri_list = case_db_proxy.get_subjects_in_trade_off(**db_infos, predicate=orion_ns.criterium_property,
                                                                                     object_=criterium_uri)
-            
+            for property_uri in criterium_properties_uri_list:
+                properties_estimation_method = self._get_properties_estimation_methods(db_infos, case_db_proxy, property_uri, alternatives_list)
+                result[-1]["criterium_properties_list"].append(properties_estimation_method)
         
+        return result
     
+    
+    def _get_criterium_ranking(self, db_infos, case_db_proxy, criterium_uri, alternatives_uri_to_name_dict):
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        criterium_values_list = case_db_proxy.get_objects_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.value)
+        
+        result = {}
+        for criterium_value_uri in criterium_values_list:
+            criterium_value = case_db_proxy.get_objects_in_trade_off(**db_infos, subject=criterium_value_uri, predicate=orion_ns.value)[0]
+            alternative_uri = case_db_proxy.get_subjects_in_trade_off(**db_infos, predicate=orion_ns.criterium_alternative, 
+                                                                      object_=criterium_value_uri)[0]
+            alternative_name = alternatives_uri_to_name_dict[alternative_uri]
+            
+            result[alternative_name] = criterium_value
+            
+        return result
+            
+    def _get_properties_estimation_methods(self, db_infos, case_db_proxy, property_uri, alternatives_list):
+        property_ontology_id = case_db_proxy.get_property_ontology_id_from_uri(**db_infos, property_uri=property_uri)
+        property_name = self._get_estimation_method_property_ontology_id_name(property_ontology_id, True, False, case_db_proxy)
+
+        estimation_methods_name_list = self._get_estimation_methods_name(property_name, case_db_proxy)
+        estimation_methods = []
+        for estimation_method_name in estimation_methods_name_list:
+            current_em = self._get_estimation_method_values(db_infos, case_db_proxy, estimation_method_name, property_uri, alternatives_list)
+            estimation_methods.append(current_em)
+        
+        return {"property_name": property_name, "estimation_methods": estimation_methods}
+    
+    
+    def _get_estimation_method_values(self, db_infos, case_db_proxy, estimation_method_name, property_uri, alternatives_list):
+        estimation_method_ontology_id = self._get_estimation_method_property_ontology_id_name(estimation_method_name, False, True)
+        
+        linked_alternatives_list_uri = case_db_proxy.get_alternative_from_property_uri(**db_infos, property_uri=property_uri)
+        
+        estimation_methods_values = []
+        for (_, alternative_uri) in alternatives_list:
+            if alternative_uri in linked_alternatives_list_uri:
+                db_result = case_db_proxy.get_estimation_value(**db_infos, 
+                                                               alternative_uri=alternative_uri, property_uri=property_uri, 
+                                                               estimation_method_ontology_id=estimation_method_ontology_id)
+                if db_result is None:
+                    db_result = {"value": self.PROPERTY_VALUE_NOT_COMPUTED_STRING, "up_to_date": True}
+            else:
+                db_result = {"value": self.PROPERTY_NOT_ADDED_STRING, "up_to_date": True}
+            
+            estimation_methods_values.append({"value": db_result["value"], "up_to_date": db_result["up_to_date"]})
+        
+        return {"estimation_method_name": estimation_method_name, "estimated_values": estimation_methods_values}
+            
+    
+    def _add_criterium_value(self, db_infos, case_db_proxy, trade_off_method_uri, criterium_name, alternative_uri, criterium_value):
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        
+        criterium_uri = self._get_criterium_uri_from_name(db_infos, case_db_proxy, trade_off_method_uri, criterium_name)
+        criterium_values_uri_list = case_db_proxy.get_objects_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.value)
+        for criterium_value_uri in criterium_values_uri_list:
+            link_alternative_uri = case_db_proxy.get_subjects_in_trade_off(**db_infos, predicate=orion_ns.criterium_alternative,
+                                                                           object_=criterium_value_uri)
+            
+            if link_alternative_uri == alternative_uri:
+                case_db_proxy.set_in_trade_off(**db_infos, subject=criterium_value_uri, predicate=orion_ns.value, object_=criterium_value)
+                return
+            
+        # A value node for this criterium and alternative does not exist yet, a new one will be created
+        criterium_value_uri = case_db_proxy.add_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.value, object_=None)
+        case_db_proxy.add_in_trade_off(**db_infos, subject=criterium_value_uri, predicate=orion_ns.value, object_=criterium_value, 
+                                       is_object_uri=False)
+        case_db_proxy.add_in_trade_off(**db_infos, subject=alternative_uri, predicate=orion_ns.criterium_alternative, 
+                                       object_=criterium_value_uri)
 
     # Endpoints
 
@@ -204,7 +390,7 @@ class PughService(coach.DecisionProcessService):
             case_db_proxy.remove_in_trade_off(**db_infos, subject=alternative_baseline, predicate=orion_ns.baseline, object_=trade_off_method_uri)
         
         case_db_proxy.add_in_trade_off(**db_infos, subject=baseline, predicate=orion_ns.baseline, object_=trade_off_method_uri)
-        return self.matrix_dialogue_transition(user_id, delegate_token, case_db, case_id)    
+        return self.matrix_dialogue_transition(user_id, delegate_token, case_db, case_id, trade_off_method_uri)    
     
     
     @endpoint("/add_criterium_dialogue", ["GET"], "text/html")
@@ -244,7 +430,7 @@ class PughService(coach.DecisionProcessService):
         
         try:
             self._add_or_replace_criterium(db_infos, case_db_proxy, criterium_uri, criterium_name, criterium_weight, criterium_properties)
-        except MicroserviceException:
+        except MicroserviceException as e:
             return("Compute an estimation for each property you want to add.")
         
         return "Criterium added!"
@@ -259,6 +445,9 @@ class PughService(coach.DecisionProcessService):
         case_db_proxy = self.create_proxy(case_db)
         
         criteria_name_list = self._get_criteria_name_list(db_infos, case_db_proxy, trade_off_method_uri)
+        if len(criteria_name_list) == 0:
+            return "Add a criterium before wanting to change one"
+        
         if selected_criterium_name not in criteria_name_list:
             selected_criterium_name = criteria_name_list[0]
             
@@ -312,39 +501,77 @@ class PughService(coach.DecisionProcessService):
         """
         Endpoint which shows the Pugh matrix dialogue.
         """
+        orion_ns = rdflib.Namespace(self.orion_ns)
         db_infos = {"user_id": user_id, "token": delegate_token, "case_id": case_id}
         case_db_proxy = self.create_proxy(case_db)
         
         alternatives_list = case_db_proxy.get_decision_alternatives(**db_infos)
-        criteria_nested_list = self._get_criteria_properties_estimation_methods(db_infos, case_db_proxy, trade_off_method_uri, 
-                                                                                alternatives_list)
-        
-        return render_template("matrix_dialogue.html", alternatives_list=alternatives_list, criteria_nested_list=criteria_nested_list)
+        criteria_nested_list = self._get_criteria_properties_estimation_methods(db_infos, case_db_proxy, trade_off_method_uri)
+        try:
+            baseline_uri = case_db_proxy.get_subjects_in_trade_off(**db_infos, predicate=orion_ns.baseline, object_=trade_off_method_uri)[0]
+        except IndexError:
+            baseline_uri = None
+            
+        return render_template("matrix_dialogue.html", alternatives_list=alternatives_list, baseline_uri=baseline_uri,
+                               criteria_nested_list=criteria_nested_list)
     
     
     @endpoint("/change_rating", ["POST"], "text/html")
-    def change_rating(self, user_id, delegate_token, case_db, case_id):
+    def change_rating(self, user_id, delegate_token, case_db, case_id, trade_off_method_uri):
         """
         This method is called using POST when the user presses the save button in the Pugh matrix dialogue. It updates the values
         of the ranking of each alternative according to the current values in the dialogue.
         """
-        # Get alternatives from the database
+        orion_ns = rdflib.Namespace(self.orion_ns)
         case_db_proxy = self.create_proxy(case_db)
+        db_infos = {"user_id": user_id, "token": delegate_token, "case_id": case_id}
+        request_values = request.values.to_dict()
 
-        decision_alternatives = case_db_proxy.get_decision_alternatives(user_id = user_id, token = delegate_token, case_id = case_id)
-        alternative_ids = [a[1] for a in decision_alternatives]
+        try:
+            baseline_uri = case_db_proxy.get_subjects_in_trade_off(**db_infos, predicate=orion_ns.baseline, object_=trade_off_method_uri)[0]
+        except IndexError:
+            baseline_uri = None
+            
+        alternatives_list = case_db_proxy.get_decision_alternatives(**db_infos)
+        criteria_name_list = self._get_criteria_name_list(db_infos, case_db_proxy, trade_off_method_uri)
+        for (_, alternative_uri) in alternatives_list:
+            if alternative_uri == baseline_uri:
+                continue # Baseline has always a 0 value, but we want to preserve an ancient value set by the user, if any.
+            
+            for criterium_name in criteria_name_list:
+                try:
+                    criterium_value = request_values["{0}_{1}".format(alternative_uri, criterium_name)]
+                except KeyError:
+                    criterium_value = 0
+                
+                self._add_criterium_value(db_infos, case_db_proxy, trade_off_method_uri, criterium_name, alternative_uri, criterium_value)
         
-        # Get criteria from the database
-        criteria = self.get_criteria(user_id, delegate_token, case_db, case_id).keys()
-
-        # For each alternative, build a map from criteria to value and write it to the database
-        for a in alternative_ids:
-            ranking = { c : request.values[str(a) + ":" + c] for c in criteria }
-            self.set_alternative_ranking(user_id, delegate_token, case_db, case_id, a, ranking)
-
-        # Show the updated matrix        
-        return self.matrix_dialogue_transition(user_id, delegate_token, case_db, case_id)    
+        return self.matrix_dialogue_transition(user_id, delegate_token, case_db, case_id, trade_off_method_uri)    
         
 
 if __name__ == '__main__':
     PughService(sys.argv[1]).run()
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

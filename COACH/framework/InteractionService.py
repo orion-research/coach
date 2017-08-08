@@ -11,7 +11,6 @@ import ipaddress
 import json
 import os
 import subprocess
-import sys
 
 # Coach modules
 from COACH.framework import coach

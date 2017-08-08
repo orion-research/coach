@@ -505,8 +505,10 @@ class CaseDatabase(coach.GraphDatabaseService):
         case_graph.set((estimation_uri, orion_ns.up_to_date, rdflib.Literal(True)))
     
     @endpoint("/get_alternative_from_property_ontology_id", ["GET"], "application/json")
-    def get_alternative_from_property_ontology_id(self, user_id, user_token, case_id, property_ontology_id):
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+    def get_alternative_from_property_ontology_id(self, user_id, token, case_id, property_ontology_id):
+        if self.is_stakeholder(user_id, case_id) and (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = token) or 
+                                                      self.authentication_service_proxy.check_delegate_token(user_id = user_id, delegate_token = token, case_id = case_id)):
+
             case_id = rdflib.URIRef(case_id)
             case_graph = self.graph.get_context(case_id)
 
@@ -522,11 +524,32 @@ class CaseDatabase(coach.GraphDatabaseService):
             result = [e.toPython() for (e,) in result]
             return result
         else:
-            raise RuntimeError("Invalid user token")
+            raise RuntimeError("Invalid user or delegate token")
+        
+    @endpoint("/get_alternative_from_property_uri", ["GET"], "application/json")
+    def get_alternative_from_property_uri(self, user_id, token, case_id, property_uri):
+        if self.is_stakeholder(user_id, case_id) and (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = token) or 
+                                                      self.authentication_service_proxy.check_delegate_token(user_id = user_id, delegate_token = token, case_id = case_id)):
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_graph = self.graph.get_context(rdflib.URIRef(case_id))
+            return list(case_graph.objects(property_uri, orion_ns.belong_to))
+        else:
+            raise RuntimeError("Invalid user or delegate token")
+        
+    @endpoint("/get_property_ontology_id_from_uri", ["GET"], "application/json")
+    def get_property_ontology_id_from_uri(self, user_id, token, case_id, property_uri):
+        if self.is_stakeholder(user_id, case_id) and (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = token) or 
+                                                      self.authentication_service_proxy.check_delegate_token(user_id = user_id, delegate_token = token, case_id = case_id)):
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_graph = self.graph.get_context(rdflib.URIRef(case_id))
+            return case_graph.value(rdflib.URIRef(property_uri), orion_ns.ontology_id, any=False).toPython()
+        else:
+            raise RuntimeError("Invalid user or delegate token")
         
     @endpoint("/get_estimation_uri", ["GET"], "application/json")
-    def get_estimation_uri(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
-        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+    def get_estimation_uri(self, user_id, token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
+        if self.is_stakeholder(user_id, case_id) and (self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = token) or 
+                                                      self.authentication_service_proxy.check_delegate_token(user_id = user_id, delegate_token = token, case_id = case_id)):
             if property_uri is None:
                 return None
             
@@ -554,7 +577,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             
             return result[0][0] if len(result) == 1 else None
         else:
-            raise RuntimeError("Invalid user token")
+            raise RuntimeError("Invalid user or delegate token")
         
     @endpoint("/get_estimation_value", ["GET"], "application/json")
     def get_estimation_value(self, user_id, token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
@@ -583,7 +606,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             estimation_up_to_date = case_graph.value(estimation_uri, orion_ns.up_to_date, any=False).toPython()
             return {"value": estimation_value, "up_to_date": estimation_up_to_date}
         else:
-            raise RuntimeError("Invalid user token")
+            raise RuntimeError("Invalid user or delegate token")
     
     @endpoint("/get_estimation_parameters", ["GET"], "application/json")
     def get_estimation_parameters(self, user_id, user_token, case_id, alternative_uri, property_uri, estimation_method_ontology_id):
@@ -754,6 +777,9 @@ class CaseDatabase(coach.GraphDatabaseService):
         if not isinstance(parent, rdflib.term.URIRef) and not isinstance(child, (rdflib.term.Literal, rdflib.term.URIRef)):
             raise RuntimeError("parent must be a URIRef, child must either be a URIRef or a Literal, but they are {0}, {1}."
                                .format(parent.__class__, child.__class__))
+        
+        if isinstance(child, rdflib.term.Literal):
+            return False
             
         case_graph = self.graph.get_context(rdflib.URIRef(case_id))
         query = """ ASK WHERE {
@@ -778,7 +804,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                 raise RuntimeError("The object of the triplet must either be a new uri or a child of the trade-off method.")
             
             return True
-        else: # object_ is not a child of case_id => it is a new uri, so the subject need to be a child of the trade-off method
+        else: # object_ is not a child of case_id => it is a new uri or a literal, so the subject need to be a child of the trade-off method
             if not self._is_child(case_id, current_trade_off_method, subject):
                 raise RuntimeError("The subject of the triplet must be a child of the trade-off method when the object is not in the graph.")
             
@@ -821,12 +847,21 @@ class CaseDatabase(coach.GraphDatabaseService):
             if object_ is not None:
                 object_ = rdflib.URIRef(object_) if is_object_uri else rdflib.Literal(object_)
                 
-            triples = case_graph.triples((subject, predicate, object_))
+            # Create a list as a generator can be iterated only one time
+            triples = list(case_graph.triples((subject, predicate, object_)))
+            
+            # Check that each triples can be safely removed with the delegate token. Perform this check for each triple before
+            # removing any, as if the first triple removed is the link from the trade-off method to an element of these triples,
+            # the following removals will fail as this element will no longer be a child of the trade-off method.
+            for (triple_subject, triple_predicate, triple_object) in triples:
+                # Raise an error if the modification is not allowed
+                self._is_modification_by_trade_off_method_allowed(case_id, triple_subject, triple_object)
+                    
+                
             # TODO: add transaction
             # Remove triplet one by one to ensure that they can be removed with the delegate token.
             for (triple_subject, triple_predicate, triple_object) in triples:
-                if self._is_modification_by_trade_off_method_allowed(case_id, triple_subject, triple_object):
-                    case_graph.remove((triple_subject, triple_predicate, triple_object))
+                case_graph.remove((triple_subject, triple_predicate, triple_object))
         else:
             raise RuntimeError("Invalid user or delegate token")
         
@@ -1102,7 +1137,7 @@ class CaseDatabase(coach.GraphDatabaseService):
                                                       self.authentication_service_proxy.check_delegate_token(user_id = user_id, delegate_token = token, case_id = case_id)):
             case_id = rdflib.URIRef(case_id)
             case_graph = self.graph.get_context(case_id)
-            q = "SELECT ?title ?a WHERE { ?case_id orion:alternative ?a . ?a orion:title ?title . }"
+            q = "SELECT ?title ?a WHERE { ?case_id orion:alternative ?a . ?a orion:title ?title . } ORDER BY ?a"
             result = case_graph.query(q, initNs = { "orion": rdflib.Namespace(self.orion_ns)},
                                       initBindings = { "case_id": case_id })
             return list(result)

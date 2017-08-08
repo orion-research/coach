@@ -4,7 +4,6 @@
 	<table class="properties_estimation_table">
 		<tr>
 			<th colspan="2">Criterium</th>
-			<th>Weight</th>
 			{%- for alternative in alternatives_list %}
 				<th> {{alternative[0]}} </th>
 			{% endfor -%}
@@ -12,15 +11,11 @@
 		
 		{%- for criterium in criteria_nested_list %}
 			<tr class="criteria_row">
-				<th class="criteria" colspan="2">{{criterium.name}}</th>
-				<td rowspan="{{criterium.properties | length}}">
-					{{criterium.weight}}
-				</td>
-				
+				<th class="criteria" colspan="2">{{criterium.criterium_name}}</th>
 				{%- for alternative in alternatives_list %}
 					<td> 
-						<input type="number" name="{{alternative[1]}}_{{criterium.name}}" min="-2" max="2" 
-								{%- if alternative[0] == baseline %}
+						<input type="number" name="{{alternative[1]}}_{{criterium.criterium_name}}" min="-2" max="2" 
+								{%- if alternative[1] == baseline_uri %}
 									value="0" disabled/>
 								{% else %}
 									value="{{criterium.ranking[alternative[0]]}}"/>
@@ -29,7 +24,7 @@
 				{% endfor -%}
 			</tr>
 			
-			{%- for property in criterium.properties %}
+			{%- for property in criterium.criterium_properties_list %}
 				<tr class="property_row">
 					<th rowspan="{{property.estimation_methods | length}}">{{property.property_name}}</th>
 					
@@ -82,3 +77,4 @@
 	
 	<input type="submit" value="Save">
 </form>
+

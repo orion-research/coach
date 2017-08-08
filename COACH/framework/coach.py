@@ -245,10 +245,7 @@ class Microservice:
                     self.trace_indent -= 1
                     print(highlight_text(self.trace_indent * "    " + "result from " + m.__name__ + ": " + (str(result).split("\n", 1)[0])))
                 response = Response(endpoint_content_conversion[content][0](result), status = 200, content_type = content)
-            except Exception as e:
-#                 print("name : ", e.__class__.__name__)
-#                 print("message :", str(e))
-#                 sys.stdout.flush()
+            except Exception:
                 message = "An error occurred while processing the endpoint " + m.__name__ + ":\n"
                 message += "Service: " + self.__class__.__name__ + " running at " + self.host + ":" + str(self.port) + "\n"
                 message += "Arguments: " + str(args) + "\n"

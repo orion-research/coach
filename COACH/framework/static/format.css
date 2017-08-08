@@ -77,6 +77,10 @@ tr.property_row {
 	border-top: 2px solid black;
 }
 
+tr.criteria_row {
+	border-top: 3px solid black;
+}
+
 td.out_of_date {
 	background-color:yellow;
 }

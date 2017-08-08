@@ -576,7 +576,7 @@ class PropertyModelService(coach.Microservice):
         case_db_proxy = db_infos["case_db_proxy"]
 
         property_ontology_id = self._get_property_ontology_id_name(property_name)        
-        linked_alternatives_list_uri = case_db_proxy.get_alternative_from_property_ontology_id(user_id=user_id, user_token=user_token, 
+        linked_alternatives_list_uri = case_db_proxy.get_alternative_from_property_ontology_id(user_id=user_id, token=user_token, 
                                                                                                case_id=case_id, 
                                                                                                property_ontology_id=property_ontology_id)
         
@@ -658,7 +658,7 @@ class PropertyModelService(coach.Microservice):
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
         estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
         
-        estimation_method_uri = case_db_proxy.get_estimation_uri(user_id=user_id, user_token=user_token, case_id=case_id,
+        estimation_method_uri = case_db_proxy.get_estimation_uri(user_id=user_id, token=user_token, case_id=case_id,
                                                                  alternative_uri=alternative_uri, property_uri=property_uri,
                                                                  estimation_method_ontology_id=estimation_method_ontology_id)
         return (estimation_method_uri is not None)
@@ -719,7 +719,7 @@ class PropertyModelService(coach.Microservice):
             property_name: The name of the property for which the returned estimation methods are available.
         OUTPUT:
             A list with the name of all estimation methods available for the provided property.
-            The estimation method "ExpertEstimate" is a default to all properties, and it is declined in 3 differents estimation methods,
+            The estimation method "ExpertEstimate" is a default to all properties, and it is declined in 3 different estimation methods,
             depending of the type of the property.
         """
         property_ontology_id = self._get_property_ontology_id_name(property_name)
@@ -975,7 +975,7 @@ class PropertyModelService(coach.Microservice):
         property_uri = self._get_property_uri_from_name(db_infos, property_name)
 
         estimation_method_ontology_id = self._get_estimation_method_ontology_id_name(estimation_method_name)
-        estimation_uri = case_db_proxy.get_estimation_uri(user_id=user_id, user_token=user_token, case_id=case_id,
+        estimation_uri = case_db_proxy.get_estimation_uri(user_id=user_id, token=user_token, case_id=case_id,
                                                           alternative_uri=alternative_uri, property_uri=property_uri,
                                                           estimation_method_ontology_id=estimation_method_ontology_id)
         properties_used_to_estimation_method = case_db_proxy.get_estimation_used_properties(user_id=user_id, user_token=user_token,
