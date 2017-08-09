@@ -215,16 +215,20 @@ class PughService(coach.DecisionProcessService):
     def _add_or_replace_criterium(self, db_infos, case_db_proxy, criterium_uri, criterium_name, criterium_weight, criterium_properties_ontology_id_list):
         orion_ns = rdflib.Namespace(self.orion_ns)
         
-        case_db_proxy.remove_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.name, object_=None)
-        case_db_proxy.add_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.name, object_=criterium_name, is_object_uri=False)
-        
-        case_db_proxy.remove_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.weight, object_=None)
-        case_db_proxy.add_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.weight, object_=criterium_weight, is_object_uri=False)
-        
-        case_db_proxy.remove_in_trade_off(**db_infos, subject=None, predicate=orion_ns.criterium_property, object_=criterium_uri)
-        for criterium_property_ontology_id in criterium_properties_ontology_id_list:
-            property_uri = case_db_proxy.get_property_uri_from_ontology_id(**db_infos, property_ontology_id=criterium_property_ontology_id)
-            case_db_proxy.add_in_trade_off(**db_infos, subject=property_uri, predicate=orion_ns.criterium_property, object_=criterium_uri)
+        try:
+            case_db_proxy.remove_in_trade_off(**db_infos, subject=None, predicate=orion_ns.criterium_property, object_=criterium_uri)
+            for criterium_property_ontology_id in criterium_properties_ontology_id_list:
+                property_uri = case_db_proxy.get_property_uri_from_ontology_id(**db_infos, property_ontology_id=criterium_property_ontology_id)
+                case_db_proxy.add_in_trade_off(**db_infos, subject=property_uri, predicate=orion_ns.criterium_property, object_=criterium_uri)
+    
+            case_db_proxy.remove_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.name, object_=None)
+            case_db_proxy.add_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.name, object_=criterium_name, is_object_uri=False)
+            
+            case_db_proxy.remove_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.weight, object_=None)
+            case_db_proxy.add_in_trade_off(**db_infos, subject=criterium_uri, predicate=orion_ns.weight, object_=criterium_weight, is_object_uri=False)
+        except MicroserviceException:
+            self._delete_criterium(db_infos, case_db_proxy, criterium_uri)
+            raise
 
 
     def _delete_criterium(self, db_infos, case_db_proxy, criterium_uri):
@@ -430,8 +434,8 @@ class PughService(coach.DecisionProcessService):
         
         try:
             self._add_or_replace_criterium(db_infos, case_db_proxy, criterium_uri, criterium_name, criterium_weight, criterium_properties)
-        except MicroserviceException as e:
-            return("Compute an estimation for each property you want to add.")
+        except MicroserviceException:
+            return "Compute an estimation for each property you want to add."
         
         return "Criterium added!"
     
@@ -485,7 +489,10 @@ class PughService(coach.DecisionProcessService):
         
         criterium_uri = self._get_criterium_uri_from_name(db_infos, case_db_proxy, trade_off_method_uri, criterium)
         if action == "Change criterium":
-            self._add_or_replace_criterium(db_infos, case_db_proxy, criterium_uri, new_name, new_weight, criterium_properties)
+            try:
+                self._add_or_replace_criterium(db_infos, case_db_proxy, criterium_uri, new_name, new_weight, criterium_properties)
+            except MicroserviceException:
+                return "Compute an estimation for each property you want to add."
             return "Criterium changed!"
         elif action == "Delete criterium":
             self._delete_criterium(db_infos, case_db_proxy, criterium_uri)

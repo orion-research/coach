@@ -11,7 +11,7 @@ import json
 import os
 import sys
 from collections import defaultdict
-from scipy import spatial
+import heapq
 sys.path.append(os.path.join(os.curdir, os.pardir, os.pardir, os.pardir))
 
 
@@ -28,7 +28,20 @@ import rdflib
 from rdflib.namespace import split_uri
 import sqlalchemy
 from rdflib_sqlalchemy.store import SQLAlchemy
-    
+
+# TODO: to suppress
+from datetime import datetime
+import inspect
+
+def log(*args, verbose = True):
+    message = "" if verbose else "::"
+    if verbose:
+        message = datetime.now().strftime("%H:%M:%S") + " : "
+        message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
+    for arg in args:
+        message += str(arg).replace("\n", "\n::") + " "
+    print(message)
+    sys.stdout.flush()
     
 class KnowledgeRepositoryService(Microservice):
 
@@ -392,7 +405,8 @@ class KnowledgeRepositoryService(Microservice):
     
     
     @endpoint("/get_similar_cases", ["GET"], "application/json")
-    def get_similar_cases(self, case_db, case_uri, similarity_threshold, number_ratio_threshold):
+    def get_similar_cases(self, case_db, case_uri, number_of_returned_case, number_ratio_threshold, goal_weight, context_weight,
+                          stakeholders_weight):
         # Get all necessary data from the ontology
         case_db_proxy = self.create_proxy(case_db)
            
@@ -402,60 +416,72 @@ class KnowledgeRepositoryService(Microservice):
         stakeholder_classes_in_ontology = ["RoleType", "RoleFunction", "RoleLevel", "RoleTitle"]
         stakeholder_uri_from_ontology_list = self._get_ontology_instances(None, case_db_proxy, stakeholder_classes_in_ontology, [0])
  
-        context_categories_in_ontology = ["OrganizationProperty", 
-                                          "ProductProperty", 
-                                          "StakeholderProperty", 
-                                          "DevelopmentMethodAndTechnologyProperty", 
-                                          "MarketAndBusinessProperty"]
+        context_categories_in_ontology = ["OrganizationProperty", "ProductProperty", "StakeholderProperty", 
+                                          "DevelopmentMethodAndTechnologyProperty", "MarketAndBusinessProperty"]
         context_categories_in_database = ["organization", "product", "stakeholder", "method", "business"]
-         
         context_from_ontology = {}
         for (database_name, ontology_name) in zip(context_categories_in_database, context_categories_in_ontology):
             context_from_ontology[database_name] = self._get_ontology_instances(ontology_name, case_db_proxy, None, (1, 4, 5))
              
         # Compute vectors
-        (case_vector, _, _) = self._get_case_vector(case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, 
-                                                    context_from_ontology, context_categories_in_database)
-         
-        result = []
+        case_vectors = self._get_case_vectors(case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, 
+                                              context_from_ontology, context_categories_in_database)
+        
+        # result_heap either contains less than number_of_returned_case element, or contains the top number_of_returned_case cases
+        # according to their similarity
+        result_heap = []
         cases_uri_list = [case_node[0].properties["uri"] for case_node in self.query("MATCH (case:Case) RETURN case")]
          
         for current_case_uri in cases_uri_list:
             if current_case_uri == case_uri:
                 continue
              
-            (current_case_vector, number_indexes, single_select_indexes) = (
-                self._get_case_vector(current_case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, context_from_ontology, 
-                                      context_categories_in_database))
+            current_case_vectors = self._get_case_vectors(current_case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, 
+                                                          context_from_ontology, context_categories_in_database)
              
-            similarity = self._compute_similarity(case_vector, current_case_vector, number_ratio_threshold, number_indexes, single_select_indexes)
-            if similarity > similarity_threshold:
-                current_case_node = list(self.query("MATCH (c:Case {uri: $uri}) RETURN c", {"uri": current_case_uri}))[0][0]
-                current_case_title = current_case_node.properties["title"]
+            similarity = self._compute_similarity(case_vectors, current_case_vectors, number_ratio_threshold, goal_weight, context_weight, 
+                                                  stakeholders_weight)
+            if similarity == 0:
+                continue
+            
+            current_case_node = list(self.query("MATCH (c:Case {uri: $uri}) RETURN c", {"uri": current_case_uri}))[0][0]
+            current_case_title = current_case_node.properties["title"]
+            alternatives_name_list = self._get_alternative(current_case_uri)
+            
+            query_selected_alternative = """MATCH (:Case {uri :$uri}) -[:selected_alternative]-> (alt:Alternative)
+                                            RETURN alt.title"""
+            try:
+                selected_alternative = list(self.query(query_selected_alternative, {"uri": current_case_uri}))[0][0]
+            except IndexError:
+                selected_alternative = None               
+
+            if len(result_heap) == number_of_returned_case:
+                heapq.heappushpop(result_heap, (similarity, current_case_title, selected_alternative, alternatives_name_list, 
+                                   self._get_properties_estimation_methods(current_case_uri, alternatives_name_list)))
+            else:
+                heapq.heappush(result_heap, (similarity, current_case_title, selected_alternative, alternatives_name_list,
+                   self._get_properties_estimation_methods(current_case_uri, alternatives_name_list)))
                 
-                query_selected_alternative = """MATCH (:Case {uri :$uri}) -[:selected_alternative]-> (alt:Alternative)
-                                                RETURN alt.title"""
-                try:
-                    selected_alternative = list(self.query(query_selected_alternative, {"uri": current_case_uri}))[0][0]
-                except IndexError:
-                    selected_alternative = None               
-                
-                alternatives_name_list = self._get_alternative(current_case_uri)
-                result.append((current_case_title, similarity, selected_alternative, alternatives_name_list, 
-                               self._get_properties_estimation_methods(current_case_uri, alternatives_name_list)))
-        return result
+        result_heap.sort()
+        result_heap.reverse()
+        return result_heap
         
     
-    def _get_case_vector(self, case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, context_from_ontology, 
+    def _get_case_vectors(self, case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, context_from_ontology, 
                          context_categories_name):
-        result = self._get_goal_components(case_uri, goal_uri_from_ontology_list)
-        result += self._get_stakeholder_components(case_uri, stakeholder_uri_from_ontology_list)
+        result = {}
         
-        (context_components, number_indexes, single_select_indexes) = (
-            self._get_context_components(case_uri, context_from_ontology, context_categories_name, len(result)))
+        goal_components = self._get_goal_components(case_uri, goal_uri_from_ontology_list)
+        result["goal"] = {"vector": goal_components, "number_indexes": set(), "single_select_indexes": set()}
+
+        stakeholders_components = self._get_stakeholder_components(case_uri, stakeholder_uri_from_ontology_list)
+        result["stakeholders"] = {"vector": stakeholders_components, "number_indexes": set(), "single_select_indexes": set()}
         
-        result += context_components
-        return (result, number_indexes, single_select_indexes)
+        (context_components, number_indexes, single_select_indexes) = self._get_context_components(case_uri, context_from_ontology, 
+                                                                                                   context_categories_name)
+        result["context"] = {"vector": context_components, "number_indexes": number_indexes, "single_select_indexes": single_select_indexes}
+
+        return result
     
     
     def _get_goal_components(self, case_uri, goal_uri_from_ontology_list):
@@ -478,7 +504,8 @@ class KnowledgeRepositoryService(Microservice):
         return [1 if stakeholder in stakeholder_in_case else 0 for stakeholder in stakeholder_uri_from_ontology_list]
     
     
-    def _get_context_components(self, case_uri, context_from_ontology, categories_name, start_index):
+    def _get_context_components(self, case_uri, context_from_ontology, categories_name):
+        # Cypher does not allow parameter for a relation's label, so string format is used instead.
         query = """ MATCH (:Case {{uri: $case_uri}}) -[:context]-> () -[:{0}]-> () -[grade_id]-> (value)
                     RETURN grade_id, value.value
         """
@@ -506,7 +533,7 @@ class KnowledgeRepositoryService(Microservice):
                     pass
                 
                 elif current_type in ["integer", "float"]:
-                    number_indexes.add(len(result) + start_index)
+                    number_indexes.add(len(result))
                     if current_grade_id in context_in_case:
                         field_value = float(context_in_case[current_grade_id][0])
                         result.append(field_value)
@@ -514,7 +541,7 @@ class KnowledgeRepositoryService(Microservice):
                         result.append(0)
                 
                 elif current_type == "single_select":
-                    single_select_indexes.add(len(result) + start_index)
+                    single_select_indexes.add(len(result))
                     if current_grade_id in context_in_case:
                         # 0 is the value when the user selects unknown. Consequently, the first value in the ontology is 1, 
                         # hence 'index + 1'
@@ -539,12 +566,54 @@ class KnowledgeRepositoryService(Microservice):
         return (result, number_indexes, single_select_indexes)
     
     
-    def _compute_similarity(self, case_vector1, case_vector2, number_ratio_threshold, number_indexes, single_select_indexes):
+    def _compute_similarity(self, vectors_dict_1, vectors_dict_2, number_ratio_threshold, goal_weight, context_weight, stakeholders_weight):
+        goal_vector_1 = vectors_dict_1["goal"]["vector"]
+        goal_vector_2 = vectors_dict_2["goal"]["vector"]
+        number_indexes = vectors_dict_1["goal"]["number_indexes"]
+        single_select_indexes = vectors_dict_1["goal"]["single_select_indexes"]
+        goal_information = self._do_compute_similarity(goal_vector_1, goal_vector_2, number_ratio_threshold, number_indexes, 
+                                                       single_select_indexes)
+        goal_similarity = goal_information[0]
+        goal_weight *= goal_information[1]
         
-        vector_length = len(case_vector1)
-        if vector_length != len(case_vector2):
+        context_vector_1 = vectors_dict_1["context"]["vector"]
+        context_vector_2 = vectors_dict_2["context"]["vector"]
+        number_indexes = vectors_dict_1["context"]["number_indexes"]
+        single_select_indexes = vectors_dict_1["context"]["single_select_indexes"]
+        context_information = self._do_compute_similarity(context_vector_1, context_vector_2, number_ratio_threshold, number_indexes, 
+                                                          single_select_indexes)
+        context_similarity = context_information[0]
+        context_weight *= context_information[1]
+        
+        stakeholders_vector_1 = vectors_dict_1["stakeholders"]["vector"]
+        stakeholders_vector_2 = vectors_dict_2["stakeholders"]["vector"]
+        number_indexes = vectors_dict_1["stakeholders"]["number_indexes"]
+        single_select_indexes = vectors_dict_1["stakeholders"]["single_select_indexes"]
+        stakeholders_information = self._do_compute_similarity(stakeholders_vector_1, stakeholders_vector_2, number_ratio_threshold,
+                                                                number_indexes, single_select_indexes)
+        stakeholders_similarity = stakeholders_information[0]
+        stakeholders_weight *= stakeholders_information[1]
+        
+        log("goal_similarity :", goal_similarity, type(goal_similarity))
+        log("context_similarity :", context_similarity, type(context_similarity))
+        log("stakeholders_similarity :", stakeholders_similarity, type(stakeholders_similarity))
+        log("goal_weight :", goal_weight, type(goal_weight))
+        log("context_weight :", context_weight, type(context_weight))
+        log("stakeholders_weight :", stakeholders_weight, type(stakeholders_weight))
+        try:
+            return ((goal_similarity * goal_weight + context_similarity * context_weight + stakeholders_similarity * stakeholders_weight) /
+                    (goal_weight + context_weight + stakeholders_weight))
+        except ZeroDivisionError:
+            return 0
+    
+    
+    def _do_compute_similarity(self, case_vector_1, case_vector_2, number_ratio_threshold, number_indexes, single_select_indexes):
+        
+        vector_length = len(case_vector_1)
+        log("vector_length :", vector_length)
+        if vector_length != len(case_vector_2):
             raise RuntimeError("Both vectors must have the same length, but length are {0} and {1}."
-                               .format(vector_length, len(case_vector2)))
+                               .format(vector_length, len(case_vector_2)))
         
         # Jaccard index is used to compute similarity
         number_of_components_both_1 = 0 # Component are identical
@@ -552,8 +621,8 @@ class KnowledgeRepositoryService(Microservice):
         # Components are different is computed by vector_lentgth - identical - no_information
         
         for i in range(vector_length):
-            value1 = abs(case_vector1[i])
-            value2 = abs(case_vector2[i])
+            value1 = abs(case_vector_1[i])
+            value2 = abs(case_vector_2[i])
             value_min = min(value1, value2)
             value_max = max(value1, value2)
             
@@ -577,11 +646,12 @@ class KnowledgeRepositoryService(Microservice):
                     number_of_components_both_0 += 1
                 elif value_min == 1:
                     number_of_components_both_1 += 1
-                
+             
         try:
-            return number_of_components_both_1 / (vector_length - number_of_components_both_0)
+            number_of_meaningful_components = vector_length - number_of_components_both_0
+            return (number_of_components_both_1 / number_of_meaningful_components, number_of_meaningful_components)
         except ZeroDivisionError:
-            return 0
+            return (0, 0)
         
     def _get_alternative(self, case_uri):
         query = """ MATCH (:Case {uri: $uri}) -[:alternative]-> (alternative:Alternative)

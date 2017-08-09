@@ -1,7 +1,7 @@
 <h2>Computed similarity</h2>
 
 {% for similar_case in similar_cases_list -%}
-	<h3 style="padding-top: 30px;">{{similar_case[0]}}: {{"%.4f" | format(similar_case[1])}}</h3>
+	<h3 style="padding-top: 30px;">{{similar_case[1]}}: {{"%.4f" | format(similar_case[0])}}</h3>
 	{% if similar_case[2] -%}
 		<p>
 			Selected alternative: {{similar_case[2]}}

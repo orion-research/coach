@@ -606,19 +606,24 @@ class InteractionService(coach.Microservice):
     
     
     @endpoint("/compute_similarity", ["POST"], "text/html")
-    def compute_similarity(self, similarity_threshold, number_ratio_threshold, export_case = False):
+    def compute_similarity(self, number_of_returned_case, number_ratio_threshold, goal_weight, context_weight, stakeholders_weight, 
+                           export_case = False):
         # The similarity is computed using the knowledge repository data, the current case must therefore be exported.
         if export_case == "on":
             self.export_case_to_knowledge_repository()
             
-        similarity_threshold = float(similarity_threshold)
+        number_of_returned_case = int(number_of_returned_case)
         number_ratio_threshold = float(number_ratio_threshold)
+        goal_weight = int(goal_weight)
+        context_weight = int(context_weight)
+        stakeholders_weight = int(stakeholders_weight)
         similar_cases = self.knowledge_repository_proxy.get_similar_cases(case_db=self.get_setting("database"), case_uri=session["case_id"], 
-                                                                          similarity_threshold=similarity_threshold,
-                                                                          number_ratio_threshold=number_ratio_threshold)
+                                                                          number_of_returned_case=number_of_returned_case,
+                                                                          number_ratio_threshold=number_ratio_threshold, 
+                                                                          goal_weight=goal_weight, context_weight=context_weight,
+                                                                          stakeholders_weight=stakeholders_weight)
         
-        dialogue = render_template("computed_similarity.html", similar_cases_list=similar_cases)
-        return self.main_menu_transition(main_dialogue=dialogue)
+        return self.main_menu_transition(main_dialogue=render_template("computed_similarity.html", similar_cases_list=similar_cases))
 
 
     @endpoint("/logout", ["GET"], "text/html")
