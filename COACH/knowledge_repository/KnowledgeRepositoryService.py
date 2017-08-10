@@ -28,20 +28,6 @@ import rdflib
 from rdflib.namespace import split_uri
 import sqlalchemy
 from rdflib_sqlalchemy.store import SQLAlchemy
-
-# TODO: to suppress
-from datetime import datetime
-import inspect
-
-def log(*args, verbose = True):
-    message = "" if verbose else "::"
-    if verbose:
-        message = datetime.now().strftime("%H:%M:%S") + " : "
-        message += str(inspect.stack()[1][1]) + "::" + str(inspect.stack()[1][3]) + " : " #FileName::CallerMethodName
-    for arg in args:
-        message += str(arg).replace("\n", "\n::") + " "
-    print(message)
-    sys.stdout.flush()
     
 class KnowledgeRepositoryService(Microservice):
 
@@ -405,11 +391,12 @@ class KnowledgeRepositoryService(Microservice):
     
     
     @endpoint("/get_similar_cases", ["GET"], "application/json")
-    def get_similar_cases(self, case_db, case_uri, number_of_returned_case, number_ratio_threshold, goal_weight, context_weight,
-                          stakeholders_weight):
-        # Get all necessary data from the ontology
+    def get_similar_cases(self, user_id, user_token, case_uri, case_db, number_of_returned_case, number_ratio_threshold, goal_weight, 
+                          context_weight, stakeholders_weight):
         case_db_proxy = self.create_proxy(case_db)
+        db_infos = {"user_id": user_id, "user_token": user_token, "case_id": case_uri}
            
+        # Get all necessary data from the ontology
         goal_class_in_ontology = ["CustomerValue", "FinancialValue", "InternalBusinessValue", "InnovationAndLearningValue", "MarketValue"]
         goal_uri_from_ontology_list = self._get_ontology_instances(None, case_db_proxy, goal_class_in_ontology, [0])
              
@@ -424,8 +411,8 @@ class KnowledgeRepositoryService(Microservice):
             context_from_ontology[database_name] = self._get_ontology_instances(ontology_name, case_db_proxy, None, (1, 4, 5))
              
         # Compute vectors
-        case_vectors = self._get_case_vectors(case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, 
-                                              context_from_ontology, context_categories_in_database)
+        case_vectors = self._get_case_vectors(db_infos, case_db_proxy, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, 
+                                              context_from_ontology, context_categories_in_database, True)
         
         # result_heap either contains less than number_of_returned_case element, or contains the top number_of_returned_case cases
         # according to their similarity
@@ -435,9 +422,11 @@ class KnowledgeRepositoryService(Microservice):
         for current_case_uri in cases_uri_list:
             if current_case_uri == case_uri:
                 continue
-             
-            current_case_vectors = self._get_case_vectors(current_case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, 
-                                                          context_from_ontology, context_categories_in_database)
+            
+            db_infos["case_id"] = current_case_uri
+            current_case_vectors = self._get_case_vectors(db_infos, case_db_proxy, goal_uri_from_ontology_list, 
+                                                          stakeholder_uri_from_ontology_list, context_from_ontology, 
+                                                          context_categories_in_database, False)
              
             similarity = self._compute_similarity(case_vectors, current_case_vectors, number_ratio_threshold, goal_weight, context_weight, 
                                                   stakeholders_weight)
@@ -467,66 +456,108 @@ class KnowledgeRepositoryService(Microservice):
         return result_heap
         
     
-    def _get_case_vectors(self, case_uri, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, context_from_ontology, 
-                         context_categories_name):
+    def _get_case_vectors(self, db_infos, case_db_proxy, goal_uri_from_ontology_list, stakeholder_uri_from_ontology_list, 
+                          context_from_ontology, context_categories_name, get_information_from_database):
         result = {}
         
-        goal_components = self._get_goal_components(case_uri, goal_uri_from_ontology_list)
+        goal_components = self._get_goal_components(db_infos, case_db_proxy, goal_uri_from_ontology_list, get_information_from_database)
         result["goal"] = {"vector": goal_components, "number_indexes": set(), "single_select_indexes": set()}
 
-        stakeholders_components = self._get_stakeholder_components(case_uri, stakeholder_uri_from_ontology_list)
+        stakeholders_components = self._get_stakeholder_components(db_infos, case_db_proxy, stakeholder_uri_from_ontology_list, 
+                                                                   get_information_from_database)
         result["stakeholders"] = {"vector": stakeholders_components, "number_indexes": set(), "single_select_indexes": set()}
         
-        (context_components, number_indexes, single_select_indexes) = self._get_context_components(case_uri, context_from_ontology, 
-                                                                                                   context_categories_name)
+        context_informations = self._get_context_components(db_infos, case_db_proxy, context_from_ontology, context_categories_name, 
+                                                            get_information_from_database)
+        context_components = context_informations[0]
+        number_indexes = context_informations[1]
+        single_select_indexes = context_informations[2]
         result["context"] = {"vector": context_components, "number_indexes": number_indexes, "single_select_indexes": single_select_indexes}
 
         return result
     
     
-    def _get_goal_components(self, case_uri, goal_uri_from_ontology_list):
+    def _get_goal_from_knowledge_repository(self, case_uri):
         query = """ MATCH (:Case {uri: $case_uri}) -[:goal]-> () --> (goal)
                     RETURN goal.uri
         """
         query_result = self.query(query, {"case_uri": case_uri})
-        
-        goals_in_case = [e[0] for e in query_result]
+        return [e[0] for e in query_result]
+    
+    def _get_goal_from_database(self, db_infos, case_db_proxy):
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        case_uri = db_infos["case_id"]
+        goal_uri = case_db_proxy.get_value(**db_infos, subject=case_uri, predicate=orion_ns.goal, object_=None, any_=False)
+        return [object_ for (_, object_) in case_db_proxy.get_predicate_objects(**db_infos, subject=goal_uri)]
+    
+    def _get_goal_components(self, db_infos, case_db_proxy, goal_uri_from_ontology_list, get_goal_from_database):
+        if get_goal_from_database:
+            goals_in_case = self._get_goal_from_database(db_infos, case_db_proxy)
+        else:
+            case_uri = db_infos["case_id"]
+            goals_in_case = self._get_goal_from_knowledge_repository(case_uri)
         return [1 if goal in goals_in_case else 0 for goal in goal_uri_from_ontology_list]
     
     
-    def _get_stakeholder_components(self, case_uri, stakeholder_uri_from_ontology_list):
-        query = """ MATCH (:Case {uri :$case_uri}) -[:role]-> (:Role) --> (stakeholder)
-                    RETURN stakeholder.uri
+    def _get_stakeholders_from_knowledge_repository(self, case_uri):
+        query = """ MATCH (:Case {uri :$case_uri}) -[:role]-> (:Role) --> (stakeholder_type)
+                    RETURN stakeholder_type.uri
         """
         query_result = self.query(query, {"case_uri": case_uri})
-
-        stakeholder_in_case = [e[0] for e in query_result]
-        return [1 if stakeholder in stakeholder_in_case else 0 for stakeholder in stakeholder_uri_from_ontology_list]
+        return [e[0] for e in query_result]
+    
+    def _get_stakeholders_from_database(self, db_infos, case_db_proxy):
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        case_uri = db_infos["case_id"]
+        roles_uri_list = case_db_proxy.get_objects(**db_infos, subject=case_uri, predicate=orion_ns.role)
+        
+        result = []
+        for role_uri in roles_uri_list:
+            result += [object_ for (_, object_) in case_db_proxy.get_predicate_objects(**db_infos, subject=role_uri)]
+        return result
+    
+    def _get_stakeholder_components(self, db_infos, case_db_proxy, stakeholder_uri_from_ontology_list, get_stakeholders_from_database):
+        if get_stakeholders_from_database:
+            stakeholders_type_in_case = self._get_stakeholders_from_database(db_infos, case_db_proxy)
+        else:
+            case_uri = db_infos["case_id"]
+            stakeholders_type_in_case = self._get_stakeholders_from_knowledge_repository(case_uri)
+        return [1 if stakeholder_type in stakeholders_type_in_case else 0 for stakeholder_type in stakeholder_uri_from_ontology_list]
     
     
-    def _get_context_components(self, case_uri, context_from_ontology, categories_name):
+    def _get_context_from_knowledge_repository(self, case_uri, category_name):
         # Cypher does not allow parameter for a relation's label, so string format is used instead.
         query = """ MATCH (:Case {{uri: $case_uri}}) -[:context]-> () -[:{0}]-> () -[grade_id]-> (value)
                     RETURN grade_id, value.value
         """
+        query_result = self.query(query.format(category_name), {"case_uri": case_uri})
+        context_in_case = defaultdict(list)
+        for record in query_result:
+            context_in_case[record[0].type].append(record[1])
+        return context_in_case
         
+        
+    def _get_context_from_database(self, db_infos, case_db_proxy, category_name):
+        orion_ns = rdflib.Namespace(self.orion_ns)
+        return case_db_proxy.get_context(**db_infos, context_predicate=orion_ns[category_name])
+    
+    def _get_context_components(self, db_infos, case_db_proxy, context_from_ontology, categories_name, get_context_from_database):
         result = []
         number_indexes = set()
         single_select_indexes = set()
-        
+            
         for category_name in categories_name:
-            query_result = self.query(query.format(category_name), {"case_uri": case_uri})
-            
-            context_in_case = defaultdict(list)
-            for record in query_result:
-                context_in_case[record[0].type].append(record[1])
-            
+            if get_context_from_database:
+                context_in_case = self._get_context_from_database(db_infos, case_db_proxy, category_name)
+            else:
+                case_uri = db_infos["case_id"]
+                context_in_case = self._get_context_from_knowledge_repository(case_uri, category_name)
+                
             for context_entry in context_from_ontology[category_name]:
                 # context_entry is a list [grade_id, type, possible_values]. possible_values can be either None or a list of string
                 current_grade_id = context_entry[0]
                 current_type = context_entry[1]
                 current_possible_values_list = context_entry[2]
-                
                 
                 if current_type == "text":
                     # At the moment, text entry are not used to compute similarity.
@@ -561,7 +592,6 @@ class KnowledgeRepositoryService(Microservice):
                 else:
                     raise RuntimeError("Unknown type {0}. Allowed types are 'text', 'integer', 'float', 'single_select' and 'multi_select'."
                                        .format(current_type))
-                
             
         return (result, number_indexes, single_select_indexes)
     
@@ -594,12 +624,6 @@ class KnowledgeRepositoryService(Microservice):
         stakeholders_similarity = stakeholders_information[0]
         stakeholders_weight *= stakeholders_information[1]
         
-        log("goal_similarity :", goal_similarity, type(goal_similarity))
-        log("context_similarity :", context_similarity, type(context_similarity))
-        log("stakeholders_similarity :", stakeholders_similarity, type(stakeholders_similarity))
-        log("goal_weight :", goal_weight, type(goal_weight))
-        log("context_weight :", context_weight, type(context_weight))
-        log("stakeholders_weight :", stakeholders_weight, type(stakeholders_weight))
         try:
             return ((goal_similarity * goal_weight + context_similarity * context_weight + stakeholders_similarity * stakeholders_weight) /
                     (goal_weight + context_weight + stakeholders_weight))
@@ -608,9 +632,7 @@ class KnowledgeRepositoryService(Microservice):
     
     
     def _do_compute_similarity(self, case_vector_1, case_vector_2, number_ratio_threshold, number_indexes, single_select_indexes):
-        
         vector_length = len(case_vector_1)
-        log("vector_length :", vector_length)
         if vector_length != len(case_vector_2):
             raise RuntimeError("Both vectors must have the same length, but length are {0} and {1}."
                                .format(vector_length, len(case_vector_2)))

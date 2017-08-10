@@ -1389,7 +1389,7 @@ class CaseDatabase(coach.GraphDatabaseService):
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             case_graph = self.graph.get_context(rdflib.URIRef(case_id))
             result = case_graph.predicate_objects(rdflib.URIRef(subject))
-            return list(result)
+            return [(p.toPython(), o.toPython()) for (p, o) in result]
         else:
             raise RuntimeError("Invalid user token")
         
