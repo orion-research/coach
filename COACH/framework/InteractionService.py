@@ -134,15 +134,18 @@ class InteractionService(coach.Microservice):
         context = kwargs
         
         if "case_id" in session:
-            user_id = session["user_id"]
-            user_token = session["user_token"]
-            case_id = session["case_id"]
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            db_infos = {"user_id": session["user_id"], "user_token": session["user_token"], "case_id": session["case_id"]}
+            case_id = db_infos["case_id"]
             
-            selected_decision_process = self.case_db_proxy.get_selected_trade_off_method(user_id = user_id, user_token = user_token, 
-                                                                                         case_id = case_id)
+            selected_decision_process = self.case_db_proxy.get_selected_trade_off_method(**db_infos)
             if selected_decision_process:
                 decision_process_proxy = self.create_proxy(selected_decision_process)
                 context["process_menu"] = decision_process_proxy.process_menu()
+                
+            context["is_case_open"] = self.case_db_proxy.get_value(**db_infos, subject=case_id, predicate=orion_ns.close, object_=None, 
+                                                                   any_=False)
+            context["is_case_open"] = not context["is_case_open"]
         return render_template("main_menu.html", **context)
 
 
@@ -239,13 +242,17 @@ class InteractionService(coach.Microservice):
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
-    @endpoint("/open_case_dialogue", ["GET"], "text/html")
-    def open_case_dialogue_transition(self):
+    @endpoint("/load_case_dialogue", ["GET"], "text/html")
+    def load_case_dialogue_transition(self):
         # Create links to the user's cases
         user_cases_db = self.case_db_proxy.user_cases(user_id = session["user_id"], user_token = session["user_token"])
         user_cases_kr = self.knowledge_repository_proxy.get_cases(user_id = session["user_id"])
-        user_cases_kr_not_in_db = [user_case for user_case in user_cases_kr if user_case not in user_cases_db]
-        dialogue = render_template("open_case_dialogue.html", open_cases = user_cases_db, close_cases = user_cases_kr_not_in_db)
+        
+        opened_cases = user_cases_db["opened_cases"]
+        closed_cases = user_cases_db["closed_cases"]
+        exported_cases = [user_case for user_case in user_cases_kr if user_case not in opened_cases if user_case not in closed_cases]
+        
+        dialogue = render_template("load_case_dialogue.html", opened_cases=opened_cases, closed_cases=closed_cases, exported_cases=exported_cases)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     @endpoint("/case_status_dialogue", ["GET"], "text/html")
@@ -550,19 +557,16 @@ class InteractionService(coach.Microservice):
         return self.case_status_dialogue_transition(), 
 
 
-    @endpoint("/open_case", ["GET"], "text/html")
-    def open_case(self, case_id):
+    @endpoint("/load_case", ["GET"], "text/html")
+    def load_case(self, case_id):
         # TODO: Instead of showing case id on screen, it should be the case name + id
         session["case_id"] = case_id
-        user_id = session["user_id"]
-        user_token = session["user_token"]
-        if not self.case_db_proxy.is_case_in_database(user_id=user_id, user_token=user_token, case_id=case_id):
-            case_information = self.knowledge_repository_proxy.import_case(case_uri=case_id, format_="n3")
-            case_graph_description = case_information["case_graph_description"]
-            case_uri = case_information["case_uri"]
-            self.case_db_proxy.import_case(user_id=user_id, user_token=user_token, graph_description=case_graph_description, format_="n3",
-                                            case_id=case_uri)
-            
+        db_infos = {"user_id": session["user_id"], "user_token": session["user_token"], "case_id": case_id}
+        
+        if not self.case_db_proxy.is_case_in_database(**db_infos):
+            case_graph_description = self.knowledge_repository_proxy.import_case(case_uri=case_id, format_="n3")
+            self.case_db_proxy.import_case(**db_infos, graph_description=case_graph_description, format_="n3")
+        
         return self.case_status_dialogue_transition()
     
     @endpoint("/close_case_dialogue", ["GET"], "text/html")
@@ -583,22 +587,32 @@ class InteractionService(coach.Microservice):
         return self.main_menu_transition(main_dialogue = dialogue)
     
     @endpoint("/close_case", ["POST"], "text/html")
-    def close_case(self, selected_alternative, comments, export_to_kr_checkbox = False):
+    def close_case(self, selected_alternative, comments, export_to_kr_checkbox=""):
+        submit_component = request.values.to_dict()["submit_component"]
         db_infos = {"user_id": session["user_id"], "user_token": session["user_token"], "case_id": session["case_id"]}
         
-        if selected_alternative == "None":
-            selected_alternative = None
-        self.case_db_proxy.add_case_decision(**db_infos, selected_alternative_uri=selected_alternative, comments=comments)
-        
-        if export_to_kr_checkbox == "on":
-            #TODO: add a confirmation window
-            case_description = self.case_db_proxy.export_case_data(**db_infos, format_ = "n3")
-            self.knowledge_repository_proxy.export_case(graph_description=case_description, format_="n3")
+        if submit_component == "Delete case":
+            self.case_db_proxy.remove_case(**db_infos)
+            dialogue = "Case deleted"
+        else:
+            if selected_alternative == "None":
+                selected_alternative = None
+            self.case_db_proxy.add_case_decision(**db_infos, selected_alternative_uri=selected_alternative, comments=comments)
+            self.case_db_proxy.close_case(**db_infos)
             
-        self.case_db_proxy.remove_case(**db_infos)
+            if export_to_kr_checkbox == "on":
+                description = self.case_db_proxy.export_case_data(**db_infos, format_="n3")
+                self.knowledge_repository_proxy.export_case(graph_description=description, format_="n3")
+            dialogue = "Case closed"
+            
         del session["case_id"]
-        return self.main_menu_transition(main_dialogue="Case closed")
+        return self.main_menu_transition(main_dialogue=dialogue)
     
+    @endpoint("/open_case", ["GET"], "text/html")
+    def open_case(self):
+        db_infos = {"user_id": session["user_id"], "user_token": session["user_token"], "case_id": session["case_id"]}
+        self.case_db_proxy.open_case(**db_infos)
+        return self.main_menu_transition(main_dialogue="Case opened")
     
     @endpoint("/compute_similarity_dialogue", ["GET"], "text/html")
     def compute_similarity_dialogue(self):

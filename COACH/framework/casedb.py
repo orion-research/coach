@@ -156,10 +156,26 @@ class CaseDatabase(coach.GraphDatabaseService):
         Each case is represented by a pair indicating case id and case title.
         """
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token):
-            q = "SELECT ?case_id ?case_title WHERE { ?case_id orion:role ?r . ?r orion:person ?user_uri . ?case_id orion:title ?case_title }"
-            result = self.graph.query(q, initNs = { "orion": rdflib.Namespace(self.orion_ns)},
-                                      initBindings = { "user_uri": self.authentication_service_proxy.get_user_uri(user_id = user_id) })
-            return list(result)
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            user_id = self.authentication_service_proxy.get_user_uri(user_id = user_id)
+            q = """ SELECT ?case_id ?case_title 
+                    WHERE { 
+                        ?case_id orion:role ?role . 
+                        ?role orion:person ?user_uri . 
+                        ?case_id orion:title ?case_title .
+                    }
+                """
+            result = list(self.graph.query(q, initNs = {"orion": orion_ns}, initBindings = {"user_uri": user_id}))
+            
+            opened_cases = []
+            closed_cases = []
+            for (case_id, case_title) in result:
+                is_case_open = not self.graph.value(case_id, orion_ns.close, any=False)
+                if is_case_open:
+                    opened_cases.append((case_id, case_title))
+                else:
+                    closed_cases.append((case_id, case_title))
+            return {"opened_cases": opened_cases, "closed_cases": closed_cases}
         else:
             raise RuntimeError("Invalid user token")
         
@@ -197,6 +213,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             # Add title and description
             case_graph.add((case_id, orion_ns.title, rdflib.Literal(title)))
             case_graph.add((case_id, orion_ns.description, rdflib.Literal(description)))
+            case_graph.add((case_id, orion_ns.close, rdflib.Literal(False)))
             case_graph.add((case_id, rdflib.RDF.type, orion_ns.Case))
 
             # Create the relationships to an initial role with initiator as the person
@@ -428,7 +445,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             ?parameter orion:name ?parameter_name
         }
         """
-        result = case_graph.query(query, initNs = {"orion": rdflib.Namespace(self.orion_ns)},
+        result = case_graph.query(query, initNs = {"orion": orion_ns},
                                   initBindings = {"case_id": case_id, "estimation": estimation_uri})
         
         parameter_name_to_uri_dict = {}
@@ -1222,6 +1239,28 @@ class CaseDatabase(coach.GraphDatabaseService):
         else:
             raise RuntimeError("Invalid user token")
         
+    @endpoint("/open_case", ["GET"], "application/json")
+    def open_case(self, user_id, user_token, case_id):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_id = rdflib.URIRef(case_id)
+            case_graph = self.graph.get_context(case_id)
+            
+            case_graph.set((case_id, orion_ns.close, rdflib.Literal(False)))
+        else:
+            raise RuntimeError("Invalid user token")
+        
+    @endpoint("/close_case", ["GET"], "application/json")
+    def close_case(self, user_id, user_token, case_id):
+        if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
+            orion_ns = rdflib.Namespace(self.orion_ns)
+            case_id = rdflib.URIRef(case_id)
+            case_graph = self.graph.get_context(case_id)
+            
+            case_graph.set((case_id, orion_ns.close, rdflib.Literal(True)))
+        else:
+            raise RuntimeError("Invalid user token")
+        
     @endpoint("/remove_case", ["GET", "POST"], "application/json")
     def remove_case(self, user_id, user_token, case_id):
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
@@ -1423,14 +1462,20 @@ class CaseDatabase(coach.GraphDatabaseService):
                 predicate = rdflib.URIRef(predicate)
                 
             if object_ is None:
-                return case_graph.value(subject, predicate, None, default_value, any_)
+                try:
+                    return case_graph.value(subject, predicate, None, default_value, any_).toPython()
+                except AttributeError:
+                    return default_value
             else:
                 # Guess if object_ is a literal or a URI. 
-                value_with_literal_object = case_graph.value(subject, predicate, rdflib.Literal(object_), default_value, any_)
+                value_with_literal_object = case_graph.value(subject, predicate, rdflib.Literal(object_), default_value, any_).toPython()
                 if value_with_literal_object == default_value:
-                    return case_graph.value(subject, predicate, rdflib.URIRef(object_), default_value, any_)
+                    try:
+                        return case_graph.value(subject, predicate, rdflib.URIRef(object_), default_value, any_).toPython()
+                    except AttributeError:
+                        return default_value
                 else:
-                    return value_with_literal_object
+                    return value_with_literal_object.toPython()
         else:
             raise RuntimeError("Invalid user token")
         

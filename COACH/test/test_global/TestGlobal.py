@@ -43,7 +43,7 @@ class TestGlobal (unittest.TestCase):
     MAIN_MENU__PAGE_TITLE = "COACH decision support system"
     
     MAIN_MENU__CASE_MENU = "Case"
-    MAIN_MENU__OPEN_CASE_LINK = "Open case"
+    MAIN_MENU__OPEN_CASE_LINK = "Load case"
     MAIN_MENU__NEW_CASE_LINK = "New case"
     MAIN_MENU__CASE_STATUS_LINK = "Case status"
     MAIN_MENU__CASE_DESCRIPTION_LINK = "Case description"
@@ -94,7 +94,9 @@ class TestGlobal (unittest.TestCase):
     CLOSE_CASE__EXPORT_TO_KR_CHECKBOX_NAME = "export_to_kr_checkbox"
     CLOSE_CASE__SELECTED_ALTERNATIVE_NAME = "selected_alternative"
     CLOSE_CASE__NONE_ALTERNATIVE = "None"
-    CLOSE_CASE__CONFIRMATION_MESSAGE = "Case closed"
+    CLOSE_CASE__CONFIRMATION_MESSAGE = "Case deleted"
+    CLOSE_CASE__SUBMIT_FORM_BUTTONS_NAME = "submit_component"
+    CLOSE_CASE__DELETE_CASE_BUTTON_VALUE = "Delete case"
     
     #goal_dialogue.html
     GOAL_CATEGORY_CUSTOMER__PREFIX_ID = "SGR"
@@ -149,14 +151,20 @@ class TestGlobal (unittest.TestCase):
         self._go_to_link(self.MAIN_MENU__CASE_MENU, self.MAIN_MENU__CLOSE_CASE)
         self._check_check_box(self.CLOSE_CASE__EXPORT_TO_KR_CHECKBOX_NAME, False)
         self._select_combo_box(self.CLOSE_CASE__SELECTED_ALTERNATIVE_NAME, self.CLOSE_CASE__NONE_ALTERNATIVE)
-          
-        with self.wait_for_page_load():
-            self.driver.find_element_by_tag_name("form").submit()
-        self.assertIn(self.CLOSE_CASE__CONFIRMATION_MESSAGE, self.driver.page_source)
         
+        submit_components_elements = self.driver.find_elements_by_name(self.CLOSE_CASE__SUBMIT_FORM_BUTTONS_NAME)
+        for submit_component in submit_components_elements:
+            if submit_component.get_attribute("value") == self.CLOSE_CASE__DELETE_CASE_BUTTON_VALUE:
+                delete_button = submit_component
+                break
+                
+        with self.wait_for_page_load():
+            delete_button.click()
+        self.assertIn(self.CLOSE_CASE__CONFIRMATION_MESSAGE, self.driver.page_source)
+
         
     @contextmanager
-    def wait_for_page_load(self, timeout=5):
+    def wait_for_page_load(self, timeout=10):
         """
         Utility method to wait until a page is loaded. It will not work if the html does not change (angular application for example)
         More information on http://www.obeythetestinggoat.com/how-to-get-selenium-to-wait-for-page-load-after-a-click.html

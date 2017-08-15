@@ -1,0 +1,18 @@
+<h2>Select a case to work on</h2>
+
+<ul>
+<h3>Opened cases</h3>
+{% for c in opened_cases %}
+	<li> <a href={{ url_for("load_case", case_id = c[0]) }}>{{c[1]}}</a></li>
+{% endfor %}
+
+<h3>Closed cases</h3>
+{% for c in closed_cases %}
+	<li> <a href= {{ url_for("load_case", case_id = c[0]) }}> {{c[1]}}</a></li>
+{% endfor %}
+
+<h3>Exported cases</h3>
+{% for c in exported_cases %}
+	<li> <a href= {{ url_for("load_case", case_id = c[0]) }}> {{c[1]}}</a></li>
+{% endfor %}
+</ul>

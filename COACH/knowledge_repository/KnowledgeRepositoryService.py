@@ -341,11 +341,7 @@ class KnowledgeRepositoryService(Microservice):
         query_result = self.query(query, {"case_uri": case_uri})
         case_graph = self.get_graph_from_query_result(list(query_result))
         
-        orion_ns = rdflib.Namespace(self.orion_ns)
-        case_uri = case_graph.query("SELECT ?case_uri WHERE {?case_uri a orion:Case.}", initNs={"orion": orion_ns})
-        case_uri = list(case_uri)[0][0].toPython()
-        case_graph_description = case_graph.serialize(format=format_).decode("utf8")
-        return {"case_graph_description": case_graph_description, "case_uri": case_uri}
+        return case_graph.serialize(format=format_).decode("utf8")
             
     def get_graph_from_query_result(self, query_result_list):
         graph_description = ""
@@ -488,7 +484,10 @@ class KnowledgeRepositoryService(Microservice):
         orion_ns = rdflib.Namespace(self.orion_ns)
         case_uri = db_infos["case_id"]
         goal_uri = case_db_proxy.get_value(**db_infos, subject=case_uri, predicate=orion_ns.goal, object_=None, any_=False)
-        return [object_ for (_, object_) in case_db_proxy.get_predicate_objects(**db_infos, subject=goal_uri)]
+        if goal_uri is None:
+            return []
+        else:
+            return [object_ for (_, object_) in case_db_proxy.get_predicate_objects(**db_infos, subject=goal_uri)]
     
     def _get_goal_components(self, db_infos, case_db_proxy, goal_uri_from_ontology_list, get_goal_from_database):
         if get_goal_from_database:

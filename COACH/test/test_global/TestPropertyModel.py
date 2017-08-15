@@ -276,7 +276,7 @@ class TestPropertyModel(TestGlobal):
                 self._send_key_in_field(parameter_name + "_parameter", parameters_dict[parameter_name])
         
         compute_button = self._find_submit_component(self.PROPERTY_ESTIMATION_METHOD__COMPUTE_BUTTON_VALUE)
-        with self.wait_for_page_load():
+        with self.wait_for_page_load(15):
             compute_button.click()
     
     def _delete_estimation(self):

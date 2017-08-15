@@ -22,9 +22,11 @@ class TestSimilarity(TestGlobal):
     Context_category = Enum("Context_category", ["ORGANIZATION", "PRODUCT", "STAKEHOLDER", "METHOD", "BUSINESS"])
     
     #compute_similarity_dialogue.html
-    COMPUTE_SIMILARITY__SIMILARITY_THRESHOLD_FIELD_NAME = "similarity_threshold"
+    COMPUTE_SIMILARITY__MOST_SIMILAR_CASES_FIELD_NAME = "number_of_returned_case"
     COMPUTE_SIMILARITY__NUMBER_RATIO_THRESHOLD_FIELD_NAME = "number_ratio_threshold"
-    COMPUTE_SIMILARITY__EXPORT_CASE_CHECKBOX_NAME = "export_case"
+    COMPUTE_SIMILARITY__GOAL_WEIGHT_FIELD_NAME = "goal_weight"
+    COMPUTE_SIMILARITY__CONTEXT_WEIGHT_FIELD_NAME = "context_weight"
+    COMPUTE_SIMILARITY__STAKEHOLDERS_WEIGHT_FIELD_NAME = "stakeholders_weight"
     
     #computed_similarity.html
     COMPUTED_SIMILARIRY__SUB_TITLE = "Computed similarity"
@@ -56,7 +58,6 @@ class TestSimilarity(TestGlobal):
         It will test:
             - Two identical cases have a similarity of 1
             - Two different cases have a similarity less than 1
-            - Cases are not returned when their similarity with the current case is below the threshold
             - Number are considered equals when their ratio is below the threshold
             - Number are considered different when their ratio is above the threshold
             - Number are considered as no information if their value is 0
@@ -73,7 +74,7 @@ class TestSimilarity(TestGlobal):
         self._set_up_context()
         self._set_up_stakeholder()
         self._go_to_link(self.MAIN_MENU__CASE_MENU, self.MAIN_MENU__EXPORT_CASE_LINK, 600)        
-         
+          
         # Two identical cases have a similarity of 1
         # A case is not similar to itself
         # Export to knowledge repository checkbox
@@ -81,54 +82,48 @@ class TestSimilarity(TestGlobal):
         self._set_up_goal()
         self._set_up_context()
         self._set_up_stakeholder()
-        self._compute_similarity(True)
+        self._compute_similarity()
         self._assert_case_similar(self.CASE_NAME_1, 1)
         self._assert_case_not_similar(self.CASE_NAME_2)
-         
+          
         # Several persons with the same role do not bring more information
         self._go_to_link(self.MAIN_MENU__STAKEHOLDERS_MENU, self.MAIN_MENU__STAKEHOLDERS_EDIT)
         # remove "decider" from user1's function, but decider is still in user2's function, so the similarity should not change
         stakeholder_information = self._get_stakeholder_information()
         stakeholder_information[self.INITIAL__USER_NAME_1][self.STAKEHOLDER__ROLE_FUNCTION] = ["Leader"]
         self._save_stakeholders(stakeholder_information)
-        self._compute_similarity(True)
+        self._compute_similarity()
         self._assert_case_similar(self.CASE_NAME_1, 1)
-         
+          
         # Two different cases have a similarity less than 1
-        customer_goal = self._get_goal_category_information(self.GOAL_CATEGORY_CUSTOMER__PREFIX_ID, [1, 2, 3, 15, 16])
-        customer_goal = {k: not customer_goal[k] for k in customer_goal}
+        customer_goal = self._get_goal_category_information(self.GOAL_CATEGORY_CUSTOMER__PREFIX_ID, [1, 2, 3, 15, 16], lambda i: i%2 == 1)
         self._go_to_link(self.MAIN_MENU__GOAL_MENU, self.MAIN_MENU__GOAL_CUSTOMER_VALUE) 
         self._save_goal_category(customer_goal)
-        self._compute_similarity(True)
+        self._compute_similarity()
         self._assert_case_similar(self.CASE_NAME_1, 0.918)
-         
-        # Cases are not returned when their similarity with the current case is below the threshold 
-        self._go_to_link(self.MAIN_MENU__CASE_MENU, self.MAIN_MENU__COMPUTE_SIMILARITY)
-        self._compute_similarity(False, 0.95)
-        self._assert_case_not_similar(self.CASE_NAME_1)
-         
+          
         # Number are considered equals when their ratio is below the threshold
         organization_context = self._get_context_category_information(self.Context_category.ORGANIZATION)
         organization_context["O05.1_integer"] = 100
         self._go_to_link(self.MAIN_MENU__CONTEXT_MENU, self.MAIN_MENU__CONTEXT_ORGANIZATION)
         self._save_category_context(organization_context)
-        self._compute_similarity(True, 0.8, 2)
+        self._compute_similarity(number_ratio_threshold=2)
         self._assert_case_similar(self.CASE_NAME_1, 0.918)
-         
+          
         # Number are considered different when their ratio is above the threshold
-        self._compute_similarity(False, 0.8, 1.5)
+        self._compute_similarity(number_ratio_threshold=1.5)
         self._assert_case_similar(self.CASE_NAME_1, 0.9016)
-         
+          
         # Number are considered as no information if their value is 0
         organization_context["O05.1_integer"] = 0
         self._go_to_link(self.MAIN_MENU__CONTEXT_MENU, self.MAIN_MENU__CONTEXT_ORGANIZATION)
         self._save_category_context(organization_context)
         self._go_to_link(self.MAIN_MENU__CASE_MENU, self.MAIN_MENU__EXPORT_CASE_LINK, 120)
-        
+         
         self._open_or_create_case(self.CASE_NAME_1)
         self._go_to_link(self.MAIN_MENU__CONTEXT_MENU, self.MAIN_MENU__CONTEXT_ORGANIZATION)
         self._save_category_context(organization_context)
-        self._compute_similarity(True)
+        self._compute_similarity()
         self._assert_case_similar(self.CASE_NAME_2, 0.9167)
         
         self._logout()
@@ -146,17 +141,15 @@ class TestSimilarity(TestGlobal):
         self._set_up_context(True)
         self._go_to_link(self.MAIN_MENU__STAKEHOLDERS_MENU, self.MAIN_MENU__STAKEHOLDERS_EDIT)
         self._save_stakeholders({})
-        self._compute_similarity(True, 0)
+        self._compute_similarity()
         self._assert_case_not_similar(self.CASE_NAME_1)
         self._assert_case_not_similar(self.CASE_NAME_2)
         self._assert_case_not_similar(self.CASE_NAME_3)
         
         # It is possible to retrieve a case where the user is not a stakeholder
         self._set_up_goal()
-        self._compute_similarity(True, 0.2)
-        self._assert_case_similar(self.CASE_NAME_1, 0.2807)
-        
-        
+        self._compute_similarity()
+        self._assert_case_similar(self.CASE_NAME_1, 0.2759)
         
         
     def _set_up_goal(self, int_to_bool_func = lambda i: i%2 == 0):
@@ -290,23 +283,47 @@ class TestSimilarity(TestGlobal):
                                            }
                }
         
-
-    def _compute_similarity(self, export_case_to_kr=False, similarity_threshold=0.8, number_ratio_threshold=1.5):
+    
+    def _compute_similarity(self, number_of_returned_case=20, number_ratio_threshold=1.5, goal_weight=1, context_weight=1, stakeholders_weight=1):
+        self.number_of_returned_cases = number_of_returned_case
+        
         self._go_to_link(self.MAIN_MENU__CASE_MENU, self.MAIN_MENU__COMPUTE_SIMILARITY)
-        self._send_key_in_field(self.COMPUTE_SIMILARITY__SIMILARITY_THRESHOLD_FIELD_NAME, similarity_threshold)
+        self._send_key_in_field(self.COMPUTE_SIMILARITY__MOST_SIMILAR_CASES_FIELD_NAME, number_of_returned_case)
         self._send_key_in_field(self.COMPUTE_SIMILARITY__NUMBER_RATIO_THRESHOLD_FIELD_NAME, number_ratio_threshold)
-        self._check_check_box(self.COMPUTE_SIMILARITY__EXPORT_CASE_CHECKBOX_NAME, export_case_to_kr)
+        self._send_key_in_field(self.COMPUTE_SIMILARITY__GOAL_WEIGHT_FIELD_NAME, goal_weight)
+        self._send_key_in_field(self.COMPUTE_SIMILARITY__CONTEXT_WEIGHT_FIELD_NAME, context_weight)
+        self._send_key_in_field(self.COMPUTE_SIMILARITY__STAKEHOLDERS_WEIGHT_FIELD_NAME, stakeholders_weight)
         
         with self.wait_for_page_load(600):
             self.driver.find_element_by_tag_name("form").submit()
         
     
     def _assert_case_similar(self, case_title, similarity):
+        """
+        To assert that the case are similar, it will assert that either the provided case appear in the page with the provided 
+        similarity, or that the case with the smallest similarity has a greater similarity that the provided similarity.
+        
+        However, the test will pass if there is a case whose title is case_title, but with a bigger similarity than similarity
+        and the number of returned cases is number_of_returned_cases and each case has a greater similarity than similarity.
+        """
         self._assert_page(self.COMPUTED_SIMILARIRY__SUB_TITLE, True)
         
         similarity_string = self.SIMILARITY_VALUE_FORMATTER.format(similarity)
-        self.assertIn("{0}: {1}".format(case_title, similarity_string), self.driver.page_source)
-        
+        try:
+            self.assertIn("{0}: {1}".format(case_title, similarity_string), self.driver.page_source)
+        except AssertionError:
+            similar_cases_list = self.driver.find_elements_by_tag_name("h3")
+            if len(similar_cases_list) < self.number_of_returned_cases:
+                self.fail("The provided case {0} was not similar with the similarity {1}, but only {2} cases out of {3} were returned"
+                          .format(case_title, similarity, len(similar_cases_list), self.number_of_returned_cases))
+            
+            for similar_case in similar_cases_list:
+                current_case_similarity = float(similar_case.text.split(": "))
+                if current_case_similarity < similarity:
+                    self.fail(("The case {0} has a lesser similarity than the provided case {1}, the provided case should have been returned"
+                               + "with a similarity of {2}").format(similar_case.text.split(": "[0]), case_title, similarity))
+            
+            
     def _assert_case_not_similar(self, case_title):
         self._assert_page(self.COMPUTED_SIMILARIRY__SUB_TITLE, True)
         self.assertNotIn(case_title, self.driver.page_source)
