@@ -76,7 +76,21 @@ To run COACH, you first need to start neo4j. Then, to start all the services, a 
 
 To start interacting with COACH, open http://127.0.0.1:5000 in a web browser.
 
+## Running tests
+To run tests, you first need to install some more libraries
 
+    $ pip install selenium
+
+Then, selenium needs a driver that must be in the path (for example, /usr/bin or /usr/local/bin). You can download it at the address https://github.com/mozilla/geckodriver/releases
+See http://selenium-python.readthedocs.io/installation.html for more information.
+
+Once this is done, you can run the tests by going to the test directory
+    $ cd COACH/test/test_global
+
+Then, you can run all tests at once
+    $ python TestGlobal.py
+Or only one at a time, e.g.
+    $ python TestSimilarity.py
 
 # Development server
 These instructions assume you will be running COACH on a Linux server. In this configuration, an Apache server is used to handle requests, instead of the server provided 

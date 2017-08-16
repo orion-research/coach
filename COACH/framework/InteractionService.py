@@ -325,10 +325,17 @@ class InteractionService(coach.Microservice):
         activities["close"] = {
             "link" : "/close_case_dialogue",
             "name" : "Decide and close case",
-            "status" : "Not started"} # Close case can not be started, as a displayed case is always opened
+            "status" : "Not started"}
+        if self.case_db_proxy.get_value(**db_infos, subject=case_id, predicate=orion_ns.close, object_=None, any_=False):
+            activities["close"]["status"] = "Started"
 
-
-        dialogue = render_template("case_status_dialogue.html", activities = activities)
+        case_title = self.case_db_proxy.get_value(**db_infos, subject=case_id, predicate=orion_ns.title, object_=None, any_=False)
+        if activities["close"]["status"] == "Started":
+            status = "Closed"
+        else:
+            status = "Open"
+        
+        dialogue = render_template("case_status_dialogue.html", activities=activities, case_title=case_title, status=status)
         return self.main_menu_transition(main_dialogue = dialogue)
 
     
