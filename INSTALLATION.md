@@ -88,9 +88,13 @@ Once this is done, you can run the tests by going to the test directory
     $ cd COACH/test/test_global
 
 Then, you can run all tests at once
+
     $ python TestGlobal.py
+    
 Or only one at a time, e.g.
+
     $ python TestSimilarity.py
+
 
 # Development server
 These instructions assume you will be running COACH on a Linux server. In this configuration, an Apache server is used to handle requests, instead of the server provided 
