@@ -1,98 +1,130 @@
 {
-    "AverageOfTwo": {
-        "port": 5004,
-        "name": "Average of two estimation method",
-        "description": "Settings for AverageOfTwo"
-    },
-    "KnowledgeInferenceService": {
-        "database": "https://orion.sics.se:5008",
-        "port": 5010,
-        "name": "Knowledge inference microservice for the ORION project",
-        "description": "Settings for KnowledgeInferenceService",
-        "directory": "https://orion.sics.se:5003"
-    },
     "object": {
-        "host": "orion.sics.se",
-        "protocol": "https",
         "description": "Common settings for all classes",
-        "mode": "development"
-    },
-    "AuthenticationService": {
-        "authentication_database": "settings/authentication.json",
-        "secret_data_file_name": "settings/root_secret_data.json",
-        "email": {
-            "sender": "noreply@orion-research.se",
-            "server": "send.one.com",
-            "port": 587
-        },
-        "description": "Settings for AuthenticationService",
-        "logfile": "root.log",
-        "name": "Authentication service for COACH",
-        "port": 5009
-    },
-    "ExpertOpinion": {
-        "port": 5001,
-        "name": "Expert opinion estimation method",
-        "description": "Settings for ExpertOpinion"
-    },
-    "PughService": {
-        "logfile": "PughService.log",
-        "port": 5007,
-        "name": "Pugh analysis",
-        "description": "Settings for PughService"
-    },
-    "CaseDatabase": {
-        "authentication_service": "https://orion.sics.se:5009",
-        "secret_data_file_name": "settings/root_secret_data.json",
-        "label": "CaseDB",
-        "description": "Settings for CaseDatabase",
-        "name": "COACH case database service",
-        "port": 5008
-    },
-    "SimpleDecisionProcessService": {
-        "logfile": "SimpleDecisionProcessService.log",
-        "port": 5002,
-        "name": "A decision process service",
-        "description": "Settings for SimpleDecisionProcessService"
+        "mode": "development",
+        "host": "orion.sics.se",
+        "protocol": "https"
     },
     "DirectoryService": {
-        "directory_file_name": "settings/development_directory.json",
-        "port": 5003,
+        "description": "Settings for DirectoryService",
         "name": "Directory service for COACH",
-        "description": "Settings for DirectoryService"
+        "port": 5003,
+        "directory_file_name": "settings/development_directory.json"
+    },
+    "ContextModelService": {
+        "description": "Settings for ContextModelService",
+        "name": "A context model service for COACH",
+        "port": 5006,
+        "logfile": "ContextModel.log"
+    },
+    "PropertyModelService": {
+        "description": "Settings for PropertyModelService",
+        "name": "A property model service for COACH",
+        "port": 5011,
+        "logfile": "PropertyModel.log"
+    },
+    "KnowledgeRepositoryService": {
+        "description": "Settings for KnowledgeRepositoryService",
+        "name": "Knowledge repository microservice for the ORION project",
+        "port": 5005,
+        "database": "http://127.0.0.1:7474/db/data/",
+        "secret_data_file_name": "../framework/settings/root_secret_data.json",
+        "authentication_service": "https://orion.sics.se:5009"
+    },
+    "SimpleDecisionProcessService": {
+        "description": "Settings for SimpleDecisionProcessService",
+        "name": "A decision process service",
+        "port": 5002,
+        "logfile": "SimpleDecisionProcessService.log"
+    },
+    "PughService": {
+        "description": "Settings for PughService",
+        "name": "Pugh analysis",
+        "port": 5007,
+        "logfile": "PughService.log"
+    },
+    "AverageOfTwo": {
+        "description": "Settings for AverageOfTwo",
+        "name": "Average of two estimation method",
+        "port": 5004
+    },
+    "ExpertOpinion": {
+        "description": "Settings for ExpertOpinion",
+        "name": "Expert opinion estimation method",
+        "port": 5001
+    },
+    "CaseDatabase": {
+        "description": "Settings for CaseDatabase",
+        "name": "COACH case database service",
+        "port": 5008,
+        "label": "CaseDB",
+        "authentication_service": "https://orion.sics.se:5009",
+        "secret_data_file_name": "settings/root_secret_data.json",
+        "knowledge_repository": "https://orion.sics.se:5005"
+    },
+    "AuthenticationService": {
+        "description": "Settings for AuthenticationService",
+        "name": "Authentication service for COACH",
+        "port": 5009,
+        "logfile": "root.log",
+        "authentication_database": "settings/authentication.json",
+        "email": {
+            "server": "send.one.com",
+            "port": 587,
+            "sender": "noreply@orion-research.se"
+        },
+        "secret_data_file_name": "settings/root_secret_data.json"
+    },
+    "KnowledgeInferenceService": {
+        "description": "Settings for KnowledgeInferenceService",
+        "name": "Knowledge inference microservice for the ORION project",
+        "port": 5010,
+        "database": "https://orion.sics.se:5008",
+        "directory": "https://orion.sics.se:5003"
+    },
+    "ExpertEstimateText": {
+        "description": "Settings for ExpertEstimateText",
+        "name": "ExpertEstimateText estimation method",
+        "port": 5012
+    },
+    "ExpertEstimateFloat": {
+        "description": "Settings for ExpertEstimateFloat",
+        "name": "ExpertEstimateFloat estimation method",
+        "port": 5013
+    },
+    "ExpertEstimateInteger": {
+        "description": "Settings for ExpertEstimateInteger",
+        "name": "ExpertEstimateInteger estimation method",
+        "port": 5014
+    },
+    "BasicCOCOMO": {
+        "description": "Settings for BasicCOCOMO",
+        "name": "BasicCOCOMO estimation method",
+        "port": 5015
+    },
+    "IntermediateCOCOMO": {
+        "description": "Settings for IntermediateCOCOMO",
+        "name": "IntermediateCOCOMO estimation method",
+        "port": 5016
+    },
+    "CostEstimation": {
+        "description": "Settings for CostEstimation",
+        "name": "CostEstimation estimation method",
+        "port": 5017
     },
     "InteractionService": {
-        "database": "https://orion.sics.se:5008",
-        "authentication_service": "https://orion.sics.se:5009",
-        "knowledge_repository": "https://orion.sics.se:5005",
-        "secret_data_file_name": "settings/root_secret_data.json",
         "description": "Settings for InteractionService",
+        "name": "COACH interaction microservice for ORION project",
+        "port": 443,
+        "database": "https://orion.sics.se:5008",
         "service_directories": [
             "https://orion.sics.se:5003"
         ],
-        "property_service": "https://orion.sics.se:5011",
         "logfile": "root.log",
+        "authentication_service": "https://orion.sics.se:5009",
+        "knowledge_repository": "https://orion.sics.se:5005",
         "context_service": "https://orion.sics.se:5006",
-        "name": "COACH interaction microservice for ORION project",
-        "port": 443
-    },
-    "PropertyModelService": {
-        "logfile": "PropertyModel.log",
-        "port": 5011,
-        "name": "A property model service for COACH",
-        "description": "Settings for PropertyModelService"
-    },
-    "ContextModelService": {
-        "logfile": "ContextModel.log",
-        "port": 5006,
-        "name": "A context model service for COACH",
-        "description": "Settings for ContextModelService"
-    },
-    "KnowledgeRepositoryService": {
-        "database": "http://127.0.0.1:7474/db/data/",
-        "port": 5005,
-        "secret_data_file_name": "../framework/settings/root_secret_data.json",
-        "name": "Knowledge repository microservice for the ORION project",
-        "description": "Settings for KnowledgeRepositoryService"
+        "property_service": "https://orion.sics.se:5011",
+        "secret_data_file_name": "settings/root_secret_data.json"
     }
 }

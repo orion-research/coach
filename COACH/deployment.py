@@ -259,13 +259,14 @@ class AuthenticationService(Service):
 
 class CaseDatabase(Service):
 
-    def __init__(self, name, description, path, label, authentication):
+    def __init__(self, name, description, path, label, authentication, knowledge_repository):
         """
         Creates a CaseDatabase object. 
         """
         super().__init__(name, description, path)
         self.label = label
         self.authentication = authentication
+        self.knowledge_repository = knowledge_repository
         
 
     def directory_entry(self, configuration):
@@ -284,7 +285,8 @@ class CaseDatabase(Service):
                 "port": configuration.service_port(self),
                 "label": self.label,
                 "authentication_service": configuration.service_url(self.authentication),
-                "secret_data_file_name": "settings/root_secret_data.json"
+                "secret_data_file_name": "settings/root_secret_data.json",
+                "knowledge_repository": configuration.service_url(self.knowledge_repository)
                 }
 
 
@@ -444,13 +446,14 @@ class PropertyModelService(Service):
 
 class KnowledgeRepositoryService(Service):
     
-    def __init__(self, name, description, path, database):
+    def __init__(self, name, description, path, database, authentication_service):
         """
         Creates a KnowledgeRepositoryService object. In addition to the Service, it has the following parameter:
         - database: a url to the database where knowledge is stored.
         """
         super().__init__(name, description, path)
         self.database = database
+        self.authentication_service = authentication_service
 
 
     def directory_entry(self, configuration):
@@ -468,7 +471,8 @@ class KnowledgeRepositoryService(Service):
                 "name": self.description,
                 "port": configuration.service_port(self),
                 "database": self.database,
-                "secret_data_file_name": "../framework/settings/root_secret_data.json"
+                "secret_data_file_name": "../framework/settings/root_secret_data.json",
+                "authentication_service": configuration.service_url(self.authentication_service)
                 }
 
     
