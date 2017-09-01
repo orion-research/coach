@@ -119,7 +119,7 @@ development_services_with_ports = services_with_ports.copy()
 development_services_with_ports[root] = 443
 
 development = ApacheConfiguration("development", "orion.sics.se", development_services_with_ports, "https",
-                                  "development_settings.json", "jax", "www-data")
+                                  "development_settings.json", "jax", "www-data", "3.5")
 
 configurations = [local, development]
 

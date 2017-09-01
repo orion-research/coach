@@ -100,7 +100,7 @@ application = {application}
         template = """
 <virtualhost *:{port}>
     ServerName {base_url}
-    WSGIDaemonProcess {daemon_name} user={user_name} group={group_name} threads=5 python-path=/var/www/COACH/COACH/{file_path}:/var/www/developmentenv/lib/python3.4/site-packages
+    WSGIDaemonProcess {daemon_name} user={user_name} group={group_name} threads=5 python-path=/var/www/COACH/COACH/{file_path}:/var/www/developmentenv/lib/python{python_version}/site-packages
     WSGIScriptAlias / /var/www/COACH/COACH/{file_path}/{name_lower}.wsgi
 
     SSLCertificateFile      /etc/letsencrypt/live/orion.sics.se/cert.pem
@@ -119,7 +119,8 @@ application = {application}
 """
         return template.format(port = port, base_url = configuration.base_url, user_name = configuration.user_name, 
                                group_name = configuration.group_name, file_path = "/".join(self.path.split(".")),
-                               name_lower = self.name.lower(), daemon_name = "coach-" + configuration.mode + "-" + self.name.lower())
+                               name_lower = self.name.lower(), daemon_name = "coach-" + configuration.mode + "-" + self.name.lower(),
+                               python_version = configuration.python_version)
 
 
     def minimal_functional_service(self):
@@ -830,15 +831,17 @@ class ApacheConfiguration(Configuration):
     """
 
     def __init__(self, mode, base_url, services_with_ports, protocol, settings_file_name, 
-                 user_name, group_name):
+                 user_name, group_name, python_version):
         """
         Creates an ApacheConfiguration object. It extends the Configuration constructor with the following parameters:
         - user_name: the user name under which the Apache server is running.
         - group_name: the group name under which the Apache server is running.
+        - python_version: which Python version is used on the Apache server.
         """
         super().__init__(mode, base_url, services_with_ports, protocol, settings_file_name)
         self.user_name = user_name
         self.group_name = group_name
+        self.python_version = python_version
 
 
     def generate(self, script_name):

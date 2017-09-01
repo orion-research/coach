@@ -1452,6 +1452,7 @@ class CaseDatabase(coach.GraphDatabaseService):
             Raise RuntimeError if the user_token does not match the user_id.
             Raise UniquenessError if there is more than one value matching the provided criteria and any_ is False
             Raise an error if subject, predicate and object_ are all defined. 
+            :rtype:
         """
         if self.authentication_service_proxy.check_user_token(user_id = user_id, user_token = user_token) and self.is_stakeholder(user_id, case_id):
             

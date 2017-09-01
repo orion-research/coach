@@ -147,7 +147,7 @@ The COACH software will be installed in the /var/www directory, and that is wher
 
 	$ cd /var/www
 	$ sudo mkdir COACH
-	$ sudo virtualenv developmentenv
+	$ sudo virtualenv -p python3 developmentenv
 
 The python command in developmentenv should point at Python version 3.x, and this can be checked using:
 
@@ -166,7 +166,8 @@ You may need to be the owner of this directory for some commands to work properl
 	$ sudo chown -R <your user id> /var/www/developmentenv
 
 ## Python libraries
-Having installed Python 3.x (whatever the latest version is), and the pip package manager (sudo apt-get python3-pip), do the following inside the local environment:
+Having installed Python 3.x (whatever the latest version is), and the pip package manager (sudo apt-get python3-pip),
+do the following inside the local environment:
 
 	$ source developmentenv/bin/activate
 	$ sudo pip install flask
@@ -175,6 +176,8 @@ Having installed Python 3.x (whatever the latest version is), and the pip packag
 	$ sudo pip install rdflib
 	$ sudo pip install sqlalchemy
 	$ sudo pip install rdflib-sqlalchemy
+
+If there are errors related to file permissions, you may try to use sudo -H ... instead.
 
 
 ## COACH source code
@@ -243,6 +246,11 @@ Edit the following file:
 In the file, enter the following text, and then save the file (ctrl-X):
 
 	LoadModule wsgi_module /usr/lib/apache2/modules/mod_wsgi-py34.cpython-34m.so
+
+The exact content of the above line depends on the Python version you are using. The above is for 3.4,
+and for 3.5 it should read:
+
+	LoadModule wsgi_module /usr/lib/apache2/modules/mod_wsgi-py35.cpython-35m-x86_64-linux-gnu.so
 
 Also edit the following file:
 
