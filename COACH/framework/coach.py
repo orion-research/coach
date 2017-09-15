@@ -110,8 +110,13 @@ class Microservice:
         
         # It is difficult to find a reliable way to determine the top directory that works on all kinds of system.
         # However, COACH top directory must be on the sys path of any module which is below it.
-        syspath0 = os.path.abspath(sys.path[0]) 
-        return syspath0[0:syspath0.rfind("COACH")+len("COACH")]
+        s = "COACH"
+        for p in sys.path:
+            absp = os.path.abspath(p)
+            if s in absp:
+                return absp[0:absp.rfind(s) + len(s)]
+#        syspath0 = os.path.abspath(sys.path[0])
+#        return syspath0[0:syspath0.rfind("COACH")+len("COACH")]
     
     
     def microservice_directory(self):

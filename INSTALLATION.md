@@ -139,15 +139,13 @@ If something goes wrong, the Apache log is the first place to look for troublesh
 To make it easier to control which Python version, and what library versions, are used, Python provides a virtual environment mechanism.
 The following command installs this mechanism:
 
-	$ sudo pip install virtualenv
-
-(In some installations, you have to use pip3 instead of pip in all python module handling commands.)
+    $ sudo apt-get install python3-venv
 
 The COACH software will be installed in the /var/www directory, and that is where the virtual environment will also reside.
 
 	$ cd /var/www
 	$ sudo mkdir COACH
-	$ sudo virtualenv -p python3 developmentenv
+	$ sudo python3 -m venv developmentenv
 
 The python command in developmentenv should point at Python version 3.x, and this can be checked using:
 
@@ -177,7 +175,10 @@ do the following inside the local environment:
 	$ sudo pip install sqlalchemy
 	$ sudo pip install rdflib-sqlalchemy
 
+(In some systems, you may need to use pip3 instead of pip.)
+
 If there are errors related to file permissions, you may try to use sudo -H ... instead.
+
 
 
 ## COACH source code
@@ -245,12 +246,10 @@ Edit the following file:
 
 In the file, enter the following text, and then save the file (ctrl-X):
 
-	LoadModule wsgi_module /usr/lib/apache2/modules/mod_wsgi-py34.cpython-34m.so
-
-The exact content of the above line depends on the Python version you are using. The above is for 3.4,
-and for 3.5 it should read:
-
 	LoadModule wsgi_module /usr/lib/apache2/modules/mod_wsgi-py35.cpython-35m-x86_64-linux-gnu.so
+
+The above is with the assumption that you are using Python 3.5, and with other versions the a different mod_wsgi
+module version will be needed.
 
 Also edit the following file:
 
@@ -364,7 +363,8 @@ There are also issues with RC4 encryption. In the same file, the following lines
 
 - Apache does not give much feedback on errors in the wsgi setup. Therefore, it is advisable to test each *.wsgi file individually by 
 simply running `python file.wsgi` (or python3) from the terminal. This will detect issues such as path errors etc.
-If there is no output, everything should be ok.
+If there is no output, everything should be ok. Also, first testing a small hello world wsgi example is advisable, before
+trying to serve the full COACH implementation.
 
 - The Apache configuration files can be tested for syntax errors by running `apachectl -t`. The command `apachectl -S` can be used to 
 produce a listing of the different virtual hosts set up, to help discovering if they are conflicting in some way.
@@ -378,6 +378,8 @@ A fix to this is to copy the contents of the COACH port 80 virtual host to the d
 - The ports used by COACH services must be open to the Internet in the firewalls to allow external access to the server. If a port is closed, one possible indication is a very long (many seconds) response time for a request, followed by a message in the browser indicating that the service was not available.
 
 - Sometimes, it can appear that a code change did not take effect. If so, it could be the browser that caches pages from the previous version instead of showing a newly generated page. Check that the version number shown on the page corresponds to the current version of the source code, and if not, do a hard update of the page.
+
+- It is very important to have compatible versions for mod_wsgi and the Python interpreter. Otherwise, very strange errors can occur.
 
 ## Configuring GitHub webhooks
 

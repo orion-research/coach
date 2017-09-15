@@ -60,11 +60,6 @@ class Service(object):
 import os
 import sys
 
-# Activate virtual environment
-activate_this = '/var/www/developmentenv/bin/activate_this.py'
-with open(activate_this) as file_:
-    exec(file_.read(), dict(__file__=activate_this))
-
 sys.path.append("/var/www/COACH/COACH/{file_path}")
 sys.path.append("/var/www/COACH")
 
@@ -100,7 +95,8 @@ application = {application}
         template = """
 <virtualhost *:{port}>
     ServerName {base_url}
-    WSGIDaemonProcess {daemon_name} user={user_name} group={group_name} threads=5 python-path=/var/www/COACH/COACH/{file_path}:/var/www/developmentenv/lib/python{python_version}/site-packages
+    WSGIDaemonProcess {daemon_name} user={user_name} group={group_name} threads=5 python-home=/var/www/developmentenv python-path=/var/www/COACH/COACH/{file_path}
+    WSGIApplicationGroup %{{GLOBAL}}
     WSGIScriptAlias / /var/www/COACH/COACH/{file_path}/{name_lower}.wsgi
 
     SSLCertificateFile      /etc/letsencrypt/live/orion.sics.se/cert.pem
@@ -110,10 +106,10 @@ application = {application}
 
     <directory /var/www/COACH/COACH/{file_path}>
         WSGIProcessGroup {daemon_name}
-        WSGIApplicationGroup %{{GLOBAL}}
         WSGIScriptReloading On
         Order deny,allow
         Allow from all
+        Require all granted
     </directory>
 </virtualhost>     
 """

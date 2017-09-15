@@ -6,11 +6,6 @@
 import os
 import sys
 
-# Activate virtual environment
-activate_this = '/var/www/developmentenv/bin/activate_this.py'
-with open(activate_this) as file_:
-    exec(file_.read(), dict(__file__=activate_this))
-
 sys.path.append("/var/www/COACH/COACH/decision_process/SimpleDecisionProcessService")
 sys.path.append("/var/www/COACH")
 
